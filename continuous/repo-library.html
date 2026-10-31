@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070d14">
+  <title>Atlas · Biblioteca de código</title>
+  <link rel="stylesheet" href="/atlas-theme.css">
+</head>
+<body>
+<main class="library-page">
+  <div class="library-topline"><div class="library-eyebrow"><span aria-hidden="true">⌘</span> ION / OBSERVATORIO DE CÓDIGO</div><a class="library-back" href="/chat/">Volver a Atlas ↗</a></div>
+  <h1>Una biblioteca.<br>Mil formas de construir.</h1>
+  <p class="library-intro">El código público entra como referencia. Atlas reúne sus fuentes, contrasta lo que afirman y conserva la evidencia. Aquí puedes ver cuánto existe y cuánto queda por comprobar.</p>
+
+  <div class="library-system" aria-live="polite">
+    <div class="library-system-copy"><strong id="library-state">Consultando el catálogo local…</strong><small id="library-run">Esperando datos del coordinador.</small></div>
+    <span class="library-update" id="library-update">—</span>
+  </div>
+
+  <div class="library-goals" aria-label="Progreso real hacia los objetivos de la biblioteca">
+    <article class="library-goal"><div class="goal-top"><span>01 / REPOSITORIOS</span><span class="goal-icon" aria-hidden="true">⌘</span></div><div class="goal-value"><strong id="count-repositories">—</strong><span>/ <span id="target-repositories">100.000</span></span></div><progress id="progress-repositories" value="0" max="100000" aria-label="Repositorios catalogados, esperando datos"></progress><p class="goal-caption">Catalogados. Tener una ficha no acredita su calidad.</p></article>
+    <article class="library-goal"><div class="goal-top"><span>02 / SELECCIÓN ÉLITE</span><span class="goal-icon" aria-hidden="true">◇</span></div><div class="goal-value"><strong id="count-elite">—</strong><span>/ <span id="target-elite">1.000</span></span></div><progress id="progress-elite" value="0" max="1000" aria-label="Selección élite, esperando datos"></progress><p class="goal-caption">Objetivo de selección. Solo cuentan registros acreditados.</p></article>
+    <article class="library-goal"><div class="goal-top"><span>03 / GANADORES</span><span class="goal-icon" aria-hidden="true">✳</span></div><div class="goal-value"><strong id="count-winners">—</strong><span>/ <span id="target-winners">250</span></span></div><progress id="progress-winners" value="0" max="250" aria-label="Ganadores acreditados, esperando datos"></progress><p class="goal-caption">Objetivo final. Una clasificación requiere pruebas comparables.</p></article>
+  </div>
+
+  <div class="library-totals"><span><strong id="count-entries">—</strong> fichas importadas</span><span><strong id="count-unique">—</strong> URL únicas</span><span><strong id="count-verified">—</strong> metadatos contrastados</span><span><strong id="count-reflections">—</strong> reflexiones locales</span></div>
+  <p class="pulse-detail" id="library-backup">Copia de seguridad: esperando información.</p>
+
+  <section class="library-discovery" aria-labelledby="discovery-heading">
+    <div class="library-catalog-head"><div><h2 id="discovery-heading">Descubrimiento automático</h2><p>Consultas públicas a GitHub. Cada hallazgo queda pendiente de evaluación.</p></div><span class="repo-badge" id="discovery-state">Esperando estado</span></div>
+    <dl class="discovery-metrics">
+      <div><dt>Repositorios nuevos</dt><dd id="discovery-count">—</dd></div>
+      <div><dt>Intentos registrados</dt><dd id="discovery-attempts">—</dd></div>
+      <div><dt>Consultas terminadas</dt><dd id="discovery-completed">—</dd></div>
+      <div><dt>Consultas parciales</dt><dd id="discovery-partial">—</dd></div>
+    </dl>
+    <p class="discovery-schedule" id="discovery-schedule" role="status">Consultando el siguiente turno de búsqueda…</p>
+    <div class="discovery-history" id="discovery-history"><p class="pulse-detail">Esperando el registro de consultas.</p></div>
+    <p class="library-alert" id="discovery-error" role="status"></p>
+    <p class="discovery-coverage" id="discovery-coverage">Las categorías y los resultados son preliminares. Terminar una consulta no acredita cobertura, calidad ni ganadores.</p>
+  </section>
+
+  <section class="library-taxonomy" aria-labelledby="taxonomy-heading">
+    <div class="library-catalog-head"><div><h2 id="taxonomy-heading">Mapa de búsqueda</h2><p id="taxonomy-description">Consultando la propuesta de categorías…</p></div><span class="library-eyebrow">TAXONOMÍA / BORRADOR</span></div>
+    <details class="taxonomy-browser"><summary id="taxonomy-summary">Explorar las categorías propuestas</summary><div class="taxonomy-areas" id="taxonomy-areas" aria-busy="true"></div></details>
+    <p class="library-alert" id="taxonomy-error" role="status"></p>
+  </section>
+
+  <div class="library-catalog-head"><div><h2>Explorar el catálogo</h2><p>Busca por nombre, descripción o tecnología.</p></div><span class="library-eyebrow">FUENTES / REGISTROS</span></div>
+  <form class="library-search" id="library-search" role="search">
+    <label><span class="sr-only">Buscar en la biblioteca de código</span><input id="library-query" type="search" maxlength="200" autocomplete="off" placeholder="Buscar un repositorio, una idea o una tecnología…"></label>
+    <button type="submit">Buscar</button><button id="library-clear" type="button">Limpiar</button>
+  </form>
+  <div class="library-results-meta"><span id="library-results-count" role="status">Preparando la búsqueda…</span><span>30 POR PÁGINA</span></div>
+  <div class="library-cards" id="library-cards" aria-busy="true"></div>
+  <nav class="library-pagination" aria-label="Páginas de la biblioteca"><button id="library-previous" type="button" disabled>← Anterior</button><span id="library-page-number">Página 1</span><button id="library-next" type="button" disabled>Siguiente →</button></nav>
+  <p class="library-alert" id="library-error" role="status"></p>
+
+  <div class="library-catalog-head"><div><h2 id="library-notes-heading">Reflexiones de Atlas</h2><p>Interpretaciones del modelo local, todavía sin verificar.</p></div></div>
+  <div class="library-results-meta"><span id="library-notes-count" role="status">Consultando las últimas reflexiones…</span><span>ÚLTIMAS 10</span></div>
+  <div class="library-cards" id="library-notes" aria-labelledby="library-notes-heading" aria-busy="true"></div>
+  <p class="library-alert" id="library-notes-error" role="status"></p>
+
+  <div class="library-method"><h2>De una afirmación a una prueba</h2><p>Las descripciones, licencias y valoraciones importadas son afirmaciones de su fuente. La consulta de metadatos a GitHub confirma esos campos en una fecha concreta; no demuestra que el código sea seguro, que funcione aquí ni que sea superior. Los objetivos de 100.000, 1.000 y 250 son metas, no resultados. Esta biblioteca no ejecuta los repositorios ni modifica los pesos de Qwen.</p></div>
+</main>
+<script type="module">
+const byId=id=>document.getElementById(id);
+const format=new Intl.NumberFormat('es-ES');
+const finite=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0?value:null;
+const num=value=>finite(value)===null?'—':format.format(value);
+const date=value=>{if(!value)return null;const parsed=new Date(value);return Number.isFinite(parsed.getTime())?parsed.toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):null;};
+const make=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=String(text);return n;};
+const safeUrl=value=>{try{const url=new URL(value);return ['https:','http:'].includes(url.protocol)&&!url.username&&!url.password?url.href:null;}catch{return null;}};
+let offset=0,total=0,query='',requestVersion=0,controller=null,searchTimer=null,statusBusy=false,notesBusy=false,notesLoaded=false,notesCount=null,taxonomyBusy=false,taxonomyLoaded=false;
+const limit=30;
+function setPaging(loading=false){byId('library-previous').disabled=loading||offset===0;byId('library-next').disabled=loading||offset+limit>=total;byId('library-page-number').textContent='Página '+format.format(Math.floor(offset/limit)+1)+(total?' de '+format.format(Math.ceil(total/limit)):'');}
+function badgeText(item){if(item.metadataVerifiedAt&&item.metadata)return 'Metadatos GitHub';if(item.verificationStatus==='not_found')return 'No localizado';if(item.verificationStatus==='rate_limited')return 'Consulta aplazada';if(item.verificationStatus==='error')return 'Consulta fallida';if(item.verificationStatus==='redirect_pending')return 'Redirección por revisar';return 'Por verificar';}
+function renderItem(item){
+  const card=make('article','repo-card'),header=make('div','repo-card-head');
+  const metadata=item.metadata&&typeof item.metadata==='object'?item.metadata:null;
+  const discovered=item.evidence==='C'||item.sourceKind==='discovered'||Boolean(item.searchSource||item.discovery);
+  const href=safeUrl(metadata?.htmlUrl||item.url);
+  const name=make(href?'a':'span','repo-name',metadata?.fullName||item.name||item.repo||'Referencia sin nombre');
+  if(href){name.href=href;name.target='_blank';name.rel='noopener noreferrer';}
+  const verified=Boolean(item.metadataVerifiedAt&&metadata);
+  header.append(name,make('span','repo-badge'+(verified?' verified':''),discovered&&!verified?'Búsqueda · evaluación pendiente':badgeText(item)));card.append(header);
+  if(discovered)card.append(make('p','repo-origin','Descubierto en búsqueda · evaluación pendiente'));
+  const description=metadata?.description||item.description;
+  if(typeof description==='string'&&description.trim())card.append(make('p','repo-description',description));
+  const meta=make('div','repo-meta');
+  if(metadata?.language)meta.append(make('span',null,metadata.language));
+  if(finite(metadata?.stars)!==null)meta.append(make('span',null,'☆ '+num(metadata.stars)+' en GitHub'));
+  if(metadata?.archived===true)meta.append(make('span',null,'Repositorio archivado'));
+  if(item.category)meta.append(make('span',null,String(item.category)));
+  const verifiedDate=date(item.metadataVerifiedAt);if(verifiedDate)meta.append(make('span',null,'Consultado '+verifiedDate));
+  if(discovered){const found=date(item.discoveredAt||item.discovery?.firstSeenAt||item.searchSource?.at);if(found)meta.append(make('span',null,'Descubierto '+found));}
+  if(!meta.childElementCount)meta.append(make('span',null,discovered?'Metadatos pendientes de contraste individual':'Ficha importada · metadatos pendientes'));
+  card.append(meta);
+  const evidence=make('details','repo-evidence');evidence.append(make('summary',null,'Fuentes y afirmaciones'));
+  evidence.append(make('p',null,verified?'Metadatos contrastados con GitHub. La calidad y el funcionamiento del código siguen sin verificar.':discovered?'Referencia encontrada en una búsqueda pública de GitHub. La coincidencia temática no valida la categoría, la calidad ni el funcionamiento del código.':'Ficha de referencia importada; su descripción y sus valoraciones todavía no se han contrastado.'));
+  if(discovered){
+    const searchSource=item.searchSource||item.discovery||{},searchHref=safeUrl(searchSource.url||searchSource.sourceUrl),searchDate=date(searchSource.at||searchSource.lastSeenAt||searchSource.firstSeenAt||item.discoveredAt);
+    if(searchDate)evidence.append(make('p',null,'Observación de búsqueda: '+searchDate+'.'));
+    if(typeof searchSource.query==='string')evidence.append(make('p',null,'Consulta de descubrimiento: '+searchSource.query));
+    if(typeof item.classificationMethod==='string')evidence.append(make('p',null,item.classificationMethod));
+    if(searchHref){const searchLink=make('a',null,'Ver la fuente de descubrimiento ↗');searchLink.href=searchHref;searchLink.target='_blank';searchLink.rel='noopener noreferrer';evidence.append(searchLink);}
+  }
+  if(item.licenseClaim)evidence.append(make('p',null,'Licencia declarada por la fuente: '+String(item.licenseClaim)+' · sin verificar.'));
+  if(item.verifiedLicense)evidence.append(make('p',null,'Identificador de licencia informado por GitHub: '+String(item.verifiedLicense)+'. Revisa el archivo de licencia antes de reutilizar el código.'));
+  else evidence.append(make('p',null,'Licencia contrastada: pendiente.'));
+  if(item.evidence)evidence.append(make('p',null,'Nivel de evidencia registrado: '+String(item.evidence)+'.'));
+  const claims=item.rawClaims??item.claims;
+  if(claims){const text=typeof claims==='string'?claims:JSON.stringify(claims,null,2);if(text)evidence.append(make('p',null,'Afirmaciones originales, sin verificar:\n'+text.slice(0,6000)));}
+  if(href){const source=make('a',null,'Abrir la fuente original ↗');source.href=href;source.target='_blank';source.rel='noopener noreferrer';evidence.append(source);}
+  card.append(evidence);return card;
+}
+async function loadItems(){
+  const version=++requestVersion;controller?.abort();controller=new AbortController();
+  byId('library-cards').setAttribute('aria-busy','true');byId('library-results-count').textContent='Buscando en el archivo local…';byId('library-error').textContent='';setPaging(true);
+  try{
+    const params=new URLSearchParams({q:query,limit:String(limit),offset:String(offset)});
+    const response=await fetch('/library/items?'+params,{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(12000)])});
+    if(!response.ok)throw Error('No se pudo leer la biblioteca (HTTP '+response.status+').');
+    const result=await response.json();if(version!==requestVersion)return;
+    if(!Array.isArray(result.items)||finite(result.total)===null)throw Error('El catálogo devolvió datos no válidos.');
+    total=result.total;
+    const items=result.items.filter(item=>item&&typeof item==='object');
+    byId('library-cards').replaceChildren(...items.map(renderItem));
+    if(!items.length)byId('library-cards').append(make('div','library-empty',query?'No hay coincidencias. Prueba otra palabra o limpia la búsqueda.':'Todavía no hay registros disponibles. Aquí aparecerán las fichas importadas y los nuevos hallazgos.'));
+    byId('library-results-count').textContent=total?num(offset+1)+'–'+num(Math.min(offset+items.length,total))+' de '+num(total)+(query?' coincidencias':' registros'):'0 resultados';
+  }catch(error){if(version!==requestVersion)return;byId('library-results-count').textContent='Catálogo no disponible';byId('library-error').textContent=error.name==='TimeoutError'?'El catálogo tardó demasiado en responder. Puedes reintentar la búsqueda.':error.message;byId('library-cards').replaceChildren(make('div','library-empty','No se ha podido cargar esta página. Los registros guardados no se han cambiado.'));total=0;}
+  finally{if(version===requestVersion){byId('library-cards').setAttribute('aria-busy','false');setPaging();}}
+}
+function noteText(value){if(typeof value==='string')return value;if(Array.isArray(value))return value.map(noteText).filter(Boolean).join('\n');if(value&&typeof value==='object')return JSON.stringify(value,null,2);return '';}
+function renderNote(item){
+  const card=make('article','repo-card'),header=make('div','repo-card-head'),href=safeUrl(item.url);
+  const source=make(href?'a':'span','repo-name',href?new URL(href).hostname+new URL(href).pathname:'Fuente no indicada');
+  if(href){source.href=href;source.target='_blank';source.rel='noopener noreferrer';}
+  header.append(source,make('span','repo-badge','Interpretación local · sin verificar'));card.append(header);
+  card.append(make('p','repo-description',noteText(item.summary)||'El registro no incluye un resumen.'));
+  const meta=make('div','repo-meta');meta.append(make('span',null,date(item.at)||'Fecha no registrada'),make('span',null,'Evidencia '+String(item.evidence||'D')),make('span',null,item.executed===true?'El registro declara ejecución; evidencia pendiente.':'Propuesta sin ejecutar'));
+  card.append(meta);
+  const details=make('details','repo-evidence');details.append(make('summary',null,'Posible uso, riesgos y siguiente prueba'));
+  for(const [field,label] of [['possibleUse','Posible uso'],['risks','Riesgos señalados'],['nextExperiment','Siguiente experimento propuesto']]){const text=noteText(item[field]);if(text)details.append(make('p',null,label+':\n'+text));}
+  details.append(make('p',null,'Hipótesis generada por el modelo local. No equivale a una revisión independiente ni a una prueba ejecutada.'));
+  card.append(details);return card;
+}
+async function loadNotes(){
+  if(notesBusy||document.hidden)return;notesBusy=true;byId('library-notes').setAttribute('aria-busy','true');byId('library-notes-error').textContent='';
+  try{
+    const response=await fetch('/library/notes?limit=10',{cache:'no-store',signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw Error('No se pudieron consultar las reflexiones (HTTP '+response.status+').');
+    const result=await response.json();if(!Array.isArray(result.items)||finite(result.total)===null)throw Error('Las reflexiones devolvieron datos no válidos.');
+    const items=result.items.filter(item=>item&&typeof item==='object'&&!Array.isArray(item)).slice(0,10);
+    byId('library-notes').replaceChildren(...items.map(renderNote));
+    if(!items.length)byId('library-notes').append(make('div','library-empty','Todavía no hay reflexiones guardadas. Aquí aparecerán las interpretaciones de Atlas cuando el ciclo local las genere.'));
+    byId('library-notes-count').textContent=items.length?'Mostrando '+num(items.length)+' de '+num(result.total)+' reflexiones':'Sin reflexiones registradas';
+    byId('count-reflections').textContent=num(result.total);notesCount=result.total;notesLoaded=true;
+  }catch(error){
+    byId('library-notes-count').textContent=notesLoaded?'Última consulta guardada · puede estar desactualizada':'Reflexiones no disponibles';
+    byId('library-notes-error').textContent=error.name==='TimeoutError'?'La consulta tardó demasiado. Se reintentará automáticamente.':error.message;
+    if(!notesLoaded)byId('library-notes').replaceChildren(make('div','library-empty','El coordinador no ha facilitado las reflexiones. No se ha cambiado ningún registro.'));
+  }finally{notesBusy=false;byId('library-notes').setAttribute('aria-busy','false');}
+}
+function renderDiscovery(value){
+  if(!value||typeof value!=='object'||Array.isArray(value)){
+    byId('discovery-state').textContent='Estado no disponible';byId('discovery-schedule').textContent='El coordinador todavía no facilita el estado del descubrimiento.';
+    for(const id of ['discovery-count','discovery-attempts','discovery-completed','discovery-partial'])byId(id).textContent='—';
+    byId('discovery-history').replaceChildren(make('p','pulse-detail','No hay un registro de la última consulta disponible.'));byId('discovery-error').textContent='';return;
+  }
+  const jobs=value.jobs&&typeof value.jobs==='object'?value.jobs:{};
+  const partial=finite(value.partialQueries)??(['truncated','incomplete'].every(key=>finite(jobs[key]??0)!==null)?(jobs.truncated??0)+(jobs.incomplete??0):null);
+  byId('discovery-count').textContent=num(value.discovered);
+  byId('discovery-attempts').textContent=num(value.searchObservations);
+  byId('discovery-completed').textContent=num(finite(value.completedQueries)??finite(jobs.complete??0));
+  byId('discovery-partial').textContent=num(partial);
+  const states={ready:'En cola',busy:'Consulta en curso',waiting:'Esperando turno',rate_limited:'Búsqueda aplazada',paused:'En pausa'};
+  byId('discovery-state').textContent=states[value.state]||'Estado registrado';
+  const next=date(value.nextRun),retry=date(value.backoffUntil);
+  byId('discovery-schedule').textContent=retry?'Espera solicitada por GitHub hasta '+retry+'.'+(next?' Próximo turno previsto: '+next+'.':''):next?'Próximo turno previsto: '+next+'.':'No hay un próximo turno registrado.';
+  byId('discovery-error').textContent=value.lastError?'Última incidencia: '+String(value.lastError).slice(0,600):'';
+  const last=value.lastRun,history=byId('discovery-history');history.replaceChildren();
+  if(last&&typeof last==='object'&&!Array.isArray(last)){
+    const heading=make('div','discovery-query-head'),at=date(last.checkedAt||last.at);
+    heading.append(make('strong',null,'Última consulta'),make('span',null,at||'Fecha no registrada'));history.append(heading);
+    if(last.category||last.categoryId)history.append(make('p','discovery-category',String(last.category||last.categoryId)));
+    if(typeof last.query==='string')history.append(make('code','discovery-query',last.query));
+    const details=[];
+    if(finite(last.page)!==null)details.push('Página '+num(last.page));
+    if(finite(last.received)!==null)details.push(num(last.received)+' resultados recibidos');
+    if(finite(last.added)!==null)details.push(num(last.added)+' nuevos');
+    if(last.truncated===true)details.push('Resultados limitados por la búsqueda');
+    if(last.incomplete===true)details.push('GitHub informó resultados incompletos');
+    if(details.length)history.append(make('p','pulse-detail',details.join(' · ')));
+    const href=safeUrl(last.sourceUrl);
+    if(href){const source=make('a','discovery-source','Ver la consulta de origen ↗');source.href=href;source.target='_blank';source.rel='noopener noreferrer';history.append(source);}
+  }else history.append(make('p','pulse-detail','Todavía no hay consultas de descubrimiento registradas.'));
+  byId('discovery-coverage').textContent=typeof value.coverage==='string'?value.coverage:'Las categorías y los resultados son preliminares. Terminar una consulta no acredita cobertura, calidad ni ganadores.';
+}
+async function loadTaxonomy(){
+  if(taxonomyBusy||taxonomyLoaded||document.hidden)return;taxonomyBusy=true;byId('taxonomy-areas').setAttribute('aria-busy','true');byId('taxonomy-error').textContent='';
+  try{
+    const response=await fetch('/library/taxonomy',{cache:'no-store',signal:AbortSignal.timeout(10000)});
+    if(!response.ok)throw Error('No se pudo consultar la taxonomía (HTTP '+response.status+').');
+    const taxonomy=await response.json();
+    if(!taxonomy||taxonomy.status!=='draft'||!Array.isArray(taxonomy.macroareas)||!taxonomy.macroareas.length)throw Error('La propuesta de taxonomía devolvió datos no válidos.');
+    const areas=taxonomy.macroareas;
+    if(areas.some(area=>!area||typeof area.name!=='string'||!Array.isArray(area.categories)||area.categories.some(category=>!category||typeof category.id!=='string'||typeof category.name!=='string'||typeof category.query!=='string')))throw Error('La propuesta contiene categorías no válidas.');
+    const count=areas.reduce((sum,area)=>sum+area.categories.length,0);
+    const groups=areas.map(area=>{
+      const group=make('details','taxonomy-area'),summary=make('summary'),heading=make('span',null,area.name);
+      summary.append(heading,make('small',null,num(area.categories.length)+' categorías'));group.append(summary);
+      const list=make('ul','taxonomy-categories');
+      for(const category of area.categories){const row=make('li'),name=make('div','taxonomy-category-name');name.append(make('span',null,category.id),make('strong',null,category.name));row.append(name,make('code',null,category.query));list.append(row);}
+      group.append(list);return group;
+    });
+    byId('taxonomy-areas').replaceChildren(...groups);byId('taxonomy-description').textContent=num(count)+' categorías propuestas en '+num(areas.length)+' macroáreas. Clasificación pendiente de validación; sin ganadores asignados.';
+    byId('taxonomy-summary').textContent='Explorar las '+num(count)+' categorías propuestas';taxonomyLoaded=true;
+  }catch(error){
+    byId('taxonomy-description').textContent='La propuesta de categorías no está disponible.';byId('taxonomy-error').textContent=error.name==='TimeoutError'?'La consulta tardó demasiado. Se reintentará cuando vuelvas a la página.':error.message;
+    byId('taxonomy-areas').replaceChildren(make('p','pulse-detail','No se han podido cargar las macroáreas. Se conserva la taxonomía guardada en el coordinador.'));
+  }finally{taxonomyBusy=false;byId('taxonomy-areas').setAttribute('aria-busy','false');}
+}
+async function loadStatus(){
+  if(statusBusy||document.hidden)return;statusBusy=true;
+  try{
+    const response=await fetch('/library/status',{cache:'no-store',signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('Estado no disponible');const state=await response.json();
+    const counts=state.counts||{},targets=state.targets||{};
+    renderDiscovery(state.discovery);
+    for(const [key,fallback] of [['repositories',100000],['elite',1000],['winners',250]]){
+      const count=finite(counts[key]),target=finite(targets[key])||fallback;
+      byId('count-'+key).textContent=num(count);byId('target-'+key).textContent=num(target);
+      const progress=byId('progress-'+key);progress.max=target;progress.value=count??0;progress.setAttribute('aria-label',key+': '+num(count)+' de '+num(target));
+    }
+    byId('count-entries').textContent=num(counts.entries);byId('count-unique').textContent=num(counts.uniqueUrls);byId('count-verified').textContent=num(counts.metadataVerified);
+    const reflections=finite(state.reflections)??finite(counts.reflections);
+    if(reflections!==null){byId('count-reflections').textContent=num(reflections);if(reflections!==notesCount)void loadNotes();}
+    const backupAt=date(state.backup?.at),integrity=state.backup?.integrity;
+    byId('library-backup').textContent=backupAt?'Última copia local: '+backupAt+(typeof integrity==='string'||typeof integrity==='boolean'?' · integridad informada: '+String(integrity):''):'No consta una copia de seguridad reciente.';
+    const retry=date(state.backoffUntil),next=date(state.nextRun),last=date(state.lastRun?.checkedAt||state.lastRun);
+    byId('library-state').textContent=state.paused===true?'Catálogo en pausa':state.running===true||state.state==='active'?'Contrastando referencias':retry?'Consulta aplazada por el proveedor':state.lastError?'Catálogo disponible · última consulta con incidencia':'Catálogo local disponible';
+    const details=[last?'Última revisión: '+last:null,retry?'Reintento previsto: '+retry:next?'Próxima revisión: '+next:null,state.lastError?'Incidencia: '+String(state.lastError).slice(0,240):null].filter(Boolean);
+    byId('library-run').textContent=details.join(' · ')||'Los contadores reflejan registros guardados, no una evaluación de calidad.';
+    byId('library-update').textContent='ACTUALIZADO '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  }catch{byId('library-state').textContent='No se puede comprobar el estado';byId('library-run').textContent='El coordinador no ha respondido. Los últimos contadores visibles pueden estar desactualizados.';byId('library-update').textContent='SIN ACTUALIZAR';byId('discovery-state').textContent='Sin actualizar';byId('discovery-schedule').textContent='No se ha podido comprobar el próximo turno. Los últimos datos visibles pueden estar desactualizados.';}
+  finally{statusBusy=false;}
+}
+function search(){clearTimeout(searchTimer);query=byId('library-query').value.trim();offset=0;void loadItems();}
+byId('library-search').addEventListener('submit',event=>{event.preventDefault();search();});
+byId('library-query').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(search,350);});
+byId('library-clear').addEventListener('click',()=>{byId('library-query').value='';search();byId('library-query').focus();});
+byId('library-previous').addEventListener('click',()=>{offset=Math.max(0,offset-limit);void loadItems();});
+byId('library-next').addEventListener('click',()=>{if(offset+limit<total){offset+=limit;void loadItems();}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){void loadStatus();void loadNotes();void loadTaxonomy();}});
+void loadItems();void loadStatus();void loadNotes();void loadTaxonomy();setInterval(loadStatus,30000);setInterval(loadNotes,60000);
+</script>
+</body>
+</html>

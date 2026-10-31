@@ -1,0 +1,123 @@
+{
+  "port": 8788,
+  "autonomousProgramming": true,
+  "repositoryDiscovery": true,
+  "discoveryIntervalMinutes": 10,
+  "maxQueuedSources": 3000,
+  "intervalSeconds": 15,
+  "refreshHours": 24,
+  "stepsPerDocument": 1500,
+  "parallelCandidates": 1,
+  "trainingBackend": "cpu",
+  "gpuPython": "python",
+  "gpuUpdates": 1200,
+  "gpuBatchSize": 512,
+  "maxDocuments": 1500,
+  "maxDocumentCharacters": 24000,
+  "sources": [
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/HTML",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/CSS",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/API/Fetch_API",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/API/Web_Audio_API",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/JavaScript/Guide/Introduction",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/JavaScript/Guide/Grammar_and_types",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/JavaScript/Guide/Control_flow_and_error_handling",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/JavaScript/Guide/Functions",
+      "role": "validation"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/JavaScript/Guide/Loops_and_iteration",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/API/Canvas_API/Tutorial",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/API/WebGL_API/Tutorial",
+      "role": "train"
+    },
+    {
+      "url": "https://developer.mozilla.org/es/docs/Web/API/Web_Workers_API/Using_web_workers",
+      "role": "train"
+    },
+    {
+      "url": "https://docs.python.org/es/3/tutorial/introduction.html",
+      "role": "train"
+    },
+    {
+      "url": "https://docs.python.org/es/3/tutorial/controlflow.html",
+      "role": "validation"
+    },
+    {
+      "url": "https://docs.python.org/es/3/tutorial/datastructures.html",
+      "role": "train"
+    },
+    {
+      "url": "https://docs.python.org/es/3/tutorial/errors.html",
+      "role": "train"
+    },
+    {
+      "url": "https://docs.python.org/3/tutorial/index.html",
+      "role": "train"
+    },
+    {
+      "url": "https://docs.godotengine.org/en/stable/getting_started/step_by_step/index.html",
+      "role": "train"
+    },
+    {
+      "url": "https://docs.godotengine.org/en/stable/tutorials/scripting/index.html",
+      "role": "train"
+    },
+    {
+      "url": "https://docs.unity3d.com/es/current/Manual/CreatingAndUsingScripts.html",
+      "role": "train"
+    },
+    {
+      "url": "https://docs.blender.org/manual/en/latest/",
+      "role": "train"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/dotnet/csharp/tour-of-csharp/",
+      "role": "train"
+    },
+    {
+      "url": "https://react.dev/learn",
+      "role": "train"
+    },
+    {
+      "url": "https://www.typescriptlang.org/docs/",
+      "role": "train"
+    },
+    {
+      "url": "https://threejs.org/manual/pages/creating-a-scene.html",
+      "role": "train"
+    },
+    {
+      "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-engine-for-new-users",
+      "role": "train"
+    }
+  ]
+}

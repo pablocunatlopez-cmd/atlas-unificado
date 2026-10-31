@@ -1,0 +1,94 @@
+.atlas-subpage{margin:0!important;padding:0!important;width:auto!important;max-width:none!important;min-height:100vh;background:#fff;color:#4e544a;font:12px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:light}
+.atlas-subpage *{box-sizing:border-box}
+.atlas-subpage .app-shell{min-height:100vh}
+.atlas-subpage .main-shell{min-width:0;flex:1;display:flex;flex-direction:column;background:#fff}
+.atlas-subpage .legacy-page-content{width:min(1120px,100%);max-width:1120px;margin:0 auto;padding:28px clamp(18px,4vw,48px) 58px;flex:1;overflow:auto;color:#6e756a}
+.atlas-subpage .legacy-page-content>main{width:100%;max-width:none;margin:0;padding:0}
+.atlas-subpage h1{margin:7px 0 12px;color:#353d30;font:clamp(34px,4.4vw,52px)/1.08 Georgia,"Times New Roman",serif;letter-spacing:-1.3px}
+.atlas-subpage h2{margin:0 0 10px;color:#59654f;font:21px/1.3 Georgia,"Times New Roman",serif}
+.atlas-subpage h3{color:#66735a;font:16px Georgia,"Times New Roman",serif}
+.atlas-subpage p,.atlas-subpage li{color:#777e71;font-size:11px;line-height:1.8}
+.atlas-subpage a{color:#687b55}
+.atlas-subpage .legacy-page-content>nav{display:flex;gap:9px;flex-wrap:wrap}
+.atlas-subpage section,.atlas-subpage article,.atlas-subpage .panel{margin:12px 0;padding:18px 20px;border:1px solid #e8ebe3;border-radius:10px;background:#fff;color:#687164;box-shadow:0 4px 18px #37432a08}
+.atlas-subpage section{border-top:1px solid #e8ebe3}
+.atlas-subpage .panel{background:#fff}
+.atlas-subpage input,.atlas-subpage textarea,.atlas-subpage select{width:100%;box-sizing:border-box;border:1px solid #dfe3d8;border-radius:7px;padding:10px 12px;background:#fff;color:#394034;font:12px/1.6 system-ui,sans-serif}
+.atlas-subpage input:focus,.atlas-subpage textarea:focus,.atlas-subpage select:focus{outline:2px solid #bdc9ae;outline-offset:1px}
+.atlas-subpage button{border:1px solid #dce2d4;border-radius:7px;background:#f7f8f4;color:#5d6d4d;padding:9px 13px;font:11px system-ui,sans-serif;cursor:pointer}
+.atlas-subpage button:hover{background:#eff3e8}.atlas-subpage button:disabled{opacity:.55;cursor:wait}
+.atlas-subpage .legacy-page-content>button,.atlas-subpage form button{background:#667c53;border-color:#667c53;color:#fff}
+.atlas-subpage pre{max-height:400px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #e8ebe3;border-radius:8px;background:#f8f9f6;color:#51594b;padding:13px;font:11px/1.7 ui-monospace,Consolas,monospace}
+.atlas-subpage details{margin:12px 0;padding:12px 14px;border:1px solid #e8ebe3;border-radius:8px;background:#fbfcf9;color:#687164;font-size:11px}
+.atlas-subpage summary{cursor:pointer;color:#657452;font-weight:600}
+.atlas-subpage #notice,.atlas-subpage #status,.atlas-subpage #error{color:#758265;font-size:11px}
+.atlas-subpage #error{color:#a95f4d}
+.atlas-subpage .grid{align-items:start}
+.atlas-subpage .sky{border:1px solid #e5e8e0;background:radial-gradient(ellipse at center,#314259,#182538 52%,#111c2b);box-shadow:inset 0 0 48px #080d15}
+.atlas-subpage .sky svg{display:block}
+.atlas-subpage .sidebar-page-title{margin:3px 12px 14px;padding:8px 10px;border-left:2px solid #95a581;color:#7c8574;font:12px Georgia,serif}
+.atlas-subpage .atlas-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid #dce2d6;border-radius:50%;color:#758466;font:27px Georgia,serif}
+@media(max-width:760px){.atlas-subpage .legacy-page-content{padding:22px 16px 48px}.atlas-subpage .grid{grid-template-columns:1fr}.atlas-subpage .sky{height:340px}.atlas-subpage section,.atlas-subpage article,.atlas-subpage .panel{padding:15px}}
+
+.atlas-subpage .capabilities-page{max-width:1080px;padding-top:34px;padding-bottom:64px;color:#65705e}
+.atlas-subpage .capabilities-page .page-kicker{display:flex;align-items:center;gap:7px;color:#8c967f;font-size:8px;font-weight:700;letter-spacing:1.35px}
+.atlas-subpage .capabilities-page .page-kicker span{color:#b18c59;font-size:13px}
+.atlas-subpage .capabilities-page h1{margin:9px 0 7px;font-size:clamp(31px,4vw,44px)}
+.atlas-subpage .capabilities-page .page-lead{max-width:660px;margin:0 0 20px;color:#848d7c;font-size:10px}
+.atlas-subpage .capability-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:18px 0 12px}
+.atlas-subpage .capability-summary .summary-card{display:flex;align-items:center;gap:11px;min-width:0;margin:0;padding:13px 14px;background:#fffefa;border:1px solid #e5e9df;border-radius:9px;box-shadow:0 3px 12px #37432a06}
+.atlas-subpage .summary-icon{display:grid;flex:none;width:30px;height:30px;place-items:center;color:#6d8157;background:#eff3e9;border:1px solid #e6ecdf;border-radius:9px;font-size:14px}
+.atlas-subpage .summary-card>div{display:grid;gap:2px;min-width:0}
+.atlas-subpage .summary-card small{color:#9aa190;font-size:7px;font-weight:700;letter-spacing:1px}
+.atlas-subpage .summary-card strong{overflow:hidden;color:#53614a;font-size:9px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+.atlas-subpage .summary-card span:last-child{color:#979e90;font-size:8px}
+.atlas-subpage .summary-card .is-offline{color:#a86e5d}
+.atlas-subpage .capabilities-page .capability-card{margin:10px 0;padding:20px 22px;background:#fffefa;border:1px solid #e5e9df;border-radius:11px;box-shadow:0 4px 18px #37432a07}
+.atlas-subpage .capabilities-page .section-heading{display:flex;align-items:center;gap:11px;margin-bottom:7px}
+.atlas-subpage .section-icon{display:grid;flex:none;width:32px;height:32px;place-items:center;color:#6e8258;background:#eef2e8;border:1px solid #e4eadc;border-radius:10px 10px 4px 10px;font-size:15px}
+.atlas-subpage .section-kicker{margin-bottom:2px;color:#98a08f;font-size:7px;font-weight:700;letter-spacing:1.05px}
+.atlas-subpage .capabilities-page h2{margin:0;color:#4c5a43;font-size:19px}
+.atlas-subpage .capabilities-page p{font-size:10px;line-height:1.75}
+.atlas-subpage .capabilities-page .memory-card{background:linear-gradient(115deg,#fffefa,#f4f7ef);}
+.atlas-subpage .memory-card #memory-summary{margin:7px 0 10px;color:#65705e;font-size:10px}
+.atlas-subpage .memory-detail{display:flex;align-items:flex-start;gap:8px;padding-top:9px;color:#8c9484;border-top:1px solid #e9ece5;font-size:9px;line-height:1.6}
+.atlas-subpage .memory-detail .status-dot{margin-top:4px}
+.atlas-subpage .memory-detail strong{color:#687a54}
+.atlas-subpage .memory-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.atlas-subpage .memory-transfer-note{display:block;margin-top:7px;color:#969d90;font-size:8px;line-height:1.6}
+.atlas-subpage .memory-transfer-status{min-height:14px;margin:5px 0 0;color:#667852;font-size:9px}
+.atlas-subpage .notice-card{display:grid;gap:4px;padding:10px 12px;margin:12px 0;background:#f5f6f0;border:1px solid #e8ebe3;border-radius:7px}
+.atlas-subpage .notice-card strong{color:#647353;font-size:9px}
+.atlas-subpage .notice-card span{color:#828b7b;font-size:9px;line-height:1.65}
+.atlas-subpage .connection-form{padding-top:12px;margin-top:12px;border-top:1px solid #eaede6}
+.atlas-subpage .connection-form label,.atlas-subpage .stack-form label{display:block;margin:8px 0 5px;color:#5b674f;font-size:9px;font-weight:650}
+.atlas-subpage .connection-form small{display:block;margin-top:6px;color:#959c8e;font-size:8px}
+.atlas-subpage .key-row{display:flex;gap:8px;align-items:center}
+.atlas-subpage .key-row input{min-width:0;margin:0}
+.atlas-subpage .key-row button{flex:none;min-height:38px}
+.atlas-subpage .account-link{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:9px;font-weight:600}
+.atlas-subpage .capability-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+.atlas-subpage .capabilities-page .capability-grid .capability-card{min-width:0;height:100%;margin:0}
+.atlas-subpage .stack-form textarea{min-height:76px;margin:0 0 8px;resize:vertical}
+.atlas-subpage .stack-form textarea.code-input{min-height:54px;font:10px/1.6 ui-monospace,Consolas,monospace}
+.atlas-subpage .stack-form select{margin:0 0 8px}
+.atlas-subpage .stack-form label span{color:#969e90;font-weight:400}
+.atlas-subpage .stack-form .form-note{margin:3px 0 9px;color:#9aa091;font-size:8px}
+.atlas-subpage .stack-form button{min-height:34px}
+.atlas-subpage .capabilities-page .result-panel{min-height:32px;margin:10px 0 0;padding:10px;background:#f7f8f4;border:1px solid #e8ebe3;border-radius:7px;color:#58634f;font-size:9px}
+.atlas-subpage .capabilities-page .result-panel:empty{display:none}
+.atlas-subpage .capabilities-page details{padding:10px 11px;margin:12px 0 0}
+.atlas-subpage .capabilities-page details .result-panel{max-height:300px}
+.atlas-subpage .page-status{min-height:17px;margin:8px 0;color:#667852;font-size:9px}
+.atlas-subpage .page-footnote{padding-top:10px;margin:0;color:#9aa191;border-top:1px solid #e5e9e0;font-size:8px}
+@media(max-width:1200px){.atlas-subpage .capability-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){
+ .atlas-subpage .capability-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .atlas-subpage .capabilities-page{padding-top:22px}
+ .atlas-subpage .capability-summary{grid-template-columns:1fr;gap:6px}
+ .atlas-subpage .capability-summary .summary-card{padding:10px 12px}
+ .atlas-subpage .capability-grid{grid-template-columns:1fr}
+ .atlas-subpage .capabilities-page .capability-card{padding:15px}
+}
+@media(max-width:520px){.atlas-subpage .capability-summary{grid-template-columns:1fr}}
+@media(max-width:430px){.atlas-subpage .key-row{align-items:stretch;flex-direction:column}.atlas-subpage .key-row input,.atlas-subpage .key-row button{width:100%}}

@@ -1,0 +1,16 @@
+node_modules/
+continuous/data/
+continuous/config.json
+continuous/studio/vendor/
+**/models/
+**/runtime_data/
+**/evidence/
+**/memory/*.sqlite*
+**/__pycache__/
+**/.venv*/
+*.key
+*.log
+.env
+.env.*
+!.env.example
+verification/

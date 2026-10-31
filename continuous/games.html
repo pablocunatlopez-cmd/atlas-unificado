@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f5ef">
+  <title>Atlas · Biblioteca visual</title>
+  <style>
+    .games-page{max-width:1200px;margin:auto;padding:40px 24px 72px;color:#27382e;font-family:inherit}
+    .games-page h1{font-size:clamp(32px,5vw,52px);letter-spacing:-.045em;line-height:1.05;margin:18px 0}
+    .games-page .games-lead{font-size:17px;line-height:1.6;max-width:800px;color:#536356}
+    .games-page .games-nav,.games-page .games-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .games-page a{color:#365b35;text-underline-offset:3px}
+    .games-page .games-kicker{font-size:12px;letter-spacing:.12em;color:#62715e;text-transform:uppercase}
+    .games-page .games-note{border:1px solid #d7ddcf;background:#eef1e7;padding:18px 20px;border-radius:16px;line-height:1.6;margin:24px 0}
+    .games-page .games-controls{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end;margin:26px 0 14px}
+    .games-page label{display:block;font-weight:600;margin-bottom:7px;font-size:14px}
+    .games-page input{box-sizing:border-box;width:100%;border:1px solid #cbd3c3;border-radius:12px;background:#fffef8;color:#27382e;padding:13px 15px;font:inherit}
+    .games-page button,.games-page .games-button{border:1px solid #c7d1bb;border-radius:12px;padding:12px 16px;background:#e5ebdc;color:#30472e;font:inherit;cursor:pointer;text-decoration:none;display:inline-block}
+    .games-page button:disabled{opacity:.6;cursor:wait}
+    .games-page :is(button,a,input):focus-visible{outline:3px solid #738750;outline-offset:3px}
+    .games-page .games-status{font-size:14px;line-height:1.6;color:#596857;min-height:24px}
+    .games-page .games-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px;margin-top:24px}
+    .games-page .game-card{min-width:0;padding:22px;border:1px solid #d9dfd2;border-radius:20px;background:#fffef9;box-shadow:0 4px 24px #283b2110}
+    .games-page .game-card h2{font-size:19px;line-height:1.35;overflow-wrap:anywhere;margin:0 0 12px}
+    .games-page .game-card p{font-size:14px;line-height:1.6;color:#5f6c59}
+    .games-page .game-counts{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#6e7b64}
+    .games-page .game-media{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
+    .games-page figure{margin:0;min-width:0}
+    .games-page figure img{display:block;width:100%;height:128px;object-fit:contain;border-radius:10px;background:#ecefe6;border:1px solid #dce2d5}
+    .games-page figcaption{font-size:11px;line-height:1.4;margin-top:5px;overflow-wrap:anywhere;color:#687560}
+    .games-page .game-unavailable{padding:24px 12px;text-align:center;border:1px dashed #cbd4c2;border-radius:12px;font-size:13px}
+    .games-page .games-empty{grid-column:1/-1;padding:24px;border:1px dashed #cbd4c2;border-radius:16px}
+    .games-page .games-meta{font-size:12px;line-height:1.6;color:#64725f}
+    .games-page .games-actions{margin-top:18px;font-size:14px}
+    @media(max-width:600px){.games-page{padding:26px 16px 48px}.games-page .games-controls{grid-template-columns:1fr}.games-page .game-card{padding:18px}}
+  </style>
+</head>
+<body>
+  <main class="games-page">
+    <nav class="games-nav" aria-label="Atlas"><a href="/chat/">← Hablar con Atlas</a><a href="/capabilities/">Capacidades</a></nav>
+    <p class="games-kicker">◈ ION · REFERENCIAS DEL ORDENADOR</p>
+    <h1>Biblioteca visual</h1>
+    <p class="games-lead">Los juegos de tu PC como punto de partida para estudiar iluminación, materiales, composición y rendimiento. Atlas conserva el inventario y puede ayudarte a investigar las técnicas detrás de cada título.</p>
+    <div class="games-note"><strong>Qué contiene esta biblioteca</strong><br>Se han buscado nombres y archivos de imagen o vídeo accesibles. Una imagen puede ser un logotipo o una pantalla de inicio: no demuestra cómo se ve el juego en funcionamiento. Mostrarla aquí no significa que Qwen la haya analizado ni que sus pesos hayan aprendido de ella.</div>
+    <div class="games-controls">
+      <div><label for="game-filter">Buscar en tu biblioteca</label><input id="game-filter" type="search" placeholder="Título del juego" autocomplete="off"></div>
+      <button id="game-refresh" type="button">Actualizar inventario</button>
+    </div>
+    <div><label for="game-question">Qué quieres estudiar de estas referencias</label><input id="game-question" maxlength="600" placeholder="Por ejemplo: cómo conseguir una iluminación similar con un presupuesto pequeño"></div>
+    <p id="games-status" class="games-status" role="status" aria-live="polite">Consultando la biblioteca…</p>
+    <p id="games-meta" class="games-meta"></p>
+    <div id="games-grid" class="games-grid" aria-label="Juegos encontrados"></div>
+  </main>
+  <script>
+    const token='__TOKEN__';
+    const byId=id=>document.getElementById(id);
+    let catalog=null;
+    function element(tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;}
+    function chatLink(game){const params=new URLSearchParams({game:game.name});const question=byId('game-question').value.trim();if(question)params.set('question',question);return '/chat/?'+params;}
+    function render(){
+      const grid=byId('games-grid');grid.replaceChildren();
+      const games=Array.isArray(catalog?.games)?catalog.games:[];
+      const filter=byId('game-filter').value.trim().toLocaleLowerCase();
+      const selected=games.filter(game=>String(game.name).toLocaleLowerCase().includes(filter));
+      for(const game of selected){
+        const card=element('article','game-card');card.append(element('h2','',String(game.name)));
+        const images=Array.isArray(game.images)?game.images.filter(x=>typeof x==='string'):[];
+        const videos=Array.isArray(game.videos)?game.videos:[];
+        card.append(element('div','game-counts',`${images.length} imagen(es) · ${videos.length} vídeo(s)`));
+        if(images.length){
+          const media=element('div','game-media');
+          for(const file of images){const figure=element('figure');const link=element('a');link.href='/games/media?path='+encodeURIComponent(file);link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Abrir '+file.split(/[\\/]/).at(-1));
+            const image=element('img');image.loading='lazy';image.decoding='async';image.src=link.href;image.alt='Archivo local: '+file.split(/[\\/]/).at(-1);
+            image.addEventListener('error',()=>{const failure=element('div','game-unavailable','Imagen no disponible');link.replaceWith(failure);},{once:true});link.append(image);figure.append(link,element('figcaption','',file.split(/[\\/]/).at(-1)));media.append(figure);}
+          card.append(media);
+        }else card.append(element('p','game-unavailable','Sin imágenes visibles en los archivos revisados. Esto no describe la calidad gráfica del juego.'));
+        card.append(element('p','',`${Number(game.filesScanned)||0} entradas revisadas.${game.limited?' Exploración parcial por límite de lectura.':''}`));
+        if(game.fileKinds)card.append(element('p','games-meta',`${game.fileKinds.archives||0} archivo(s) comprimido(s) · ${game.fileKinds.gamePackages||0} paquete(s) de juego · ${game.fileKinds.executables||0} ejecutable(s). Solo inventariados.`));
+        for(const note of game.visualReferences||[]){const details=element('details');details.append(element('summary','','Referencia anotada · '+note.kind),element('p','',note.observations),element('p','','Aplicación propuesta: '+note.application),element('p','games-meta',note.observedBy+' · '+note.date+'. '+note.limits));card.append(details);}
+        if(videos.length)card.append(element('p','','Vídeos encontrados: '+videos.map(v=>String(v).split(/[\\/]/).at(-1)).join(', ')+'. Aún no se han analizado.'));
+        const actions=element('div','games-actions');const chat=element('a','games-button','Estudiar con Atlas');chat.href=chatLink(game);chat.dataset.game=game.name;
+        const google=element('a','','Buscar técnicas en Google ↗');google.href='https://www.google.com/search?q='+encodeURIComponent(game.name+' graphics rendering developer');google.target='_blank';google.rel='noopener noreferrer';
+        actions.append(chat,google);card.append(actions,element('p','games-meta','Google abre una búsqueda en tu navegador. Este enlace no acredita que Atlas haya leído sus resultados.'));grid.append(card);
+      }
+      if(!selected.length)grid.append(element('p','games-empty',games.length?'No hay títulos que coincidan con el filtro.':'No se encontraron juegos en el catálogo disponible.'));
+      const partial=catalog?.limited||games.some(g=>g.limited)||catalog?.errors?.length;
+      byId('games-status').textContent=`${games.length} carpeta(s) de juegos · ${selected.length} visible(s). ${partial?'Inventario parcial: hay límites de lectura o carpetas que no se pudieron consultar.':'Exploración acotada a las carpetas y profundidades configuradas; no es un análisis completo de los juegos.'}`;
+      byId('games-meta').textContent=(catalog?.root?'Origen: '+catalog.root+'. ':'')+(catalog?.at?'Actualizado: '+new Date(catalog.at).toLocaleString()+'. ':'')+(catalog?.error?'Error: '+catalog.error:'');
+    }
+    async function load(){const response=await fetch('/games/catalog',{cache:'no-store'});if(!response.ok)throw Error('No se pudo consultar la biblioteca ('+response.status+').');catalog=await response.json();render();}
+    byId('game-filter').addEventListener('input',render);
+    byId('game-question').addEventListener('input',()=>{document.querySelectorAll('a[data-game]').forEach(link=>{link.href=chatLink({name:link.dataset.game});});});
+    byId('game-refresh').addEventListener('click',async()=>{const button=byId('game-refresh');button.disabled=true;byId('games-status').textContent='Revisando nombres y archivos accesibles…';try{const response=await fetch('/games/refresh',{method:'POST',headers:{'X-Atlas-Token':token}});if(!response.ok)throw Error('No se pudo actualizar el inventario ('+response.status+').');await load();}catch(error){byId('games-status').textContent=error.message;}finally{button.disabled=false;}});
+    load().catch(error=>{byId('games-status').textContent=error.message;});
+  </script>
+</body>
+</html>

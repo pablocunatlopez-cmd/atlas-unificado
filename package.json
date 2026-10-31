@@ -1,0 +1,19 @@
+{
+  "name": "atlas-source",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Atlas local AI coordinator and source-only experimental components",
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "scripts": {
+    "setup": "node scripts/setup-local.mjs",
+    "start": "node continuous/service.mjs",
+    "test": "node scripts/test-source.mjs"
+  },
+  "dependencies": {
+    "quickjs-emscripten": "0.32.0",
+    "three": "0.186.1"
+  }
+}

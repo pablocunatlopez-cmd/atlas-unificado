@@ -1,0 +1,52 @@
+[
+  {
+    "id": "atlas-native",
+    "title": "Qué es el núcleo propio de Atlas",
+    "date": "2026-10-19",
+    "kind": "Especificación de esta versión",
+    "text": "Atlas Core es un programa propio de búsqueda documental, memoria versionada, cálculo aritmético y encadenamiento de reglas. No llama a un modelo externo. Atlas LM-0.1 es un modelo neuronal pequeño que predice el siguiente carácter a partir de ocho caracteres. Sus pesos se inicializan al azar y se entrenan con descenso de gradiente. No usa pesos preentrenados. El chat utiliza los resultados de herramientas explícitas; la generación del modelo pequeño queda en un laboratorio porque no tiene fiabilidad para aconsejar. No se ha demostrado equivalencia con Grok, Claude ni Sol."
+  },
+  {
+    "id": "atlas-learning",
+    "title": "Qué cuenta como aprendizaje",
+    "date": "2026-10-19",
+    "kind": "Método Atlas",
+    "text": "Guardar una memoria añade un dato recuperable. Entrenar Atlas LM cambia sus pesos numéricos mediante ejemplos de texto. Son dos operaciones diferentes. La pérdida de validación mide predicción de caracteres en una reserva que no se utiliza como ejemplo de entrenamiento. Usar esa reserva repetidamente para escoger un checkpoint limita su independencia; no sustituye una prueba externa ni demuestra inteligencia general. Un candidato solo se conserva si mejora la pérdida local de validación. El checkpoint anterior permite volver atrás."
+  },
+  {
+    "id": "atlas-autonomy",
+    "title": "Alcance de la autonomía",
+    "date": "2026-10-19",
+    "kind": "Contrato operativo",
+    "text": "Una misión de Atlas elige entre recuperar conocimiento, calcular, deducir consecuencias de reglas y ejecutar pruebas internas. Guarda las operaciones y sus resultados. No envía mensajes, no compra ni invierte, no se concede permisos, no instala extensiones y no modifica el código desplegado por sí mismo. El entrenamiento se ejecuta en un trabajador del navegador mientras está abierta la pantalla Núcleo propio. Si se cierra o se cambia de pantalla, ese entrenamiento se detiene. No existe en esta versión un proceso que siga aprendiendo en segundo plano con el sitio cerrado."
+  },
+  {
+    "id": "atlas-mandate",
+    "title": "Mandato de automejora del 16 de octubre",
+    "date": "2026-10-16",
+    "kind": "Resumen del mandato guardado",
+    "text": "Atlas debe investigar sus propias carencias y elegir mejoras con evidencia. El ciclo observar, comprender, conectar, aplicar, refutar y aprender también se aplica a su implementación. Requisito no equivale a implementación; código no equivale a ejecución; pruebas verdes no equivalen a validez general; nombrar una herramienta no demuestra que esté disponible. No cambiar el juez para aprobar al candidato ni borrar la memoria negativa. Autoprogramar una implementación y entrenar pesos son operaciones distintas. Este resumen no modifica la numeración Q ni afirma haber incorporado ciclos posteriores a la instantánea histórica del sitio."
+  },
+  {
+    "id": "atlas-spiral-direction",
+    "title": "Atlas sigue la Espiral Unificada original",
+    "date": "2026-10-19",
+    "kind": "Dirección confirmada por Pablo",
+    "text": "El programa debe seguir el rumbo de la conversación Atlas Espiral Unificado: observar, comprender, conectar, aplicar, refutar y aprender. El entrenamiento de un modelo pequeño es una herramienta dentro de ese método. La continuidad documental recuperada está en Q593 completada y Q594 abierta, según el informe del 17 de octubre de 2026. El programa conserva ciclos locales C que no modifican la numeración histórica Q ni completan el experimento pendiente. El bucle local registra evidencia y errores nuevos y se pausa si no hay novedad. No se ha habilitado una sincronización automática con la conversación original."
+  },
+  {
+    "id": "atlas-studio",
+    "title": "Atlas Studio · capacidades creativas implementadas",
+    "date": "2026-10-19",
+    "kind": "Registro de implementación",
+    "text": "Atlas Studio es un compilador procedural propio con proyectos privados y revisiones anteriores conservadas. Produce aplicaciones iniciales HTML, CSS y JavaScript: tareas, calculadora, notas y landing. El motor WebGL 2 propio renderiza geometría de esferas y cajas con materiales PBR, iluminación, sombras, reflejos y acumulación progresiva. Las escenas se exportan como PNG, glTF o HTML autocontenido. Los juegos de conducción y exploración incluyen movimiento, objetivos, pausa y reinicio. El usuario puede editar el código y ejecutarlo en una vista aislada. No hay modelos externos conectados, generación por difusión, personajes orgánicos generados desde texto ni capacidad de programación general o producción hiperrealista AAA demostrada. Las pruebas del generador, el runtime y el guardado son distintas de una revisión visual en navegador."
+  },
+  {
+    "id": "atlas-public-learning-2026-10-20",
+    "title": "Internet y aprendizaje · implementación de Atlas Core 0.3",
+    "text": "Atlas Core 0.3 consulta fuentes públicas sin modelos externos. Busca en Wikipedia ES/EN, Crossref y GitHub técnico; el lector HTTPS admite un catálogo de dominios de documentación y fuentes públicas. La agenda guarda extractos y huellas, intercala preguntas de contraste, conserva fallos y solo cuenta novedad. Puede promover un perfil predefinido de recuperación si mejora un banco sintético separado de los casos de selección, sin perder controles. El alcance es memoria y recuperación léxica; no aprendizaje general, edición autónoma de código ni entrenamiento neuronal en segundo plano. La página Q594 histórica sigue separada de esta agenda. Los registros anteriores se conservan como estados de versiones pasadas.",
+    "date": "2026-10-20",
+    "kind": "Capacidad implementada",
+    "url": "#research"
+  }
+]

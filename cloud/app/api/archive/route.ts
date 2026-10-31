@@ -1,0 +1,3 @@
+import {documents,excerpts} from "@/lib/archive";import {getChatGPTUser} from "@/app/chatgpt-auth";import {privateHeaders} from "@/lib/server-state";
+export async function GET(request:Request){if(!await getChatGPTUser())return Response.json({error:"Sesión requerida."},{status:401});const url=new URL(request.url);const id=url.searchParams.get("id");const q=url.searchParams.get("q")?.slice(0,240);if(id){const doc=documents.find(d=>d.id===id);return doc?Response.json({document:doc},{headers:privateHeaders}):Response.json({error:"Documento no disponible."},{status:404});}return Response.json({documents:documents.map(({text,...d})=>({...d,characters:text.length,summary:text.slice(0,450)})),matches:q?excerpts(q,8):[]},{headers:privateHeaders});}
+

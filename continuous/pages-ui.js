@@ -1,0 +1,15 @@
+(() => {
+ const current=location.pathname.replace(/\/$/,'')||'/',title=(document.title.split('·').at(-1)||'Atlas').trim();
+ const navItems=[['/chat/','Conversar','◌'],['/','Internet y aprendizaje','◎'],['/project/','Proyecto unificado','△'],['/library/','Biblioteca de código','⌘'],['/constellation/','Constelación','✳'],['/capabilities/','Conexiones y herramientas','⌘'],['/research/','Memoria de refutación','↗'],['/studio/','Taller 3D','◇']];
+ const make=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;};
+ const shell=make('div','app-shell'),sidebar=make('aside','sidebar'),brand=document.createElement('a');brand.className='brand';brand.href='/';
+ const mark=make('span','atlas-mark','◎'),copy=make('span','brand-copy','atlas');copy.append(make('small',null,'Una perspectiva, con memoria.'));brand.append(mark,copy);
+ const navLabel=make('div','sidebar-label','TU ESPACIO'),nav=make('nav','primary-nav');nav.setAttribute('aria-label','Navegación principal');
+ for(const [href,label,icon] of navItems){const a=make('a','nav-link',label),symbol=make('span','nav-icon',icon);a.href=href;if(current===href.replace(/\/$/,'')||current==='/'&&href==='/'){a.classList.add('active');a.setAttribute('aria-current','page');}a.prepend(symbol);nav.append(a);}
+ const lower=make('div','sidebar-lower'),note=make('div','integrity-note'),noteIcon=make('span','note-icon','✓'),noteText=make('span',null,'La honestidad es el método');noteText.append(make('small',null,'Hechos, hipótesis y límites a la vista'));note.append(noteIcon,noteText);
+ const local=make('div','local-card'),dot=make('span','status-dot online'),localText=make('span',null,'Atlas en tu PC');localText.append(make('small',null,'Modelo local · CUDA'));local.append(dot,localText);lower.append(note,local);
+ const label=make('div','sidebar-label','PÁGINA ACTUAL'),backdrop=make('div','sidebar-backdrop'),main=make('main','main-shell'),top=make('header','topbar');
+ const menu=make('button','icon-button mobile-menu','☰');menu.type='button';menu.setAttribute('aria-label','Abrir navegación');const crumbs=make('div','breadcrumb');crumbs.append(make('span',null,'Atlas'),make('span','crumb-separator','/'),make('strong',null,title));const right=make('div','topbar-right'),chatLink=make('a','top-link','Ir al chat ↗');chatLink.href='/chat/';right.append(chatLink);top.append(menu,crumbs,right);
+ const content=make('div','legacy-page-content');while(document.body.firstChild)content.append(document.body.firstChild);main.append(top,content);sidebar.append(brand,navLabel,nav,label,make('div','sidebar-page-title',title),lower);shell.append(sidebar,backdrop,main);document.body.replaceChildren(shell);document.body.classList.add('atlas-subpage');
+ menu.addEventListener('click',()=>{sidebar.classList.add('open');backdrop.classList.add('open');});backdrop.addEventListener('click',()=>{sidebar.classList.remove('open');backdrop.classList.remove('open');});
+})();

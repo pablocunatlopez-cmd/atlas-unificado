@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070d14">
+  <meta name="atlas-token" content="__TOKEN__">
+  <title>Atlas · Conversar</title>
+  <link rel="stylesheet" href="/chat/ui.css">
+  <link rel="stylesheet" href="/atlas-theme.css">
+  <script src="/chat/ui.js" type="module"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/" aria-label="Atlas, inicio">
+        <svg class="atlas-eye" width="42" height="42" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+          <circle cx="120" cy="120" r="112" stroke="currentColor" stroke-width="1" opacity=".18"/>
+          <circle cx="120" cy="120" r="95" stroke="currentColor" stroke-width=".8" opacity=".22"/>
+          <circle cx="120" cy="120" r="77" stroke="currentColor" stroke-width=".8" opacity=".25"/>
+          <path d="M120 51 180 156H60L120 51Z" stroke="currentColor" stroke-width="1.5" opacity=".6"/>
+          <path d="M78 118q42-45 84 0-42 45-84 0Z" fill="currentColor" fill-opacity=".07" stroke="currentColor" stroke-width="2"/>
+          <circle cx="120" cy="118" r="14" fill="currentColor"/><circle cx="124" cy="113" r="3.5" fill="#f8f5ef"/>
+          <circle cx="120" cy="51" r="4" fill="currentColor"/><circle cx="180" cy="156" r="4" fill="currentColor"/><circle cx="60" cy="156" r="4" fill="currentColor"/>
+        </svg>
+        <span class="brand-copy">atlas<small>Una perspectiva, con memoria.</small></span>
+      </a>
+
+      <button id="new-chat" class="new-conversation" type="button"><span class="plus-icon">＋</span><span>Nueva conversación</span><span class="shortcut">↗</span></button>
+      <div class="sidebar-label">TU ESPACIO</div>
+      <nav class="primary-nav" aria-label="Navegación principal">
+        <a class="nav-link active" href="/chat/" aria-current="page"><span class="nav-icon">◌</span>Conversar</a>
+        <a class="nav-link" href="/"><span class="nav-icon">◎</span>Internet y aprendizaje</a>
+        <a class="nav-link" href="/constellation/"><span class="nav-icon">✳</span>Constelación</a>
+        <a class="nav-link" href="/library/"><span class="nav-icon">⌘</span>Biblioteca de código</a>
+        <a class="nav-link" href="/project/"><span class="nav-icon">△</span>Proyecto unificado</a>
+        <a class="nav-link" href="/capabilities/"><span class="nav-icon">⌘</span>Crear herramientas</a>
+        <a class="nav-link" href="/research/"><span class="nav-icon">↗</span>Memoria de refutación</a>
+        <a class="nav-link" href="/studio/"><span class="nav-icon">◇</span>Taller 3D</a>
+      </nav>
+
+      <section class="conversation-section" aria-label="Conversaciones guardadas en este navegador">
+        <div class="conversation-heading"><span>CONVERSACIONES</span><span class="local-only">EN ESTE PC</span></div>
+        <label class="conversation-search-wrap">
+          <span aria-hidden="true">⌕</span>
+          <input id="conversation-search" type="search" autocomplete="off" placeholder="Buscar en tus conversaciones" aria-label="Buscar conversaciones guardadas">
+        </label>
+        <div id="conversation-list" class="conversation-list" role="list"></div>
+        <p id="conversation-empty" class="conversation-empty">Tus conversaciones aparecerán aquí.</p>
+        <p id="conversation-overflow" class="conversation-overflow" aria-live="polite"></p>
+      </section>
+
+      <div class="sidebar-lower">
+        <div class="integrity-note"><span class="note-icon">✓</span><span>La honestidad es el método<small>Hechos, hipótesis y límites a la vista</small></span></div>
+        <div class="local-card"><span class="status-dot" id="local-dot"></span><span><strong id="local-state">Conectando con Atlas</strong><small id="local-model">Motor local</small></span></div>
+        <a class="connection-link" href="/capabilities/">Conexiones y herramientas <span>↗</span></a>
+        <a class="connection-link" href="/games/">Biblioteca de videojuegos <span>↗</span></a>
+      </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <main class="main-shell">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" id="menu-toggle" type="button" aria-label="Abrir navegación">☰</button>
+        <div class="breadcrumb"><span>Atlas</span><span class="crumb-separator">/</span><strong>Conversar</strong></div>
+        <div class="topbar-right">
+          <span class="engine-pill"><span class="status-dot" id="top-dot"></span><span id="top-engine">Atlas local</span></span>
+          <a class="top-link" href="/constellation/">Constelación <span>✳</span></a>
+        </div>
+      </header>
+
+      <section class="chat-layout">
+        <div class="chat-content">
+          <div class="chat-heading">
+            <div class="eyebrow"><span>✳</span> ATLAS · ESPACIO PERSONAL</div>
+            <h1 id="thread-title">¿Qué exploramos hoy?</h1>
+            <p>Conversación local, memoria a tu alcance y herramientas que tú eliges.</p>
+            <aside class="atlas-pulse" aria-label="Actividad local de Atlas">
+              <span class="pulse-glyph" aria-hidden="true">△</span>
+              <div class="pulse-copy"><span class="pulse-kicker">ATLAS / CONSTELACIÓN / ION</span><span class="pulse-main pulse-live" id="atlas-pulse-state">Consultando la actividad autónoma…</span><span class="pulse-detail" id="atlas-pulse-detail">Esperando datos del coordinador.</span></div>
+              <a class="pulse-link" href="/library/">Biblioteca ↗</a>
+            </aside>
+          </div>
+
+          <div class="welcome" id="welcome">
+            <div class="welcome-copy">
+              <div class="welcome-mark" aria-hidden="true">
+                <svg class="welcome-eye" viewBox="0 0 240 240" fill="none">
+                  <circle cx="120" cy="120" r="112" stroke="currentColor" stroke-width="1" opacity=".18"/>
+                  <circle cx="120" cy="120" r="95" stroke="currentColor" stroke-width=".8" opacity=".22"/>
+                  <path d="M120 51 180 156H60L120 51Z" stroke="currentColor" stroke-width="1.5" opacity=".55"/>
+                  <path d="M78 118q42-45 84 0-42 45-84 0Z" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="120" cy="118" r="14" fill="currentColor"/><circle cx="124" cy="113" r="3.5" fill="#fff"/>
+                  <circle cx="120" cy="51" r="4" fill="currentColor"/><circle cx="180" cy="156" r="4" fill="currentColor"/><circle cx="60" cy="156" r="4" fill="currentColor"/>
+                </svg>
+              </div>
+              <div class="welcome-kicker"><span class="status-dot online"></span> QWEN EN TU PC <i>·</i> RTX CUDA</div>
+              <h2>Una perspectiva, con memoria.</h2>
+              <p>Explora una idea, construye algo o pon a prueba una hipótesis. Empieza por aquí:</p>
+            </div>
+            <div class="prompt-grid">
+              <button class="prompt-card" type="button" data-prompt="/prototipo Un juego de exploración urbana con una misión que pueda ganar o perder"><span class="prompt-symbol">◇</span><span><strong>Crear un prototipo</strong><small>Un juego local que puedes abrir y probar</small></span><span class="prompt-arrow">↗</span></button>
+              <button class="prompt-card" type="button" data-prompt="Investiga este tema, separa los hechos de las hipótesis y señala qué fuentes habría que comprobar. Si quieres buscar en la web, activa Internet antes de enviarlo."><span class="prompt-symbol">◎</span><span><strong>Investigar una idea</strong><small>Fuentes, contexto y dudas abiertas</small></span><span class="prompt-arrow">↗</span></button>
+              <button class="prompt-card" type="button" data-prompt="Ayúdame a programar esto. Empieza por el objetivo, propón una solución completa y explícame qué comprobaciones faltan:"><span class="prompt-symbol">⌘</span><span><strong>Crear con código</strong><small>Plan, implementación y límites claros</small></span><span class="prompt-arrow">↗</span></button>
+              <button class="prompt-card" type="button" data-prompt="Refuta esta idea: busca supuestos ocultos, casos límite y el contraejemplo más fuerte. Distingue una crítica de una prueba:"><span class="prompt-symbol">↗</span><span><strong>Contrastar una hipótesis</strong><small>Supuestos y contraejemplos</small></span><span class="prompt-arrow">↗</span></button>
+            </div>
+            <div class="welcome-foot"><span>01 <b>Conversar</b></span><span>02 <b>Contrastar</b></span><span>03 <b>Construir</b></span></div>
+          </div>
+
+          <div class="messages" id="history" role="log" aria-live="polite" aria-relevant="additions text"></div>
+        </div>
+
+        <footer class="chat-footer">
+          <div id="file-list" class="file-list" aria-live="polite"></div>
+          <form id="chat-form" class="composer">
+            <textarea id="message" maxlength="6000" rows="1" required aria-label="Mensaje para Atlas" placeholder="Pregunta lo que quieras o cuéntale qué quieres crear…"></textarea>
+            <div class="composer-toolbar">
+              <div class="toolbar-left">
+                <input id="file-input" type="file" hidden multiple accept=".txt,.md,.markdown,.json,.js,.mjs,.ts,.tsx,.jsx,.py,.html,.htm,.css,.scss,.xml,.yaml,.yml,.toml,.sql,.csv,.log,.cs,.c,.cpp,.h,.hpp,.java,.rs,.go,.sh,.ps1,.ipynb">
+        <button class="icon-button attach-button" id="attach-button" type="button" aria-label="Adjuntar archivos de texto o código" title="Leer archivos localmente">＋</button>
+                <span class="toolbar-divider"></span>
+                <button class="tool-chip" type="button" data-toggle="memory" aria-pressed="true" title="Busca recuerdos relacionados en el archivo local de hasta 1000 conversaciones."><span>◉</span> Memoria</button>
+                <button class="tool-chip" type="button" data-toggle="internet" aria-pressed="false" title="Lee URLs HTTPS públicas y busca fuentes mediante Google o DuckDuckGo cuando están disponibles. Los extractos de búsqueda se distinguen de páginas leídas."><span>◎</span> Internet</button>
+                <button class="tool-chip" type="button" data-toggle="review" aria-pressed="false" title="Solicitar una segunda pasada. Código, investigación y videojuegos se revisan automáticamente."><span>↗</span> Refutar</button>
+                <button class="tool-chip" type="button" data-toggle="external" aria-pressed="false"><span>✳</span> Mesa de estrellas</button>
+                <button class="tool-chip" type="button" data-toggle="tools" aria-pressed="true" title="Atlas selecciona automáticamente una función local aprobada cuando puede resolver tu petición. Se ejecuta aislada, sin archivos ni red."><span>⌘</span> Herramientas</button>
+                <input id="memory" type="checkbox" checked hidden>
+                <input id="internet" type="checkbox" hidden>
+                <input id="review" type="checkbox" hidden>
+                <input id="external" type="checkbox" hidden>
+                <input id="tools" type="checkbox" checked hidden>
+              </div>
+              <button class="stop-button" id="stop" type="button" hidden aria-label="Detener respuesta" title="Detener respuesta">■ <span>Detener</span></button>
+              <button class="send-button" id="send" type="submit" aria-label="Enviar mensaje" title="Enviar mensaje">↑</button>
+            </div>
+          </form>
+          <div class="composer-foot">
+            <span id="memory-info">El historial se guarda en este navegador.</span>
+            <span class="external-note"><span id="external-info">La mesa de estrellas está apagada.</span> <a id="external-settings" href="/capabilities/" hidden>Conectar</a></span>
+          </div>
+          <p class="status-line" id="status" role="status">Comprobando el motor local…</p>
+        </footer>
+      </section>
+    </main>
+  </div>
+  <script type="module">
+    const pulseState=document.getElementById('atlas-pulse-state'),pulseDetail=document.getElementById('atlas-pulse-detail');
+    const pulseNumber=value=>typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('es-ES'):'—';
+    const pulseDate=value=>{if(!value)return null;const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):null;};
+    let pulseBusy=false;
+    async function readPulse(url){const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!response.ok)throw Error('Estado no disponible');return response.json();}
+    async function updatePulse(){
+      if(pulseBusy||document.hidden)return;pulseBusy=true;
+      try{
+        const [capabilities,library]=await Promise.allSettled([readPulse('/capabilities/status'),readPulse('/library/status')]);
+        const detail=[];
+        if(capabilities.status==='fulfilled'){
+          const data=capabilities.value,review=data.autonomousReview;
+          if(review){pulseState.textContent=review.paused?'Auditoría en pausa':review.running?'Auditoría local en curso':review.enabled===false?'Auditoría desactivada':'Auditoría periódica habilitada';detail.push(pulseNumber(review.reports)+' informes guardados');const next=pulseDate(review.nextRun);if(next&&!review.running&&!review.paused)detail.push('próxima: '+next);if(review.lastError){detail.push('última revisión con incidencia');pulseState.dataset.state='error';}else pulseState.dataset.state='ok';}
+          else{pulseState.textContent='Actividad autónoma no informada';pulseState.dataset.state='error';}
+        }else{pulseState.textContent='No se puede comprobar la actividad';pulseState.dataset.state='error';}
+        if(library.status==='fulfilled'){const counts=library.value.counts||{};detail.push(pulseNumber(counts.repositories)+' repositorios · '+pulseNumber(counts.metadataVerified)+' metadatos contrastados');}
+        else detail.push('biblioteca sin respuesta');
+        pulseDetail.textContent=detail.join(' · ');
+      }finally{pulseBusy=false;}
+    }
+    void updatePulse();setInterval(updatePulse,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)void updatePulse();});
+  </script>
+</body>
+</html>

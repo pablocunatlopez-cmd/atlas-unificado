@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791868369682,
+      "tag": "0000_perpetual_maximus",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792413931528,
+      "tag": "0001_friendly_bloodscream",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792436498271,
+      "tag": "0002_chilly_jamie_braddock",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792478291101,
+      "tag": "0003_happy_trauma",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793479030182,
+      "tag": "0004_dapper_supernaut",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+/** D1-backed, user-isolated handoff to the owner's local inference worker. */
+export class CloudQueueError extends Error {
+ constructor(message,status=400){super(message);this.status=status;}
+}
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_MESSAGES=1000,LEASE_MS=300000;
+const active="('queued','running')";
+const fail=(message,status=400)=>{throw new CloudQueueError(message,status);};
+const validId=value=>typeof value==='string'&&UUID.test(value);
+const safeTitle=text=>text.replace(/\s+/g,' ').trim().slice(0,80);
+const safeAgent=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(value);
+function publicJob(row){
+ if(!row)return null;
+ const result={id:row.id,conversationId:row.conversation_id,status:row.status,createdAt:row.created_at,updatedAt:row.updated_at};
+ if(row.status==='completed'&&row.result)result.result=JSON.parse(row.result);
+ if(row.status==='failed')result.error=row.error||'El motor local no pudo completar la respuesta.';
+ return result;
+}
+function contextWindow(rows){
+ const result=[];let size=0;
+ for(const row of rows){if(result.length>=15||size+row.content.length>10000)break;result.unshift({role:row.role,content:row.content});size+=row.content.length;}
+ while(result[0]?.role==='assistant')result.shift();
+ return result;
+}
+async function jobId(userId,requestId){
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(userId+'\0'+requestId));
+ return 'job-'+[...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
+}
+export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUUID()}={}){
+ const statement=(sql,...values)=>db.prepare(sql).bind(...values);
+ const one=(sql,...values)=>statement(sql,...values).first();
+ const all=async(sql,...values)=>(await statement(sql,...values).all()).results||[];
+ async function ownedConversation(userId,id){
+  if(!validId(id))fail('Conversación no encontrada.',404);
+  const row=await one('SELECT id,title,updated_at FROM cloud_conversations WHERE id=? AND user_id=?',id,userId);
+  if(!row)fail('Conversación no encontrada.',404);return row;
+ }
+ async function ownedJob(userId,id){
+  if(typeof id!=='string'||!/^job-[a-f0-9]{64}$/.test(id))fail('Solicitud no encontrada.',404);
+  const row=await one('SELECT * FROM cloud_jobs WHERE id=? AND user_id=?',id,userId);
+  if(!row)fail('Solicitud no encontrada.',404);return row;
+ }
+ async function enqueue(userId,input){
+  if(!input||typeof input.message!=='string'||!input.message.trim()||input.message.length>6000)fail('Escribe entre 1 y 6000 caracteres.');
+  if(!validId(input.requestId))fail('El identificador de la solicitud no es válido.');
+  if(input.conversationId!==undefined&&!validId(input.conversationId))fail('El identificador de la conversación no es válido.');
+  const message=input.message.trim(),id=await jobId(userId,input.requestId),at=now();
+  const previous=await one('SELECT * FROM cloud_jobs WHERE id=? AND user_id=?',id,userId);
+  if(previous){if(previous.question!==message||(input.conversationId&&input.conversationId!==previous.conversation_id))fail('Ese identificador ya pertenece a otra solicitud.',409);return {jobId:id,conversationId:previous.conversation_id,status:previous.status};}
+  const conversationId=input.conversationId||uuid();
+  if(input.conversationId)await ownedConversation(userId,conversationId);
+  else{
+   const count=await one('SELECT count(*) AS total FROM cloud_conversations WHERE user_id=?',userId);
+   if(count.total>=1000)fail('Se alcanzó el límite de conversaciones guardadas.',409);
+   await statement('INSERT OR IGNORE INTO cloud_conversations(id,user_id,title,created_at,updated_at) VALUES(?,?,?,?,?)',conversationId,userId,safeTitle(message),at,at).run();
+   await ownedConversation(userId,conversationId);
+  }
+  const messageCount=await one('SELECT count(*) AS total FROM cloud_messages WHERE conversation_id=?',conversationId);
+  if(messageCount.total>=MAX_MESSAGES-1)fail('Esta conversación alcanzó 1000 mensajes. Abre una nueva.',409);
+  await db.batch([
+   statement(`INSERT OR IGNORE INTO cloud_jobs(id,user_id,request_id,conversation_id,question,internet,status,attempts,created_at,updated_at)
+    SELECT ?,?,?,?,?,?,'queued',0,?,? WHERE
+    (SELECT count(*) FROM cloud_jobs WHERE user_id=? AND created_at>=?)<20 AND
+    (SELECT count(*) FROM cloud_jobs WHERE status IN ${active})<30 AND
+    NOT EXISTS(SELECT 1 FROM cloud_jobs WHERE conversation_id=? AND status IN ${active})`,id,userId,input.requestId,conversationId,message,input.internet===true?1:0,at,at,userId,at-3600000,conversationId),
+   statement(`INSERT OR IGNORE INTO cloud_messages(id,conversation_id,role,content,created_at)
+    SELECT ?,?,'user',?,? WHERE EXISTS(SELECT 1 FROM cloud_jobs WHERE id=? AND user_id=?)`,id+'-user',conversationId,message,at,id,userId),
+   statement('UPDATE cloud_conversations SET updated_at=? WHERE id=? AND user_id=? AND EXISTS(SELECT 1 FROM cloud_jobs WHERE id=?)',at,conversationId,userId,id),
+  ]);
+  const saved=await one('SELECT id,status,question,conversation_id FROM cloud_jobs WHERE id=? AND user_id=?',id,userId);
+  if(!saved){
+   const running=await one(`SELECT id FROM cloud_jobs WHERE conversation_id=? AND status IN ${active} LIMIT 1`,conversationId);
+   if(running)fail('Esta conversación ya tiene una respuesta pendiente.',409);
+   fail('Se alcanzó el límite de solicitudes. Prueba más tarde.',429);
+  }
+  if(saved.question!==message||saved.conversation_id!==conversationId)fail('Ese identificador ya pertenece a otra solicitud.',409);
+  return {jobId:id,conversationId,status:saved.status};
+ }
+ async function status(){
+  const row=await one('SELECT model_name,last_seen FROM cloud_bridge ORDER BY last_seen DESC LIMIT 1');
+  return {online:!!row&&now()-row.last_seen<45000,modelName:row?.model_name||'Qwen local',lastSeen:row?new Date(row.last_seen).toISOString():null,sessionRequired:true,inference:'GPU del PC del propietario; no alojada en GitHub'};
+ }
+ async function conversations(userId){
+  const rows=await all('SELECT id,title,updated_at FROM cloud_conversations WHERE user_id=? ORDER BY updated_at DESC,id LIMIT 100',userId);
+  return {conversations:rows.map(row=>({id:row.id,title:row.title,updatedAt:new Date(row.updated_at).toISOString()}))};
+ }
+ async function conversation(userId,id){
+  const row=await ownedConversation(userId,id);
+  const messages=await all('SELECT id,role,content,created_at FROM cloud_messages WHERE conversation_id=? ORDER BY rowid LIMIT 1000',id);
+  const pending=await one(`SELECT id,status FROM cloud_jobs WHERE conversation_id=? AND user_id=? AND status IN ${active} ORDER BY created_at DESC LIMIT 1`,id,userId);
+  return {conversation:{id:row.id,title:row.title,updatedAt:new Date(row.updated_at).toISOString()},messages:messages.map(message=>({id:message.id,role:message.role,content:message.content,createdAt:new Date(message.created_at).toISOString()})),...(pending?{pendingJob:pending}:{})};
+ }
+ async function getJob(userId,id){return publicJob(await ownedJob(userId,id));}
+ async function cancel(userId,id){
+  await ownedJob(userId,id);
+  await statement(`UPDATE cloud_jobs SET status='cancelled',lease_token=NULL,lease_until=0,updated_at=? WHERE id=? AND user_id=? AND status IN ${active}`,now(),id,userId).run();
+  return publicJob(await ownedJob(userId,id));
+ }
+ async function heartbeat(input){
+  if(!safeAgent(input?.agentId))fail('Agente no válido.');
+  const modelName=typeof input.modelName==='string'?input.modelName.trim().slice(0,120):'Qwen local';
+  await statement('INSERT INTO cloud_bridge(id,model_name,last_seen) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET model_name=excluded.model_name,last_seen=excluded.last_seen',input.agentId,modelName||'Qwen local',now()).run();
+  if(input.jobId&&input.leaseToken){
+   const row=await one("SELECT status,lease_token,created_at,attempts FROM cloud_jobs WHERE id=?",input.jobId);
+   if(!row||row.status!=='running'||row.lease_token!==input.leaseToken)return {ok:true,continue:false};
+   await statement("UPDATE cloud_jobs SET lease_until=?,updated_at=? WHERE id=? AND lease_token=? AND status='running'",now()+LEASE_MS,now(),input.jobId,input.leaseToken).run();
+  }
+  return {ok:true,continue:true};
+ }
+ async function claim(input){
+  await heartbeat(input);const at=now(),leaseToken=uuid();
+  await statement("UPDATE cloud_jobs SET status='failed',error='El motor local no pudo terminar tras dos intentos.',lease_token=NULL,lease_until=0,updated_at=? WHERE status='running' AND lease_until<? AND attempts>=2",at,at).run();
+  const row=await statement(`UPDATE cloud_jobs SET status='running',lease_token=?,lease_until=?,agent_id=?,attempts=attempts+1,updated_at=?
+   WHERE id=(SELECT id FROM cloud_jobs WHERE (status='queued' OR (status='running' AND lease_until<?)) AND attempts<2 ORDER BY created_at,id LIMIT 1)
+   AND (status='queued' OR (status='running' AND lease_until<?)) RETURNING id,conversation_id,question,internet`,leaseToken,at+LEASE_MS,input.agentId,at,at,at).first();
+  if(!row)return {job:null};
+  const messages=await all('SELECT role,content FROM cloud_messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 15',row.conversation_id);
+  return {job:{id:row.id,conversationId:row.conversation_id,messages:contextWindow(messages),internet:row.internet===1,leaseToken}};
+ }
+ async function complete(input){
+  if(typeof input?.jobId!=='string'||!validId(input.leaseToken))fail('Resultado sin reserva válida.');
+  const result=input.result;
+  if(!result||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>16000||!['atlas-local','atlas-coordinator'].includes(result.model))fail('El resultado local no es válido.');
+  const value={answer:result.answer,model:result.model,modelName:typeof result.modelName==='string'?result.modelName.slice(0,120):'Qwen local'};
+  const serialized=JSON.stringify(value),at=now();
+  const row=await one('SELECT conversation_id,status,lease_token,lease_until,result FROM cloud_jobs WHERE id=?',input.jobId);
+  if(!row||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
+  if(row.status==='completed')return {ok:true,status:'completed'};
+  if(row.status!=='running')fail('La solicitud ya no admite resultados.',409);
+  if(row.lease_until<at)fail('La reserva de la respuesta ha caducado.',409);
+  await db.batch([
+   statement(`INSERT OR IGNORE INTO cloud_messages(id,conversation_id,role,content,created_at)
+    SELECT ?,conversation_id,'assistant',?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,input.jobId+'-assistant',value.answer,at,input.jobId,input.leaseToken,at),
+   statement("UPDATE cloud_jobs SET status='completed',result=?,lease_until=0,updated_at=? WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?",serialized,at,input.jobId,input.leaseToken,at),
+   statement("UPDATE cloud_conversations SET updated_at=? WHERE id=? AND EXISTS(SELECT 1 FROM cloud_jobs WHERE id=? AND lease_token=? AND status='completed')",at,row.conversation_id,input.jobId,input.leaseToken),
+  ]);
+  const saved=await one('SELECT status,lease_token FROM cloud_jobs WHERE id=?',input.jobId);
+  if(saved.status!=='completed'||saved.lease_token!==input.leaseToken)fail('La reserva cambió antes de guardar la respuesta.',409);
+  return {ok:true,status:'completed'};
+ }
+ async function failJob(input){
+  if(typeof input?.jobId!=='string'||!validId(input.leaseToken))fail('Resultado sin reserva válida.');
+  const row=await one('SELECT status,lease_token FROM cloud_jobs WHERE id=?',input.jobId);
+  if(!row||row.status!=='running'||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
+  await statement("UPDATE cloud_jobs SET status='failed',error='El motor local no pudo completar la respuesta. Puedes intentarlo de nuevo.',lease_until=0,updated_at=? WHERE id=? AND lease_token=? AND status='running'",now(),input.jobId,input.leaseToken).run();
+  return {ok:true,status:'failed'};
+ }
+ return {enqueue,status,conversations,conversation,getJob,cancel,heartbeat,claim,complete,fail:failJob};
+}

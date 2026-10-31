@@ -1,0 +1,1407 @@
+{
+  "version": 1,
+  "status": "draft",
+  "description": "Taxonomía operativa propuesta; categorías sin ganadores ni validación.",
+  "macroareas": [
+    {
+      "id": "M01",
+      "name": "Sistemas, compiladores y entornos de ejecución",
+      "categories": [
+        {
+          "id": "CAT-001",
+          "name": "Núcleos de sistemas operativos",
+          "query": "topic:kernel fork:false archived:false"
+        },
+        {
+          "id": "CAT-002",
+          "name": "Sistemas operativos especializados",
+          "query": "topic:operating-system fork:false archived:false"
+        },
+        {
+          "id": "CAT-003",
+          "name": "Unikernels",
+          "query": "topic:unikernel fork:false archived:false"
+        },
+        {
+          "id": "CAT-004",
+          "name": "Hipervisores",
+          "query": "topic:hypervisor fork:false archived:false"
+        },
+        {
+          "id": "CAT-005",
+          "name": "Máquinas virtuales de lenguajes",
+          "query": "\"virtual machine\" interpreter in:name,description,readme fork:false archived:false"
+        },
+        {
+          "id": "CAT-006",
+          "name": "Asignadores de memoria",
+          "query": "topic:memory-allocator fork:false archived:false"
+        },
+        {
+          "id": "CAT-007",
+          "name": "Recolectores de basura",
+          "query": "topic:garbage-collector fork:false archived:false"
+        },
+        {
+          "id": "CAT-008",
+          "name": "Compiladores",
+          "query": "topic:compiler fork:false archived:false"
+        },
+        {
+          "id": "CAT-009",
+          "name": "Intérpretes de lenguajes",
+          "query": "topic:interpreter fork:false archived:false"
+        },
+        {
+          "id": "CAT-010",
+          "name": "Entornos de ejecución WebAssembly",
+          "query": "topic:wasm-runtime fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M02",
+      "name": "Herramientas para construir y mantener código",
+      "categories": [
+        {
+          "id": "CAT-011",
+          "name": "Editores de código",
+          "query": "topic:code-editor fork:false archived:false"
+        },
+        {
+          "id": "CAT-012",
+          "name": "Servidores de lenguaje",
+          "query": "topic:language-server fork:false archived:false"
+        },
+        {
+          "id": "CAT-013",
+          "name": "Depuradores",
+          "query": "topic:debugger fork:false archived:false"
+        },
+        {
+          "id": "CAT-014",
+          "name": "Sistemas de compilación",
+          "query": "topic:build-system fork:false archived:false"
+        },
+        {
+          "id": "CAT-015",
+          "name": "Gestores de paquetes",
+          "query": "topic:package-manager fork:false archived:false"
+        },
+        {
+          "id": "CAT-016",
+          "name": "Generadores de código",
+          "query": "topic:code-generation fork:false archived:false"
+        },
+        {
+          "id": "CAT-017",
+          "name": "Análisis estático de código",
+          "query": "topic:static-analysis fork:false archived:false"
+        },
+        {
+          "id": "CAT-018",
+          "name": "Formateadores de código",
+          "query": "topic:formatter fork:false archived:false"
+        },
+        {
+          "id": "CAT-019",
+          "name": "Linters",
+          "query": "topic:linter fork:false archived:false"
+        },
+        {
+          "id": "CAT-020",
+          "name": "Herramientas de refactorización",
+          "query": "topic:refactoring fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M03",
+      "name": "Pruebas y aseguramiento de calidad",
+      "categories": [
+        {
+          "id": "CAT-021",
+          "name": "Pruebas unitarias",
+          "query": "topic:unit-testing fork:false archived:false"
+        },
+        {
+          "id": "CAT-022",
+          "name": "Pruebas basadas en propiedades",
+          "query": "topic:property-based-testing fork:false archived:false"
+        },
+        {
+          "id": "CAT-023",
+          "name": "Fuzzing",
+          "query": "topic:fuzzing fork:false archived:false"
+        },
+        {
+          "id": "CAT-024",
+          "name": "Pruebas de mutación",
+          "query": "topic:mutation-testing fork:false archived:false"
+        },
+        {
+          "id": "CAT-025",
+          "name": "Pruebas de extremo a extremo",
+          "query": "topic:end-to-end-testing fork:false archived:false"
+        },
+        {
+          "id": "CAT-026",
+          "name": "Pruebas de carga",
+          "query": "topic:load-testing fork:false archived:false"
+        },
+        {
+          "id": "CAT-027",
+          "name": "Regresión visual",
+          "query": "topic:visual-regression fork:false archived:false"
+        },
+        {
+          "id": "CAT-028",
+          "name": "Pruebas de contratos",
+          "query": "topic:contract-testing fork:false archived:false"
+        },
+        {
+          "id": "CAT-029",
+          "name": "Pruebas de accesibilidad",
+          "query": "topic:accessibility-testing fork:false archived:false"
+        },
+        {
+          "id": "CAT-030",
+          "name": "Pruebas mediante instantáneas",
+          "query": "topic:snapshot-testing fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M04",
+      "name": "Integración, entregas y ciclo de desarrollo",
+      "categories": [
+        {
+          "id": "CAT-031",
+          "name": "Integración y entrega continuas",
+          "query": "topic:ci-cd fork:false archived:false"
+        },
+        {
+          "id": "CAT-032",
+          "name": "Ejecutores de tareas de desarrollo",
+          "query": "topic:task-runner fork:false archived:false"
+        },
+        {
+          "id": "CAT-033",
+          "name": "Gestión de monorepositorios",
+          "query": "topic:monorepo fork:false archived:false"
+        },
+        {
+          "id": "CAT-034",
+          "name": "Automatización de versiones",
+          "query": "topic:release-automation fork:false archived:false"
+        },
+        {
+          "id": "CAT-035",
+          "name": "Repositorios de artefactos",
+          "query": "\"artifact repository\" in:name,description,readme fork:false archived:false"
+        },
+        {
+          "id": "CAT-036",
+          "name": "Gestión de dependencias",
+          "query": "topic:dependency-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-037",
+          "name": "Activación gradual de funcionalidades",
+          "query": "topic:feature-flags fork:false archived:false"
+        },
+        {
+          "id": "CAT-038",
+          "name": "Automatización de despliegues",
+          "query": "topic:deployment fork:false archived:false"
+        },
+        {
+          "id": "CAT-039",
+          "name": "Reversión de despliegues",
+          "query": "rollback deployment in:name,description,readme fork:false archived:false"
+        },
+        {
+          "id": "CAT-040",
+          "name": "Generación de registros de cambios",
+          "query": "topic:changelog-generator fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M05",
+      "name": "Infraestructura de nube y contenedores",
+      "categories": [
+        {
+          "id": "CAT-041",
+          "name": "Operadores de Kubernetes",
+          "query": "topic:kubernetes-operator fork:false archived:false"
+        },
+        {
+          "id": "CAT-042",
+          "name": "Entornos de ejecución de contenedores",
+          "query": "topic:container-runtime fork:false archived:false"
+        },
+        {
+          "id": "CAT-043",
+          "name": "Mallas de servicios",
+          "query": "topic:service-mesh fork:false archived:false"
+        },
+        {
+          "id": "CAT-044",
+          "name": "Infraestructura como código",
+          "query": "topic:infrastructure-as-code fork:false archived:false"
+        },
+        {
+          "id": "CAT-045",
+          "name": "Gestión de configuración",
+          "query": "topic:configuration-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-046",
+          "name": "Plataformas serverless",
+          "query": "topic:serverless fork:false archived:false"
+        },
+        {
+          "id": "CAT-047",
+          "name": "Gestión de secretos de infraestructura",
+          "query": "topic:secrets-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-048",
+          "name": "Registros de contenedores",
+          "query": "topic:container-registry fork:false archived:false"
+        },
+        {
+          "id": "CAT-049",
+          "name": "Escalado automático",
+          "query": "topic:autoscaling fork:false archived:false"
+        },
+        {
+          "id": "CAT-050",
+          "name": "Orquestación de recursos de nube",
+          "query": "\"cloud orchestration\" in:name,description,readme fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M06",
+      "name": "Redes y sistemas distribuidos",
+      "categories": [
+        {
+          "id": "CAT-051",
+          "name": "Bibliotecas de sistemas distribuidos",
+          "query": "topic:distributed-systems fork:false archived:false"
+        },
+        {
+          "id": "CAT-052",
+          "name": "Protocolos de consenso",
+          "query": "topic:consensus fork:false archived:false"
+        },
+        {
+          "id": "CAT-053",
+          "name": "Descubrimiento de servicios",
+          "query": "topic:service-discovery fork:false archived:false"
+        },
+        {
+          "id": "CAT-054",
+          "name": "Proxies inversos",
+          "query": "topic:reverse-proxy fork:false archived:false"
+        },
+        {
+          "id": "CAT-055",
+          "name": "Balanceadores de carga",
+          "query": "topic:load-balancer fork:false archived:false"
+        },
+        {
+          "id": "CAT-056",
+          "name": "Servidores DNS",
+          "query": "topic:dns-server fork:false archived:false"
+        },
+        {
+          "id": "CAT-057",
+          "name": "Redes privadas virtuales",
+          "query": "topic:vpn fork:false archived:false"
+        },
+        {
+          "id": "CAT-058",
+          "name": "Redes entre pares",
+          "query": "topic:peer-to-peer fork:false archived:false"
+        },
+        {
+          "id": "CAT-059",
+          "name": "Distribución de contenido en red",
+          "query": "topic:cdn fork:false archived:false"
+        },
+        {
+          "id": "CAT-060",
+          "name": "Bloqueos distribuidos",
+          "query": "topic:distributed-lock fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M07",
+      "name": "Observabilidad, continuidad y recuperación",
+      "categories": [
+        {
+          "id": "CAT-061",
+          "name": "Monitorización de sistemas",
+          "query": "topic:monitoring fork:false archived:false"
+        },
+        {
+          "id": "CAT-062",
+          "name": "Recogida y consulta de métricas",
+          "query": "topic:metrics fork:false archived:false"
+        },
+        {
+          "id": "CAT-063",
+          "name": "Gestión de registros",
+          "query": "topic:logging fork:false archived:false"
+        },
+        {
+          "id": "CAT-064",
+          "name": "Trazas distribuidas",
+          "query": "topic:distributed-tracing fork:false archived:false"
+        },
+        {
+          "id": "CAT-065",
+          "name": "Perfilado de rendimiento",
+          "query": "topic:profiling fork:false archived:false"
+        },
+        {
+          "id": "CAT-066",
+          "name": "Alertas operativas",
+          "query": "topic:alerting fork:false archived:false"
+        },
+        {
+          "id": "CAT-067",
+          "name": "Instrumentación OpenTelemetry",
+          "query": "topic:opentelemetry fork:false archived:false"
+        },
+        {
+          "id": "CAT-068",
+          "name": "Gestión de incidentes",
+          "query": "topic:incident-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-069",
+          "name": "Copias de seguridad",
+          "query": "topic:backup fork:false archived:false"
+        },
+        {
+          "id": "CAT-070",
+          "name": "Recuperación ante desastres",
+          "query": "topic:disaster-recovery fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M08",
+      "name": "Seguridad de aplicaciones y análisis defensivo",
+      "categories": [
+        {
+          "id": "CAT-071",
+          "name": "Análisis estático de seguridad",
+          "query": "topic:sast fork:false archived:false"
+        },
+        {
+          "id": "CAT-072",
+          "name": "Análisis dinámico de seguridad",
+          "query": "topic:dast fork:false archived:false"
+        },
+        {
+          "id": "CAT-073",
+          "name": "Análisis de dependencias vulnerables",
+          "query": "topic:dependency-scanning fork:false archived:false"
+        },
+        {
+          "id": "CAT-074",
+          "name": "Inventarios de componentes de software",
+          "query": "topic:sbom fork:false archived:false"
+        },
+        {
+          "id": "CAT-075",
+          "name": "Gestión de vulnerabilidades",
+          "query": "topic:vulnerability-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-076",
+          "name": "Detección de secretos expuestos",
+          "query": "topic:secret-scanning fork:false archived:false"
+        },
+        {
+          "id": "CAT-077",
+          "name": "Análisis defensivo de malware",
+          "query": "topic:malware-analysis fork:false archived:false"
+        },
+        {
+          "id": "CAT-078",
+          "name": "Aislamiento de procesos y código",
+          "query": "topic:sandboxing fork:false archived:false"
+        },
+        {
+          "id": "CAT-079",
+          "name": "Análisis de amenazas de aplicaciones",
+          "query": "topic:threat-modeling fork:false archived:false"
+        },
+        {
+          "id": "CAT-080",
+          "name": "Seguridad de la cadena de suministro",
+          "query": "topic:supply-chain-security fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M09",
+      "name": "Identidad, control de acceso y privacidad",
+      "categories": [
+        {
+          "id": "CAT-081",
+          "name": "Gestión de identidades",
+          "query": "topic:identity-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-082",
+          "name": "Sistemas de autenticación",
+          "query": "topic:authentication fork:false archived:false"
+        },
+        {
+          "id": "CAT-083",
+          "name": "Motores de autorización",
+          "query": "topic:authorization fork:false archived:false"
+        },
+        {
+          "id": "CAT-084",
+          "name": "Servidores y clientes OAuth 2.0",
+          "query": "topic:oauth2 fork:false archived:false"
+        },
+        {
+          "id": "CAT-085",
+          "name": "Integraciones OpenID Connect",
+          "query": "topic:openid-connect fork:false archived:false"
+        },
+        {
+          "id": "CAT-086",
+          "name": "Federación de identidades SAML",
+          "query": "topic:saml fork:false archived:false"
+        },
+        {
+          "id": "CAT-087",
+          "name": "Autenticación WebAuthn y passkeys",
+          "query": "topic:webauthn fork:false archived:false"
+        },
+        {
+          "id": "CAT-088",
+          "name": "Bibliotecas criptográficas",
+          "query": "topic:cryptography fork:false archived:false"
+        },
+        {
+          "id": "CAT-089",
+          "name": "Privacidad diferencial",
+          "query": "topic:differential-privacy fork:false archived:false"
+        },
+        {
+          "id": "CAT-090",
+          "name": "Anonimización de datos",
+          "query": "topic:data-anonymization fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M10",
+      "name": "Bases de datos y almacenamiento",
+      "categories": [
+        {
+          "id": "CAT-091",
+          "name": "Bases de datos relacionales",
+          "query": "topic:relational-database fork:false archived:false"
+        },
+        {
+          "id": "CAT-092",
+          "name": "Bases de datos de documentos",
+          "query": "topic:document-database fork:false archived:false"
+        },
+        {
+          "id": "CAT-093",
+          "name": "Almacenes de clave y valor",
+          "query": "topic:key-value-store fork:false archived:false"
+        },
+        {
+          "id": "CAT-094",
+          "name": "Bases de datos de grafos",
+          "query": "topic:graph-database fork:false archived:false"
+        },
+        {
+          "id": "CAT-095",
+          "name": "Bases de datos de series temporales",
+          "query": "topic:time-series-database fork:false archived:false"
+        },
+        {
+          "id": "CAT-096",
+          "name": "Bases de datos vectoriales",
+          "query": "topic:vector-database fork:false archived:false"
+        },
+        {
+          "id": "CAT-097",
+          "name": "Bases de datos integradas",
+          "query": "topic:embedded-database fork:false archived:false"
+        },
+        {
+          "id": "CAT-098",
+          "name": "Almacenamiento de objetos",
+          "query": "topic:object-storage fork:false archived:false"
+        },
+        {
+          "id": "CAT-099",
+          "name": "Sistemas de archivos distribuidos",
+          "query": "topic:distributed-filesystem fork:false archived:false"
+        },
+        {
+          "id": "CAT-100",
+          "name": "Almacenes de datos tipo lakehouse",
+          "query": "topic:lakehouse fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M11",
+      "name": "Ingeniería y gobierno de datos",
+      "categories": [
+        {
+          "id": "CAT-101",
+          "name": "Extracción, transformación y carga",
+          "query": "topic:etl fork:false archived:false"
+        },
+        {
+          "id": "CAT-102",
+          "name": "Canalizaciones de datos",
+          "query": "topic:data-pipeline fork:false archived:false"
+        },
+        {
+          "id": "CAT-103",
+          "name": "Orquestación de flujos de datos",
+          "query": "topic:workflow-orchestration fork:false archived:false"
+        },
+        {
+          "id": "CAT-104",
+          "name": "Procesamiento de flujos en tiempo real",
+          "query": "topic:stream-processing fork:false archived:false"
+        },
+        {
+          "id": "CAT-105",
+          "name": "Colas de mensajes",
+          "query": "topic:message-queue fork:false archived:false"
+        },
+        {
+          "id": "CAT-106",
+          "name": "Captura de cambios de datos",
+          "query": "topic:change-data-capture fork:false archived:false"
+        },
+        {
+          "id": "CAT-107",
+          "name": "Control de calidad de datos",
+          "query": "topic:data-quality fork:false archived:false"
+        },
+        {
+          "id": "CAT-108",
+          "name": "Catálogos de datos",
+          "query": "topic:data-catalog fork:false archived:false"
+        },
+        {
+          "id": "CAT-109",
+          "name": "Trazabilidad y linaje de datos",
+          "query": "topic:data-lineage fork:false archived:false"
+        },
+        {
+          "id": "CAT-110",
+          "name": "Contratos de datos",
+          "query": "topic:data-contracts fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M12",
+      "name": "Búsqueda, documentos y conocimiento",
+      "categories": [
+        {
+          "id": "CAT-111",
+          "name": "Motores de búsqueda",
+          "query": "topic:search-engine fork:false archived:false"
+        },
+        {
+          "id": "CAT-112",
+          "name": "Búsqueda de texto completo",
+          "query": "topic:full-text-search fork:false archived:false"
+        },
+        {
+          "id": "CAT-113",
+          "name": "Búsqueda semántica",
+          "query": "topic:semantic-search fork:false archived:false"
+        },
+        {
+          "id": "CAT-114",
+          "name": "Evaluación de recuperación de información",
+          "query": "topic:information-retrieval fork:false archived:false"
+        },
+        {
+          "id": "CAT-115",
+          "name": "Grafos de conocimiento",
+          "query": "topic:knowledge-graph fork:false archived:false"
+        },
+        {
+          "id": "CAT-116",
+          "name": "Rastreadores de páginas web",
+          "query": "topic:web-crawler fork:false archived:false"
+        },
+        {
+          "id": "CAT-117",
+          "name": "Extracción estructurada de documentos",
+          "query": "topic:document-parser fork:false archived:false"
+        },
+        {
+          "id": "CAT-118",
+          "name": "Reconocimiento óptico de caracteres",
+          "query": "topic:ocr fork:false archived:false"
+        },
+        {
+          "id": "CAT-119",
+          "name": "Enlace y resolución de entidades",
+          "query": "topic:entity-linking fork:false archived:false"
+        },
+        {
+          "id": "CAT-120",
+          "name": "Deduplicación de documentos y registros",
+          "query": "topic:deduplication fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M13",
+      "name": "Aprendizaje automático y operación de modelos",
+      "categories": [
+        {
+          "id": "CAT-121",
+          "name": "Aprendizaje automático automatizado",
+          "query": "topic:automl fork:false archived:false"
+        },
+        {
+          "id": "CAT-122",
+          "name": "Almacenes de características",
+          "query": "topic:feature-store fork:false archived:false"
+        },
+        {
+          "id": "CAT-123",
+          "name": "Seguimiento de experimentos",
+          "query": "topic:experiment-tracking fork:false archived:false"
+        },
+        {
+          "id": "CAT-124",
+          "name": "Servicios de inferencia de modelos",
+          "query": "topic:model-serving fork:false archived:false"
+        },
+        {
+          "id": "CAT-125",
+          "name": "Compresión de modelos",
+          "query": "topic:model-compression fork:false archived:false"
+        },
+        {
+          "id": "CAT-126",
+          "name": "Aprendizaje federado",
+          "query": "topic:federated-learning fork:false archived:false"
+        },
+        {
+          "id": "CAT-127",
+          "name": "Aprendizaje continuo",
+          "query": "topic:continual-learning fork:false archived:false"
+        },
+        {
+          "id": "CAT-128",
+          "name": "Aprendizaje activo",
+          "query": "topic:active-learning fork:false archived:false"
+        },
+        {
+          "id": "CAT-129",
+          "name": "Explicabilidad de modelos",
+          "query": "topic:explainable-ai fork:false archived:false"
+        },
+        {
+          "id": "CAT-130",
+          "name": "Detección de deriva de modelos",
+          "query": "topic:concept-drift fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M14",
+      "name": "Modelos de lenguaje y evaluación",
+      "categories": [
+        {
+          "id": "CAT-131",
+          "name": "Inferencia de modelos de lenguaje",
+          "query": "topic:llm-inference fork:false archived:false"
+        },
+        {
+          "id": "CAT-132",
+          "name": "Entrenamiento de modelos de lenguaje",
+          "query": "topic:llm-training fork:false archived:false"
+        },
+        {
+          "id": "CAT-133",
+          "name": "Ajuste fino de modelos de lenguaje",
+          "query": "topic:fine-tuning fork:false archived:false"
+        },
+        {
+          "id": "CAT-134",
+          "name": "Adaptadores LoRA",
+          "query": "topic:lora fork:false archived:false"
+        },
+        {
+          "id": "CAT-135",
+          "name": "Cuantización de modelos de lenguaje",
+          "query": "topic:quantization fork:false archived:false"
+        },
+        {
+          "id": "CAT-136",
+          "name": "Generación apoyada en recuperación",
+          "query": "topic:rag fork:false archived:false"
+        },
+        {
+          "id": "CAT-137",
+          "name": "Gestión y evaluación de prompts",
+          "query": "topic:prompt-engineering fork:false archived:false"
+        },
+        {
+          "id": "CAT-138",
+          "name": "Evaluación de modelos de lenguaje",
+          "query": "topic:llm-evaluation fork:false archived:false"
+        },
+        {
+          "id": "CAT-139",
+          "name": "Controles de salida de modelos",
+          "query": "topic:guardrails fork:false archived:false"
+        },
+        {
+          "id": "CAT-140",
+          "name": "Tokenizadores de texto",
+          "query": "topic:tokenization fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M15",
+      "name": "Agentes, planificación y herramientas",
+      "categories": [
+        {
+          "id": "CAT-141",
+          "name": "Bibliotecas de agentes de IA",
+          "query": "topic:ai-agents fork:false archived:false"
+        },
+        {
+          "id": "CAT-142",
+          "name": "Sistemas multiagente",
+          "query": "topic:multi-agent-systems fork:false archived:false"
+        },
+        {
+          "id": "CAT-143",
+          "name": "Orquestación de agentes",
+          "query": "topic:agent-orchestration fork:false archived:false"
+        },
+        {
+          "id": "CAT-144",
+          "name": "Servidores y herramientas MCP",
+          "query": "topic:model-context-protocol fork:false archived:false"
+        },
+        {
+          "id": "CAT-145",
+          "name": "Planificación automática de tareas",
+          "query": "topic:automated-planning fork:false archived:false"
+        },
+        {
+          "id": "CAT-146",
+          "name": "Invocación de herramientas por modelos",
+          "query": "topic:tool-use fork:false archived:false"
+        },
+        {
+          "id": "CAT-147",
+          "name": "Interacción de agentes con interfaces",
+          "query": "topic:computer-use fork:false archived:false"
+        },
+        {
+          "id": "CAT-148",
+          "name": "Automatización de navegadores",
+          "query": "topic:browser-automation fork:false archived:false"
+        },
+        {
+          "id": "CAT-149",
+          "name": "Agentes de programación",
+          "query": "topic:coding-agent fork:false archived:false"
+        },
+        {
+          "id": "CAT-150",
+          "name": "Memoria de agentes",
+          "query": "topic:agent-memory fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M16",
+      "name": "Visión artificial e imagen",
+      "categories": [
+        {
+          "id": "CAT-151",
+          "name": "Clasificación de imágenes",
+          "query": "topic:image-classification fork:false archived:false"
+        },
+        {
+          "id": "CAT-152",
+          "name": "Detección de objetos",
+          "query": "topic:object-detection fork:false archived:false"
+        },
+        {
+          "id": "CAT-153",
+          "name": "Segmentación de imágenes",
+          "query": "topic:image-segmentation fork:false archived:false"
+        },
+        {
+          "id": "CAT-154",
+          "name": "Seguimiento de objetos",
+          "query": "topic:object-tracking fork:false archived:false"
+        },
+        {
+          "id": "CAT-155",
+          "name": "Estimación de postura",
+          "query": "topic:pose-estimation fork:false archived:false"
+        },
+        {
+          "id": "CAT-156",
+          "name": "Estimación de profundidad",
+          "query": "topic:depth-estimation fork:false archived:false"
+        },
+        {
+          "id": "CAT-157",
+          "name": "Estimación de flujo óptico",
+          "query": "topic:optical-flow fork:false archived:false"
+        },
+        {
+          "id": "CAT-158",
+          "name": "Generación de imágenes",
+          "query": "topic:image-generation fork:false archived:false"
+        },
+        {
+          "id": "CAT-159",
+          "name": "Restauración de imágenes",
+          "query": "topic:image-restoration fork:false archived:false"
+        },
+        {
+          "id": "CAT-160",
+          "name": "Detección de anomalías visuales",
+          "query": "\"visual anomaly detection\" in:name,description,readme fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M17",
+      "name": "Voz, música y procesamiento de audio",
+      "categories": [
+        {
+          "id": "CAT-161",
+          "name": "Reconocimiento del habla",
+          "query": "topic:speech-recognition fork:false archived:false"
+        },
+        {
+          "id": "CAT-162",
+          "name": "Síntesis de voz",
+          "query": "topic:text-to-speech fork:false archived:false"
+        },
+        {
+          "id": "CAT-163",
+          "name": "Diarización de hablantes",
+          "query": "topic:speaker-diarization fork:false archived:false"
+        },
+        {
+          "id": "CAT-164",
+          "name": "Conversión de voz",
+          "query": "topic:voice-conversion fork:false archived:false"
+        },
+        {
+          "id": "CAT-165",
+          "name": "Generación de audio",
+          "query": "topic:audio-generation fork:false archived:false"
+        },
+        {
+          "id": "CAT-166",
+          "name": "Procesamiento digital de audio",
+          "query": "topic:audio-processing fork:false archived:false"
+        },
+        {
+          "id": "CAT-167",
+          "name": "Recuperación de información musical",
+          "query": "topic:music-information-retrieval fork:false archived:false"
+        },
+        {
+          "id": "CAT-168",
+          "name": "Separación de fuentes de audio",
+          "query": "topic:source-separation fork:false archived:false"
+        },
+        {
+          "id": "CAT-169",
+          "name": "Reducción de ruido de audio",
+          "query": "topic:noise-suppression fork:false archived:false"
+        },
+        {
+          "id": "CAT-170",
+          "name": "Audio en tiempo real",
+          "query": "topic:realtime-audio fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M18",
+      "name": "Vídeo, medios y publicación multimedia",
+      "categories": [
+        {
+          "id": "CAT-171",
+          "name": "Procesamiento de vídeo",
+          "query": "topic:video-processing fork:false archived:false"
+        },
+        {
+          "id": "CAT-172",
+          "name": "Codificación de vídeo",
+          "query": "topic:video-encoding fork:false archived:false"
+        },
+        {
+          "id": "CAT-173",
+          "name": "Transmisión de vídeo",
+          "query": "topic:video-streaming fork:false archived:false"
+        },
+        {
+          "id": "CAT-174",
+          "name": "Generación de vídeo",
+          "query": "topic:video-generation fork:false archived:false"
+        },
+        {
+          "id": "CAT-175",
+          "name": "Edición de vídeo",
+          "query": "topic:video-editing fork:false archived:false"
+        },
+        {
+          "id": "CAT-176",
+          "name": "Servidores multimedia",
+          "query": "topic:media-server fork:false archived:false"
+        },
+        {
+          "id": "CAT-177",
+          "name": "Grabación de pantalla",
+          "query": "topic:screen-recording fork:false archived:false"
+        },
+        {
+          "id": "CAT-178",
+          "name": "Herramientas de subtitulado",
+          "query": "topic:subtitles fork:false archived:false"
+        },
+        {
+          "id": "CAT-179",
+          "name": "Transcodificación multimedia",
+          "query": "topic:transcoding fork:false archived:false"
+        },
+        {
+          "id": "CAT-180",
+          "name": "Captura de movimiento",
+          "query": "topic:motion-capture fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M19",
+      "name": "Gráficos 3D, simulación interactiva y videojuegos",
+      "categories": [
+        {
+          "id": "CAT-181",
+          "name": "Motores de renderizado",
+          "query": "topic:rendering-engine fork:false archived:false"
+        },
+        {
+          "id": "CAT-182",
+          "name": "Motores de videojuegos",
+          "query": "topic:game-engine fork:false archived:false"
+        },
+        {
+          "id": "CAT-183",
+          "name": "Trazado de rayos",
+          "query": "topic:ray-tracing fork:false archived:false"
+        },
+        {
+          "id": "CAT-184",
+          "name": "Motores de física",
+          "query": "topic:physics-engine fork:false archived:false"
+        },
+        {
+          "id": "CAT-185",
+          "name": "Generación procedural de escenarios",
+          "query": "topic:procedural-generation fork:false archived:false"
+        },
+        {
+          "id": "CAT-186",
+          "name": "Animación tridimensional",
+          "query": "\"3d animation\" in:name,description,readme fork:false archived:false"
+        },
+        {
+          "id": "CAT-187",
+          "name": "Herramientas y formatos glTF",
+          "query": "topic:gltf fork:false archived:false"
+        },
+        {
+          "id": "CAT-188",
+          "name": "Fotogrametría",
+          "query": "topic:photogrammetry fork:false archived:false"
+        },
+        {
+          "id": "CAT-189",
+          "name": "Edición y depuración de shaders",
+          "query": "topic:shader-editor fork:false archived:false"
+        },
+        {
+          "id": "CAT-190",
+          "name": "Redes para videojuegos multijugador",
+          "query": "topic:game-networking fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M20",
+      "name": "Robótica, diseño y fabricación",
+      "categories": [
+        {
+          "id": "CAT-191",
+          "name": "Marcos de software robótico",
+          "query": "topic:robotics fork:false archived:false"
+        },
+        {
+          "id": "CAT-192",
+          "name": "Planificación de movimiento",
+          "query": "topic:motion-planning fork:false archived:false"
+        },
+        {
+          "id": "CAT-193",
+          "name": "Control de robots",
+          "query": "topic:robot-control fork:false archived:false"
+        },
+        {
+          "id": "CAT-194",
+          "name": "Localización y mapas simultáneos",
+          "query": "topic:slam fork:false archived:false"
+        },
+        {
+          "id": "CAT-195",
+          "name": "Navegación de robots móviles",
+          "query": "\"robot navigation\" in:name,description,readme fork:false archived:false"
+        },
+        {
+          "id": "CAT-196",
+          "name": "Manipulación y agarre robótico",
+          "query": "topic:grasping fork:false archived:false"
+        },
+        {
+          "id": "CAT-197",
+          "name": "Fusión de sensores",
+          "query": "topic:sensor-fusion fork:false archived:false"
+        },
+        {
+          "id": "CAT-198",
+          "name": "Diseño asistido por ordenador",
+          "query": "topic:cad fork:false archived:false"
+        },
+        {
+          "id": "CAT-199",
+          "name": "Preparación de impresión 3D",
+          "query": "topic:3d-printing fork:false archived:false"
+        },
+        {
+          "id": "CAT-200",
+          "name": "Gemelos digitales",
+          "query": "topic:digital-twin fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M21",
+      "name": "Sistemas integrados, IoT y computación de borde",
+      "categories": [
+        {
+          "id": "CAT-201",
+          "name": "Plataformas de sistemas integrados",
+          "query": "topic:embedded-systems fork:false archived:false"
+        },
+        {
+          "id": "CAT-202",
+          "name": "Sistemas operativos de tiempo real",
+          "query": "topic:rtos fork:false archived:false"
+        },
+        {
+          "id": "CAT-203",
+          "name": "Plataformas de Internet de las cosas",
+          "query": "topic:iot fork:false archived:false"
+        },
+        {
+          "id": "CAT-204",
+          "name": "Brokers y clientes MQTT",
+          "query": "topic:mqtt fork:false archived:false"
+        },
+        {
+          "id": "CAT-205",
+          "name": "Bibliotecas para microcontroladores",
+          "query": "topic:microcontroller fork:false archived:false"
+        },
+        {
+          "id": "CAT-206",
+          "name": "Herramientas de desarrollo de firmware",
+          "query": "topic:firmware fork:false archived:false"
+        },
+        {
+          "id": "CAT-207",
+          "name": "Diseño lógico con FPGA",
+          "query": "topic:fpga fork:false archived:false"
+        },
+        {
+          "id": "CAT-208",
+          "name": "Orquestación de computación de borde",
+          "query": "topic:edge-computing fork:false archived:false"
+        },
+        {
+          "id": "CAT-209",
+          "name": "Aprendizaje automático en dispositivos pequeños",
+          "query": "topic:tinyml fork:false archived:false"
+        },
+        {
+          "id": "CAT-210",
+          "name": "Capas de abstracción de hardware",
+          "query": "topic:hardware-abstraction-layer fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M22",
+      "name": "Ciencia computacional y herramientas de ingeniería",
+      "categories": [
+        {
+          "id": "CAT-211",
+          "name": "Cálculo numérico",
+          "query": "topic:numerical-computing fork:false archived:false"
+        },
+        {
+          "id": "CAT-212",
+          "name": "Optimización matemática",
+          "query": "topic:mathematical-optimization fork:false archived:false"
+        },
+        {
+          "id": "CAT-213",
+          "name": "Computación científica reproducible",
+          "query": "topic:scientific-computing fork:false archived:false"
+        },
+        {
+          "id": "CAT-214",
+          "name": "Simulación de eventos discretos",
+          "query": "topic:discrete-event-simulation fork:false archived:false"
+        },
+        {
+          "id": "CAT-215",
+          "name": "Análisis de elementos finitos",
+          "query": "topic:finite-element-analysis fork:false archived:false"
+        },
+        {
+          "id": "CAT-216",
+          "name": "Dinámica de fluidos computacional",
+          "query": "topic:computational-fluid-dynamics fork:false archived:false"
+        },
+        {
+          "id": "CAT-217",
+          "name": "Matemática simbólica",
+          "query": "topic:symbolic-mathematics fork:false archived:false"
+        },
+        {
+          "id": "CAT-218",
+          "name": "Simulación de computación cuántica",
+          "query": "topic:quantum-computing fork:false archived:false"
+        },
+        {
+          "id": "CAT-219",
+          "name": "Herramientas de bioinformática",
+          "query": "topic:bioinformatics fork:false archived:false"
+        },
+        {
+          "id": "CAT-220",
+          "name": "Procesamiento de datos geoespaciales",
+          "query": "topic:geospatial fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M23",
+      "name": "Aplicaciones web, servicios y contenido",
+      "categories": [
+        {
+          "id": "CAT-221",
+          "name": "Frameworks de aplicaciones web",
+          "query": "topic:web-framework fork:false archived:false"
+        },
+        {
+          "id": "CAT-222",
+          "name": "Pasarelas de API",
+          "query": "topic:api-gateway fork:false archived:false"
+        },
+        {
+          "id": "CAT-223",
+          "name": "Servidores y clientes GraphQL",
+          "query": "topic:graphql fork:false archived:false"
+        },
+        {
+          "id": "CAT-224",
+          "name": "Herramientas para API REST",
+          "query": "topic:rest-api fork:false archived:false"
+        },
+        {
+          "id": "CAT-225",
+          "name": "Comunicación mediante WebSocket",
+          "query": "topic:websocket fork:false archived:false"
+        },
+        {
+          "id": "CAT-226",
+          "name": "Componentes web nativos",
+          "query": "topic:web-components fork:false archived:false"
+        },
+        {
+          "id": "CAT-227",
+          "name": "Sistemas de gestión de contenidos",
+          "query": "topic:content-management-system fork:false archived:false"
+        },
+        {
+          "id": "CAT-228",
+          "name": "Generadores de sitios estáticos",
+          "query": "topic:static-site-generator fork:false archived:false"
+        },
+        {
+          "id": "CAT-229",
+          "name": "Gestores de contenido desacoplados",
+          "query": "topic:headless-cms fork:false archived:false"
+        },
+        {
+          "id": "CAT-230",
+          "name": "Medición y optimización web",
+          "query": "topic:web-performance fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M24",
+      "name": "Interfaces, escritorio y aplicaciones móviles",
+      "categories": [
+        {
+          "id": "CAT-231",
+          "name": "Frameworks para aplicaciones de escritorio",
+          "query": "topic:desktop-application fork:false archived:false"
+        },
+        {
+          "id": "CAT-232",
+          "name": "Desarrollo de aplicaciones móviles",
+          "query": "topic:mobile-development fork:false archived:false"
+        },
+        {
+          "id": "CAT-233",
+          "name": "Frameworks de interfaz multiplataforma",
+          "query": "topic:cross-platform fork:false archived:false"
+        },
+        {
+          "id": "CAT-234",
+          "name": "Bibliotecas de componentes de interfaz",
+          "query": "topic:ui-components fork:false archived:false"
+        },
+        {
+          "id": "CAT-235",
+          "name": "Sistemas de diseño",
+          "query": "topic:design-system fork:false archived:false"
+        },
+        {
+          "id": "CAT-236",
+          "name": "Visualización de datos",
+          "query": "topic:data-visualization fork:false archived:false"
+        },
+        {
+          "id": "CAT-237",
+          "name": "Paneles de información interactivos",
+          "query": "topic:dashboard fork:false archived:false"
+        },
+        {
+          "id": "CAT-238",
+          "name": "Tecnologías de accesibilidad de interfaces",
+          "query": "topic:accessibility fork:false archived:false"
+        },
+        {
+          "id": "CAT-239",
+          "name": "Interfaces de usuario en terminal",
+          "query": "topic:terminal-ui fork:false archived:false"
+        },
+        {
+          "id": "CAT-240",
+          "name": "Aplicaciones web progresivas",
+          "query": "topic:progressive-web-app fork:false archived:false"
+        }
+      ]
+    },
+    {
+      "id": "M25",
+      "name": "Productividad, operaciones y aplicaciones de negocio",
+      "categories": [
+        {
+          "id": "CAT-241",
+          "name": "Automatización de flujos de trabajo",
+          "query": "topic:workflow-automation fork:false archived:false"
+        },
+        {
+          "id": "CAT-242",
+          "name": "Gestión de proyectos",
+          "query": "topic:project-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-243",
+          "name": "Gestión documental",
+          "query": "topic:document-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-244",
+          "name": "Gestión del conocimiento organizativo",
+          "query": "topic:knowledge-management fork:false archived:false"
+        },
+        {
+          "id": "CAT-245",
+          "name": "Toma de notas personales",
+          "query": "topic:note-taking fork:false archived:false"
+        },
+        {
+          "id": "CAT-246",
+          "name": "Plataformas de comercio electrónico",
+          "query": "topic:ecommerce fork:false archived:false"
+        },
+        {
+          "id": "CAT-247",
+          "name": "Gestión de relaciones con clientes",
+          "query": "topic:crm fork:false archived:false"
+        },
+        {
+          "id": "CAT-248",
+          "name": "Planificación de recursos empresariales",
+          "query": "topic:erp fork:false archived:false"
+        },
+        {
+          "id": "CAT-249",
+          "name": "Analítica de productos digitales",
+          "query": "topic:product-analytics fork:false archived:false"
+        },
+        {
+          "id": "CAT-250",
+          "name": "Inteligencia de negocio",
+          "query": "topic:business-intelligence fork:false archived:false"
+        }
+      ]
+    }
+  ]
+}

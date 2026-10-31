@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f5ef">
+  <title>Atlas · Conexiones y herramientas</title>
+</head>
+<body>
+  <main class="capabilities-page">
+    <div class="page-kicker"><span>✳</span> CONSTELACIÓN · CAPACIDADES LOCALES</div>
+    <h1>Conexiones y herramientas</h1>
+    <p class="page-lead">Atlas decide cuándo revisar sus respuestas y mantiene una auditoría local periódica. Aquí puedes ver qué capacidades están disponibles, qué ha comprobado y qué conexiones externas faltan.</p>
+
+    <div class="capability-summary" aria-label="Estado de las capacidades">
+      <article class="summary-card"><span class="summary-icon">◉</span><div><small>MODELO LOCAL</small><strong id="local-model-state">Comprobando Qwen…</strong><span id="local-model-detail">RTX · CUDA</span></div></article>
+      <article class="summary-card"><span class="summary-icon">◎</span><div><small>INTERNET</small><strong>Consulta pública a demanda</strong><span id="internet-detail">URLs HTTPS o extractos de Wikipedia</span></div></article>
+      <article class="summary-card"><span class="summary-icon">✳</span><div><small>CONSTELACIÓN LOCAL</small><strong id="council-state" role="status">Consultando actividad…</strong><span>Atlas decide la revisión; auditoría periódica sin preguntas manuales</span></div></article>
+      <article class="summary-card"><span class="summary-icon">↗</span><div><small>REFLEJOS GUARDADOS</small><strong id="reflection-count">Contando…</strong><span id="reflection-detail">Críticas como contexto, no pesos</span></div></article>
+      <article class="summary-card"><span class="summary-icon">⌘</span><div><small>HERRAMIENTAS LOCALES</small><strong id="tool-count">Buscando herramientas…</strong><span>JavaScript aislado, sin red ni archivos</span></div></article>
+    </div>
+
+    <section class="capability-card">
+      <h2>Atlas · Constelación · Ion</h2>
+      <p>Elegir al mejor colaborador exige comparar resultados para la tarea: corrección comprobada, errores, coste, tiempo y disponibilidad. Los roles locales comparten Qwen y no cuentan como modelos independientes. La comparación entre proveedores externos todavía está pendiente.</p>
+      <p><strong>Atlas — mente:</strong> comprende, recuerda y propone. <strong>Constelación — estrellas:</strong> contrasta perspectivas de colaboradores conectados. <strong>Ion — acción:</strong> convierte las propuestas en resultados comprobables con las herramientas disponibles.</p>
+      <p>Ion dispone actualmente de funciones JavaScript aisladas. El control de VS Code, la instalación autónoma de herramientas y la impresión 3D quedan pendientes de integración.</p>
+      <p>El método de mejora conserva un fallo reproducible, una propuesta, una refutación y un resultado. Solo una mejora comprobada se acepta; los intentos fallidos también se recuerdan.</p>
+    </section>
+    <section class="capability-card" aria-labelledby="autonomy-heading">
+      <h2 id="autonomy-heading">Actividad autónoma local</h2>
+      <p id="autonomy-state" role="status">Consultando el coordinador…</p>
+      <p id="autonomy-results"></p>
+      <p id="autonomy-error"></p>
+      <details><summary>Diagnóstico del modelo · opinión por verificar</summary><p id="autonomy-assessment"></p></details>
+      <p>La conversación tiene prioridad: al llegar un mensaje, la auditoría local cede el motor y se reprograma. Las comprobaciones ejecutadas se muestran aparte de sus opiniones. Este proceso no modifica los pesos del modelo.</p>
+    </section>
+    <section class="capability-card memory-card">
+      <h2>Referencias de videojuegos</h2>
+      <p>Atlas puede consultar el catálogo de X:\Games para orientar una investigación. El inventario distingue imágenes accesibles de paquetes del juego; no acredita aprendizaje visual.</p>
+      <a href="/games/">Abrir biblioteca de videojuegos ↗</a>
+    </section>
+    <section class="capability-card memory-card">
+      <div class="section-heading"><span class="section-icon">◌</span><div><div class="section-kicker">MEMORIA DE CHAT</div><h2>Tus conversaciones, en tu navegador</h2></div></div>
+      <p id="memory-summary">Consultando el almacenamiento local…</p>
+      <div class="memory-detail"><span class="status-dot online"></span><span>La recuperación es textual y opcional desde el interruptor <strong>Memoria</strong> del chat. No es entrenamiento del modelo ni memoria universal.</span></div>
+      <div class="memory-actions"><button id="memory-export" type="button">Descargar copia local</button><button id="memory-import-button" type="button">Importar copia</button><input id="memory-import-file" type="file" accept="application/json,.json" hidden></div>
+      <small class="memory-transfer-note">El archivo se prepara y se lee en este navegador. Atlas conserva hasta 1000 conversaciones en IndexedDB local; la memoria no se envía a internet.</small>
+      <p id="memory-transfer-status" class="memory-transfer-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="capability-card connection-card">
+      <div class="section-heading"><span class="section-icon">✳</span><div><div class="section-kicker">MESA DE ESTRELLAS</div><h2>Conectar un revisor gratuito</h2></div></div>
+      <p><strong id="connected" role="status">Consultando conexión externa…</strong>. Esta conexión es independiente de la revisión local automática.</p>
+      <p>OpenRouter ofrece una ruta que selecciona modelos con precio cero. La disponibilidad, velocidad y cuota dependen del proveedor; Atlas limita las solicitudes externas y no cambia a modelos de pago.</p>
+      <div class="notice-card"><strong>Qué se comparte al activar la mesa</strong><span>La pregunta y el borrador de Atlas se envían al revisor seleccionado. Si la respuesta incorpora memoria local o un adjunto, ese contenido podría aparecer en el borrador.</span></div>
+      <form id="connect" class="connection-form">
+        <label for="key">Clave de OpenRouter</label>
+        <div class="key-row"><input id="key" type="password" autocomplete="off" required placeholder="Pega aquí la clave; no la envíes en el chat"><button type="submit">Validar y guardar</button></div>
+        <small>La clave se valida y queda guardada en este PC. No se muestra ni se entrega a Qwen.</small>
+      </form>
+      <a class="account-link" href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener noreferrer">Abrir la página de claves de OpenRouter <span>↗</span></a>
+    </section>
+
+    <div class="capability-grid">
+      <section class="capability-card builder-card">
+        <div class="section-heading"><span class="section-icon">⌘</span><div><div class="section-kicker">TALLER LOCAL</div><h2>Crear una herramienta</h2></div></div>
+        <p>Atlas puede escribir una función pura para cálculos o transformaciones de texto y JSON. QuickJS la ejecuta aislada, sin acceso a archivos, red ni al servidor.</p>
+        <form id="build" class="stack-form">
+          <label for="task">Qué debe hacer</label>
+          <textarea id="task" maxlength="4000" required placeholder="Suma los números de una lista y devuelve 0 si está vacía."></textarea>
+          <label for="acceptance">Casos de aceptación opcionales <span>hasta 8</span></label>
+          <textarea id="acceptance" class="code-input" placeholder='[{"input":[2,3],"expected":5}]'>[]</textarea>
+          <p class="form-note">Estos casos los defines tú. Atlas puede usarlos al reparar su solución; no son una evaluación ciega.</p>
+          <button type="submit">Generar y comprobar</button>
+        </form>
+        <pre id="build-result" class="result-panel" aria-live="polite"></pre>
+      </section>
+
+      <section class="capability-card tools-card">
+        <div class="section-heading"><span class="section-icon">◇</span><div><div class="section-kicker">HERRAMIENTAS GUARDADAS</div><h2>Ejecutar una herramienta</h2></div></div>
+        <p>Selecciona una función que ya superó sus casos de aceptación. Cada ejecución queda registrada en Atlas.</p>
+        <form id="run" class="stack-form">
+          <label for="extension">Herramienta disponible</label>
+          <select id="extension"></select>
+          <label for="input">Entrada JSON</label>
+          <textarea id="input" class="code-input">[1,2,3]</textarea>
+          <button type="submit">Ejecutar aislada</button>
+        </form>
+        <pre id="run-result" class="result-panel" aria-live="polite"></pre>
+        <details><summary>Ver código y casos guardados</summary><pre id="records" class="result-panel"></pre></details>
+      </section>
+    </div>
+
+    <p id="status" class="page-status" role="status"></p>
+    <p class="page-footnote">Atlas no se reprograma a sí mismo con este taller. Las opiniones externas y las herramientas generadas no alteran los pesos de Qwen.</p>
+  </main>
+
+  <script>
+    const token='__TOKEN__',el=id=>document.getElementById(id);
+    const memoryDbName='atlas-chat-archive',memoryStoreName='conversations',memoryCacheKey='atlas-conversations-v2',memorySignalKey='atlas-chat-archive-updated',memoryLimit=1000,memoryMessageLimit=1000,memoryCacheCharacters=1200000;
+    function openMemoryArchive(){return new Promise((resolve,reject)=>{if(!window.indexedDB){reject(new Error('IndexedDB no está disponible en este navegador.'));return;}const request=indexedDB.open(memoryDbName,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(memoryStoreName))request.result.createObjectStore(memoryStoreName,{keyPath:'id'});};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error('No pude abrir la memoria local.'));request.onblocked=()=>reject(new Error('La memoria está bloqueada por otra pestaña.'));});}
+    function memoryTxDone(tx){return new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('Falló el guardado local.'));tx.onabort=()=>reject(tx.error||new Error('Se canceló el guardado local.'));});}
+    function memoryRequest(req){return new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error('Falló la lectura local.'));});}
+    function memoryTitle(messages){return (messages.find(item=>item.role==='user')?.content||'Nueva conversación').replace(/\s+/g,' ').trim().slice(0,66);}
+    function safeMemoryMeta(meta){
+      if(!meta||typeof meta!=='object'||Array.isArray(meta))return undefined;
+      const safe={};
+      for(const key of ['reviewScope','modelName'])if(typeof meta[key]==='string')safe[key]=meta[key].slice(0,600);
+      if(Array.isArray(meta.sources))safe.sources=meta.sources.slice(0,12).filter(source=>source&&typeof source==='object'&&!Array.isArray(source)).map(source=>({...(typeof source.url==='string'?{url:source.url.slice(0,2000)}:{}),...(typeof source.title==='string'?{title:source.title.slice(0,300)}:{}),...(typeof source.excerpt==='string'?{excerpt:source.excerpt.slice(0,3000)}:{}),...(typeof source.method==='string'?{method:source.method.slice(0,160)}:{}),...(typeof source.fetchedAt==='string'?{fetchedAt:source.fetchedAt.slice(0,80)}:{})}));
+      if(Array.isArray(meta.warnings))safe.warnings=meta.warnings.filter(value=>typeof value==='string').slice(0,8).map(value=>value.slice(0,600));
+      for(const key of ['internetRequested','webRead'])if(typeof meta[key]==='boolean')safe[key]=meta[key];
+      if(Array.isArray(meta.failedWebUrls))safe.failedWebUrls=meta.failedWebUrls.filter(value=>typeof value==='string').slice(0,5).map(value=>value.slice(0,2000));
+      for(const key of ['reflectionMemoryUsed','personalMemoryUsed'])if(Number.isInteger(meta[key])&&meta[key]>=0)safe[key]=meta[key];
+      if(meta.toolRun&&typeof meta.toolRun==='object'&&!Array.isArray(meta.toolRun)){
+        const run={};
+        if(typeof meta.toolRun.used==='boolean')run.used=meta.toolRun.used;
+        for(const key of ['name','error'])if(typeof meta.toolRun[key]==='string')run[key]=meta.toolRun[key].slice(0,key==='name'?200:600);
+        try{const result=JSON.stringify(meta.toolRun.result);if(typeof result==='string'&&result.length<=10000)run.result=JSON.parse(result);}catch{}
+        if(Object.keys(run).length)safe.toolRun=run;
+      }
+      return Object.keys(safe).length?safe:undefined;
+    }
+    function safeMemoryConversation(item){
+      if(!item||typeof item!=='object'||!Array.isArray(item.messages)||item.messages.length>memoryMessageLimit||item.messages.some(m=>!m||!['user','assistant'].includes(m.role)||typeof m.content!=='string'||m.content.length>(m.role==='user'?6000:16000)))return null;
+      const messages=item.messages.map(m=>{const meta=m.role==='assistant'?safeMemoryMeta(m.meta):undefined;return{role:m.role,content:m.content,...(meta?{meta}:{})};});
+      if(!messages.length)return null;
+      return{id:typeof item.id==='string'&&item.id?item.id.slice(0,100):(crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`),title:memoryTitle(messages),updatedAt:Number.isFinite(item.updatedAt)?item.updatedAt:Date.now(),messages};
+    }
+    async function memoryRecords(){const merged=new Map();try{const db=await openMemoryArchive(),tx=db.transaction(memoryStoreName,'readonly'),done=memoryTxDone(tx),request=memoryRequest(tx.objectStore(memoryStoreName).getAll()),[rows]=await Promise.all([request,done]);for(const row of rows){const record=safeMemoryConversation(row);if(record)merged.set(record.id,record);}}catch{}try{const cached=JSON.parse(localStorage.getItem(memoryCacheKey)||'null');for(const row of cached?.conversations||[]){const record=safeMemoryConversation(row),prior=record&&merged.get(record.id);if(record&&(!prior||record.updatedAt>prior.updatedAt))merged.set(record.id,record);}}catch{}if(!merged.size){try{const legacy=JSON.parse(localStorage.getItem('atlas-chat-v1')||'[]');if(Array.isArray(legacy)&&legacy.length){const record=safeMemoryConversation({id:'legacy-atlas-chat',updatedAt:Date.now(),messages:legacy});if(record)merged.set(record.id,record);}}catch{}}return[...merged.values()].sort((a,b)=>b.updatedAt-a.updatedAt);}
+    async function localMemoryCount(){return(await memoryRecords()).length;}
+    async function writeMemoryRecords(records){const db=await openMemoryArchive(),tx=db.transaction(memoryStoreName,'readwrite'),done=memoryTxDone(tx),store=tx.objectStore(memoryStoreName);for(const record of records)store.put(record);await done;}
+    function rememberCurrentCache(records){
+      try{
+        let old=null;try{old=JSON.parse(localStorage.getItem(memoryCacheKey)||'null');}catch{}
+        const activeConversationId=typeof old?.activeConversationId==='string'&&old.activeConversationId?old.activeConversationId:records[0]?.id||null;
+        const cached=[],envelope={version:2,activeConversationId,conversations:cached};
+        let characters=JSON.stringify(envelope).length;
+        const active=records.find(record=>record.id===activeConversationId);
+        const candidates=active?[active,...records.filter(record=>record.id!==activeConversationId)]:records;
+        for(const record of candidates){
+          if(cached.length>=30)break;
+          const size=JSON.stringify(record).length+(cached.length?1:0);
+          if(characters+size>memoryCacheCharacters)continue;
+          cached.push(record);characters+=size;
+        }
+        // IndexedDB retains the complete records. Never create newer partial
+        // cache copies, which could later replace an intact archived chat.
+        localStorage.setItem(memoryCacheKey,JSON.stringify(envelope));
+      }catch{}
+    }
+    function distinctMemoryText(record){return JSON.stringify(record.messages.map(message=>[message.role,message.content]));}
+    function renderAutonomy(a){
+      el('council-state').textContent=!a?'Estado no disponible':a.paused?'Pausada':a.running?'Revisando capacidades':'Revisión automática habilitada';
+      if(!a){el('autonomy-state').textContent='El coordinador todavía no publica su actividad autónoma.';return;}
+      const when=a.nextRun?new Date(a.nextRun).toLocaleString(): 'pendiente de programar';
+      el('autonomy-state').textContent=a.running?'Auditoría en curso':a.paused?'Auditoría pausada junto al loop':`Revisión local habilitada. Próxima fecha prevista: ${when}. Puede aplazarse si Atlas está ocupado.`;
+      const checks=a.last?.checks||[];
+      el('autonomy-results').textContent=a.last?`Última auditoría: ${new Date(a.last.at).toLocaleString()}. Herramientas comprobadas: ${checks.length}; aprobadas: ${checks.filter(x=>x.passed).length}; fallidas: ${checks.filter(x=>!x.passed).length}. Candidato: ${a.last.candidate?(a.last.candidate.passed?'superó sus casos':'rechazado'):'ninguno'}.`:'Todavía no hay auditorías periódicas completadas.';
+      el('autonomy-error').textContent=a.lastError?'Último error: '+a.lastError:'';
+      el('autonomy-assessment').textContent=a.last?.assessment?JSON.stringify(a.last.assessment,null,2):'Sin diagnóstico guardado.';
+    }
+    setInterval(async()=>{try{const r=await fetch('/capabilities/status',{cache:'no-store'});if(!r.ok)throw Error();renderAutonomy((await r.json()).autonomousReview);}catch{el('autonomy-state').textContent='No se puede consultar el coordinador ahora.';}},15000);
+    async function refresh(){
+      const [capabilities,health]=await Promise.all([
+        fetch('/capabilities/status',{cache:'no-store'}).then(response=>response.json()),
+        fetch('/chat/health',{cache:'no-store'}).then(response=>response.json())
+      ]);
+      renderAutonomy(capabilities.autonomousReview);
+      el('connected').textContent=capabilities.openrouterConfigured?'Conectado · ruta gratuita':'Opcional · sin conectar';
+      el('connected').className='summary-value '+(capabilities.openrouterConfigured?'is-online':'is-offline');
+      el('local-model-state').textContent=health.ready?(health.modelName||'Qwen local'):'No disponible';
+      el('local-model-detail').textContent=health.ready?(health.gpu||'Motor local listo'):'Revisa el lanzador de Atlas';
+      el('internet-detail').textContent=health.webSearchProviders?.includes('Google')?'Google público + DuckDuckGo. Google: '+({available:'última consulta disponible',blocked:'bloqueo detectado; alternativa activa',unavailable:'último intento no disponible','not-tested':'todavía sin consulta'}[health.googleSearch?.status]||'sin comprobar')+'.':'DuckDuckGo Lite, Wikipedia de respaldo y lectura directa de URLs HTTPS';
+      const reflectionCount=Number.isFinite(health.reflectionMemory)?health.reflectionMemory:0;
+      el('reflection-count').textContent=reflectionCount?`${reflectionCount} reflexión(es)`:'Ningún reflejo guardado';
+      el('reflection-detail').textContent=reflectionCount?'Críticas externas recuperables por tema; sin verificar':'Sin críticas externas; las auditorías locales aparecen debajo';
+      const extensions=capabilities.extensions.filter(item=>item.passed);
+      el('tool-count').textContent=extensions.length?`${extensions.length} herramienta(s) disponible(s)`:'Aún no hay herramientas guardadas';
+      const memoryCount=await localMemoryCount();
+      el('memory-summary').textContent=`Hay ${memoryCount} conversación(es) guardada(s) en este navegador. Atlas busca hasta 1000 y recupera como máximo dos intercambios relacionados si Memoria está activa en el chat.`;
+      const select=el('extension');
+      select.replaceChildren();
+      if(extensions.length){
+        for(const item of extensions){const option=document.createElement('option');option.value=item.id;option.textContent=item.name;select.append(option);}
+      }else{
+        const option=document.createElement('option');option.value='';option.textContent='No hay herramientas disponibles';select.append(option);
+      }
+      el('run').querySelector('button').disabled=!extensions.length;
+      el('records').textContent=JSON.stringify(capabilities.extensions,null,2);
+    }
+    el('memory-export').addEventListener('click',async()=>{
+      const button=el('memory-export');button.disabled=true;el('memory-transfer-status').textContent='Preparando una copia local…';
+      try{
+        const conversations=await memoryRecords();
+        if(!conversations.length)throw new Error('Todavía no hay conversaciones guardadas.');
+        const backup={format:'atlas-chat-memory',version:1,exportedAt:new Date().toISOString(),conversations};
+        const text=JSON.stringify(backup,null,2);if(text.length>50*1024*1024)throw new Error('La copia supera 50 MB; reduce el archivo antes de descargarlo.');
+        const blob=new Blob([text],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+        link.href=url;link.download=`atlas-memoria-${new Date().toISOString().slice(0,10)}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        el('memory-transfer-status').textContent=`Copia descargada en este navegador: ${conversations.length} conversaciones. No se envió a ningún servicio.`;
+      }catch(error){el('memory-transfer-status').textContent=error.message;}
+      finally{button.disabled=false;}
+    });
+    el('memory-import-button').addEventListener('click',()=>el('memory-import-file').click());
+    el('memory-import-file').addEventListener('change',async event=>{
+      const file=event.target.files?.[0];if(!file)return;
+      el('memory-transfer-status').textContent='Validando el archivo local…';
+      try{
+        if(file.size>50*1024*1024)throw new Error('El archivo supera 50 MB.');
+        const backup=JSON.parse(await file.text());
+        const incoming=backup?.format==='atlas-chat-memory'&&backup.version===1?backup.conversations:backup?.version===2?backup.conversations:null;
+        if(!Array.isArray(incoming)||!incoming.length)throw new Error('El archivo no contiene un respaldo Atlas reconocido.');
+        if(incoming.length>memoryLimit)throw new Error(`La copia supera el límite de ${memoryLimit} conversaciones.`);
+        const existing=await memoryRecords(),merged=new Map(existing.map(record=>[record.id,record])),fingerprints=new Set(existing.map(distinctMemoryText));
+        let added=0,duplicates=0,conflicts=0;
+        for(const raw of incoming){
+          const record=safeMemoryConversation(raw);if(!record)throw new Error('El archivo contiene una conversación inválida; no se importó nada.');
+          const fingerprint=distinctMemoryText(record);if(fingerprints.has(fingerprint)){duplicates++;continue;}
+          if(merged.has(record.id)){record.id=crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;while(merged.has(record.id))record.id=`${record.id}-c`;conflicts++;}
+          merged.set(record.id,record);fingerprints.add(fingerprint);added++;
+        }
+        if(merged.size>memoryLimit)throw new Error(`La fusión superaría ${memoryLimit} conversaciones. No se cambió la memoria.`);
+        const records=[...merged.values()].sort((a,b)=>b.updatedAt-a.updatedAt);
+        await writeMemoryRecords(records);rememberCurrentCache(records);localStorage.setItem(memorySignalKey,String(Date.now()));
+        el('memory-transfer-status').textContent=`Importación local completada: ${added} nueva(s), ${duplicates} duplicada(s) omitida(s)${conflicts?`, ${conflicts} ID(s) duplicado(s) conservados como conversaciones aparte`:''}.`;
+        await refresh();
+      }catch(error){el('memory-transfer-status').textContent=error.message;}
+      finally{event.target.value='';}
+    });
+    async function post(route,body){
+      const response=await fetch('/capabilities/'+route,{method:'POST',headers:{'Content-Type':'application/json','X-Atlas-Token':token},body:JSON.stringify(body)});
+      const result=await response.json();
+      if(!response.ok)throw Error(result.error||'La operación no se completó.');
+      return result;
+    }
+    for(const id of ['connect','build','run'])el(id).onsubmit=async event=>{
+      event.preventDefault();
+      const button=el(id).querySelector('button');button.disabled=true;el('status').textContent='Atlas está trabajando…';
+      try{
+        if(id==='connect'){
+          const value=el('key').value.trim();el('key').value='';
+          await post('connect',{key:value});
+          el('status').textContent='OpenRouter está conectado. La mesa sigue apagada hasta que la actives en el chat.';
+        }
+        if(id==='build'){
+          const result=await post('build',{task:el('task').value,acceptanceTests:JSON.parse(el('acceptance').value)});
+          el('build-result').textContent=JSON.stringify(result,null,2);
+          el('status').textContent=result.passed?'Herramienta guardada; sus casos definidos se ejecutaron.':'No superó los casos definidos. El informe queda guardado.';
+        }
+        if(id==='run'){
+          const result=await post('run',{id:el('extension').value,input:JSON.parse(el('input').value)});
+          el('run-result').textContent=JSON.stringify(result,null,2);
+          el('status').textContent='Ejecución local completada.';
+        }
+        await refresh();
+      }catch(error){el('status').textContent=error.message;}
+      finally{button.disabled=false;}
+    };
+    refresh().catch(error=>el('status').textContent=error.message);
+  </script>
+</body>
+</html>

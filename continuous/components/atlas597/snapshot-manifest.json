@@ -1,0 +1,347 @@
+{
+  "schema": 1,
+  "importedAt": "2026-10-31T20:52:04.288Z",
+  "purpose": "Sanitized source-only export; no private models, memories or runtime evidence.",
+  "files": [
+    {
+      "path": "atlas_lm/agent_cli.py",
+      "bytes": 739,
+      "sha256": "b930edfb750c9e0457818861ec595c9731ba6d94ca6655d1cffd3621ff6fa002"
+    },
+    {
+      "path": "atlas_lm/agent_runtime.py",
+      "bytes": 31983,
+      "sha256": "f697d739c506699d0e79411e25ed6f749842dbf5525e99777b838e11eea826da"
+    },
+    {
+      "path": "atlas_lm/atlas_agent_suite.py",
+      "bytes": 1989,
+      "sha256": "f309d3dae4f821cb978fd86aee40abefbc92cfd0ff63423b681d5e4ea0c37126"
+    },
+    {
+      "path": "atlas_lm/atlas_tinyworld.py",
+      "bytes": 2152,
+      "sha256": "dadeb090b5e8be62250c2c03ece165ae9201818b8eeeedc444d6ef677e37df06"
+    },
+    {
+      "path": "atlas_lm/autonomous.py",
+      "bytes": 24515,
+      "sha256": "a4c4c15fdd38bd95f3e1a3e610f93d24c95c09cef36c50dc5c5bb741e39204df"
+    },
+    {
+      "path": "atlas_lm/codex_bridge.py",
+      "bytes": 7150,
+      "sha256": "6917afa673f0f1c58086263632c8beb003220f49e68170a2d909cc1a5534eabe"
+    },
+    {
+      "path": "atlas_lm/codex_live.py",
+      "bytes": 7580,
+      "sha256": "21d27edf08d6b57953a032c62a62184dfbcff26f068c4ea0229defb21f2c49d3"
+    },
+    {
+      "path": "atlas_lm/cognitive_kernel.py",
+      "bytes": 5514,
+      "sha256": "a3fc86add16139ff9e0130d04fa21d42e284a889c36e29e8b844866038855b73"
+    },
+    {
+      "path": "atlas_lm/contrastive_curriculum.py",
+      "bytes": 3292,
+      "sha256": "d05f77e4bca2bf5e3af4cad6a0b4c57b0a0ae5075ebfc34d1777f578fda00ea8"
+    },
+    {
+      "path": "atlas_lm/corpus.py",
+      "bytes": 4539,
+      "sha256": "44c8ad03371ec619e006526e6cadaa9e586d8a01cd55e8ceb3f1a65ad4fc33f2"
+    },
+    {
+      "path": "atlas_lm/council.py",
+      "bytes": 2943,
+      "sha256": "bd2fed03cb19cccd4c1823fd3b674a16182c88ba15927707007b4dd6510c24f2"
+    },
+    {
+      "path": "atlas_lm/decision_corpus.py",
+      "bytes": 5119,
+      "sha256": "65a1d647f9f3a9e934474f4d49b5ba576f93783e274ab0f092a9fb13a797175f"
+    },
+    {
+      "path": "atlas_lm/decision_eval.py",
+      "bytes": 1734,
+      "sha256": "1acfaa4cbe9a7a6ac8cded65ef935cb547e136ecae4edba6871dc64260b56ba5"
+    },
+    {
+      "path": "atlas_lm/decision_language.py",
+      "bytes": 996,
+      "sha256": "201757d6a8793495296bc65e9c5db4a80a08ea5b52c708610fa960c4e5311c0b"
+    },
+    {
+      "path": "atlas_lm/decision_runtime.py",
+      "bytes": 422,
+      "sha256": "f4255bcc87494869b5fda08750c81c43b8ddfdf3510e0406ffd8dcbb8c8098b0"
+    },
+    {
+      "path": "atlas_lm/evaluate.py",
+      "bytes": 1333,
+      "sha256": "8c39074cca23797831649b66da943bba4a7be338bdaa87015615d7b016130c26"
+    },
+    {
+      "path": "atlas_lm/evidence_compactor.py",
+      "bytes": 923,
+      "sha256": "73d6547045c3790d50427a074bd75d19a8d0418efaddd098b9f7afe6279c4115"
+    },
+    {
+      "path": "atlas_lm/game_cli.py",
+      "bytes": 698,
+      "sha256": "0fd6824c43bb0d4f9aeb6b86558765a892f579419cb56d2e0e2764b5a198a5b3"
+    },
+    {
+      "path": "atlas_lm/game_generator.py",
+      "bytes": 30473,
+      "sha256": "e4cd64b5d04627efb417013513a6517e5bc9b1e691e648465ff6919da9c87ae2"
+    },
+    {
+      "path": "atlas_lm/gpu.py",
+      "bytes": 4152,
+      "sha256": "0f7c9c214c447dbb1af126696e36d602a8f8af4cf3266704bd02438bea00d758"
+    },
+    {
+      "path": "atlas_lm/gpu_calibration.py",
+      "bytes": 5632,
+      "sha256": "846838e3e3531e32ec4ae7b3b2c1f1c0249172442c29f3fe3bf2d3770fe830ec"
+    },
+    {
+      "path": "atlas_lm/hybrid_eval.py",
+      "bytes": 431,
+      "sha256": "539ef6a9b00a70cc183d3cd5bb882569669656c11bd940309812b700e9ed2457"
+    },
+    {
+      "path": "atlas_lm/local_agent.py",
+      "bytes": 5194,
+      "sha256": "fb35a4f7e1f7b37c5f6938876452f5ab31b4a250e7c17ff5aa307a2e69e32f16"
+    },
+    {
+      "path": "atlas_lm/memory_store.py",
+      "bytes": 11327,
+      "sha256": "557b5bc4806376a6ccb942a4df6213663500eb55060884103201874ccb4dfe80"
+    },
+    {
+      "path": "atlas_lm/model.py",
+      "bytes": 11637,
+      "sha256": "011cfc51e3d103bd56cec0dd04b2181a9b85247f74afbeab65c898cd5ff0102d"
+    },
+    {
+      "path": "atlas_lm/offline_curriculum.py",
+      "bytes": 20858,
+      "sha256": "c5912ce3a8144c45347b9b4f85d0fdb4099ca1e7fb01ce07a4dd7b704dfba781"
+    },
+    {
+      "path": "atlas_lm/openai_collab.py",
+      "bytes": 5853,
+      "sha256": "33e554bd0acd69e23b0ac9a80c4b6eec61e0c2d531cdefb295a7a6c87140741f"
+    },
+    {
+      "path": "atlas_lm/runtime.py",
+      "bytes": 4505,
+      "sha256": "a5df816ccc3db791dd8426de3e99e7486b57dac78e65d7781d4e5374953d3c04"
+    },
+    {
+      "path": "atlas_lm/scaling.py",
+      "bytes": 726,
+      "sha256": "c2b89c038a48975dd5d02c2b3b23906629d8d20b47d56df05b9ee3c9f6137e78"
+    },
+    {
+      "path": "atlas_lm/semantic_holdout.py",
+      "bytes": 1819,
+      "sha256": "b2c5638626efb6f019f66be66c3ea122786b46169c2f9d247d648ecd7f2a083e"
+    },
+    {
+      "path": "atlas_lm/system_language.py",
+      "bytes": 5564,
+      "sha256": "9034f0bd7dc816748181e8931642632c28af58078956e57838dacd23fd03e709"
+    },
+    {
+      "path": "atlas_lm/tokenizer.py",
+      "bytes": 2111,
+      "sha256": "9fdfe553169f5d8a8ea21947bb5973a8229ec12706ed29c2974a408bbfd91de0"
+    },
+    {
+      "path": "atlas_lm/train.py",
+      "bytes": 5037,
+      "sha256": "52f442d169db24165704f8bfa0516b46ce7d0b7d74f825ddacc8604efffcaaed"
+    },
+    {
+      "path": "atlas_lm/training_engine.py",
+      "bytes": 17220,
+      "sha256": "9ce3269b1e203f18914b727fd8a06f0d9ff3e8c3d0105c78e5d9e1c7c9cefb66"
+    },
+    {
+      "path": "atlas_lm/train_decision.py",
+      "bytes": 3970,
+      "sha256": "63e2e1e3f523fca8725e5543ada0668a7edc7605ab64433ee63e53ae76033a71"
+    },
+    {
+      "path": "atlas_lm/web_evidence.py",
+      "bytes": 1110,
+      "sha256": "963ba670f44f2f8aea5cab16c97e6492d9d7602c675d0c261224705efec08028"
+    },
+    {
+      "path": "atlas_lm/__init__.py",
+      "bytes": 122,
+      "sha256": "035b427f277b8ff9d3ce284cdaa67969c28942c98d3e278dad038674a8f3002e"
+    },
+    {
+      "path": "core/atlas_epistemic_v5.py",
+      "bytes": 5596,
+      "sha256": "11bc85023e1d9118cee75f2a464345140c5de1c53ba00754e58f4b0280794e4c"
+    },
+    {
+      "path": "core/atlas_offline_deliberation.py",
+      "bytes": 6297,
+      "sha256": "4a95be3d91d1f1aa11d27fd3cca0ce6e7447dc791364560f1e908da05d2e3ebb"
+    },
+    {
+      "path": "core/atlas_provider.py",
+      "bytes": 11371,
+      "sha256": "9cd1b2f7be5221d4c6d515cf52958f7c99b40121edf267b2711c63dd39552c98"
+    },
+    {
+      "path": "core/atlas_runtime_v5.py",
+      "bytes": 11099,
+      "sha256": "f428f32cce0852ad5c9e829d46988270a58d06aa7ff004dbb750b1b489ecc9e9"
+    },
+    {
+      "path": "lor/discrete_holonomy.py",
+      "bytes": 3764,
+      "sha256": "476a6aa6907ddd79d23f4d4b0836667e4ea0ef14c73b731ab278b0e7549a4ac8"
+    },
+    {
+      "path": "lor/lor_evaluation_protocol.py",
+      "bytes": 5410,
+      "sha256": "337c87aa9821126dd2113c11a0374a4dbd63a0ae1bffd551ee99c141c808ed0a"
+    },
+    {
+      "path": "lor/lor_robustness.py",
+      "bytes": 1557,
+      "sha256": "4dbd3a0399427bd29b2ee6fee85a0a9a4779d2cfbe82cab3eaa788b90038cefd"
+    },
+    {
+      "path": "tests/test_agent_runtime_boundaries.py",
+      "bytes": 3561,
+      "sha256": "4f1ede97dcd82027b83713cb0a818312634a2c5e279886b357e43e6492e1a49b"
+    },
+    {
+      "path": "tests/test_atlas_57_lab.py",
+      "bytes": 669,
+      "sha256": "5665f9a5010e5bd9039662ef639ecca46f07012964cd77a5ec8da16b717551dd"
+    },
+    {
+      "path": "tests/test_atlas_58_lab.py",
+      "bytes": 471,
+      "sha256": "c78ea94a467912ac201843a0326dde880ddea77d0be4c071301b49b45bbb808a"
+    },
+    {
+      "path": "tests/test_atlas_59_lab.py",
+      "bytes": 1028,
+      "sha256": "9aac283331925061d0c2f5c362f4454f14df516aa5665fd5dda8f60d746d54d3"
+    },
+    {
+      "path": "tests/test_atlas_live_gpu_ui.py",
+      "bytes": 1797,
+      "sha256": "4ab1418ab404fecc3018bba259b8289e3d0162b9bab2d40197d86615e0382643"
+    },
+    {
+      "path": "tests/test_atlas_lm.py",
+      "bytes": 2007,
+      "sha256": "9953205f553ae26d5bd22f5e5a2cc8f57467595555ca734e5e15a615fa2df9e9"
+    },
+    {
+      "path": "tests/test_atlas_paths.py",
+      "bytes": 847,
+      "sha256": "38a0bb6a631283642d7422e86a7e6a1d730a47b4a1c3ebee330e4c30b7699343"
+    },
+    {
+      "path": "tests/test_autonomous.py",
+      "bytes": 10487,
+      "sha256": "9ac61f958cb90199b8b922d1789f68f9747e73a5fd2cf3b9a33743fa9a508f12"
+    },
+    {
+      "path": "tests/test_codex_bridge_live.py",
+      "bytes": 788,
+      "sha256": "3209db4019c84276c4bc217e370e302a923ea864ecd3144bd44ab771b375d22e"
+    },
+    {
+      "path": "tests/test_codex_ready.py",
+      "bytes": 4098,
+      "sha256": "9586474b657e62920e0863ee391a75ed585f2a8ba48f2aeda5fcde784cc50ac4"
+    },
+    {
+      "path": "tests/test_collaborators_595.py",
+      "bytes": 3206,
+      "sha256": "5a817a782d86ed7fffd0eb8163be626c9a34c061df90800d03a26652056468d6"
+    },
+    {
+      "path": "tests/test_game_generator.py",
+      "bytes": 5084,
+      "sha256": "429ea3cb0d07301bfef93e368eff74f0bfc0ba4a5baa88d1526ccc2e72d0b1a0"
+    },
+    {
+      "path": "tests/test_game_generator_playability.py",
+      "bytes": 3993,
+      "sha256": "f634b2efe61db515270e5af0a2790691e26f019daabcfcbd0f29b5468bff15c7"
+    },
+    {
+      "path": "tests/test_gpu_engine_511.py",
+      "bytes": 5935,
+      "sha256": "b19d2cb2d7154ce61df82dc61301ce6304f680f1497cedb2edab7a2b7854248c"
+    },
+    {
+      "path": "tests/test_launcher_596.py",
+      "bytes": 1966,
+      "sha256": "8f9720b74d2fdb82eebfd7ee97aed81d3781ccce4a85b449eea66cfee6e0e0ea"
+    },
+    {
+      "path": "tests/test_local_agent_mode.py",
+      "bytes": 5365,
+      "sha256": "9a433f584cf7acb9a8f56b472e8f13ecba18b17680fad87dd460724b9f9e161f"
+    },
+    {
+      "path": "tests/test_local_memory_510.py",
+      "bytes": 8587,
+      "sha256": "817c6566c9fcbcc566e669944de00049b162d4715a9a483af2201c24e8fd2158"
+    },
+    {
+      "path": "tests/test_offline_curriculum.py",
+      "bytes": 4832,
+      "sha256": "617019f98431a4f71a3a47f9708d573df2f423237bdf839d941a9a2b20a618fe"
+    },
+    {
+      "path": "tests/test_own_engine_510.py",
+      "bytes": 4624,
+      "sha256": "bf82bb9c351da93a41cc13d6c91d670517d84dc52e204a1bc9bf434918a2022c"
+    },
+    {
+      "path": "tests/test_v5.py",
+      "bytes": 5054,
+      "sha256": "9813848a161eb3e739a8de0a020fd0dd8b6a1178213bec798775221a5b4a2cf6"
+    },
+    {
+      "path": "scripts/download_torch_wheel.py",
+      "bytes": 5307,
+      "sha256": "f10b01eecbb8a34b4ae19f39d2c7bbecd992e49b630a7c3b2b7dbd74bc00ab9f"
+    },
+    {
+      "path": "atlas_paths.py",
+      "bytes": 3983,
+      "sha256": "6ec3db01aff4cb479f97e27c0b48fe6bec9db15fe61802df0754a12ad76171b4"
+    },
+    {
+      "path": "atlas_bridge.py",
+      "bytes": 3771,
+      "sha256": "e19c4155dc8d736beef1d8c7afc7b0951c45febcb9b03f8eaff8285de8d165ef"
+    },
+    {
+      "path": "SOURCE_ONLY.md",
+      "bytes": 544,
+      "sha256": "9fa9dbd7f2e6fa5f72290ef74d0abff4773cb552175539e737b0011e6668c3ca"
+    }
+  ]
+}
