@@ -24,7 +24,7 @@ function updateRoom(id,force=false){
  if(changed)send('room',{room:id});
  updateProcessLegend();
 }
-function updateProcessLegend(){const legend=$('process-legend');if(!legend)return;const sourceAge=processState.at?Math.max(0,Date.now()-Date.parse(processState.at)):0;const process=processForRoom(processState,currentRoom,{ageMs:Math.max(performance.now()-processReceivedAt,sourceAge)});legend.textContent=processCaption(process)+' · Movimiento = actividad; mejorar requiere pruebas.';}
+function updateProcessLegend(){const legend=$('process-legend');if(!legend)return;const sourceAge=processState.at?Date.now()-Date.parse(processState.at):Infinity;const process=processForRoom(processState,currentRoom,{ageMs:sourceAge<0?sourceAge:Math.max(performance.now()-processReceivedAt,sourceAge)});legend.textContent=processCaption(process)+' · Gestos = trabajo comunicado; adornos ≠ aprendizaje.';}
 function setOverview(value){
  overview=value;drag=null;keys.clear();joystick?.reset();transition=null;
  document.body.classList.toggle('overview',value);document.body.classList.toggle('walking',!value);$('walk').classList.toggle('selected',!value);$('overview').classList.toggle('selected',value);$('walk').querySelector('span').textContent=value?'Entrar en casa':'Explorando';$('interact').hidden=value;
@@ -40,7 +40,7 @@ function cameraFrame(time){
  else{const desired=new THREE.Vector3(player.x,1.64,player.z);if(transition){const progress=Math.min(1,(time-transition.at)/600),smooth=progress*progress*(3-2*progress);p.lerpVectors(transition.from,desired,smooth);if(progress===1)transition=null;}else p.copy(desired);const lookYaw=yaw+(recording?Math.sin((time-recordStart)*.0004)*.16:0);target.set(p.x+Math.sin(lookYaw)*Math.cos(pitch),p.y+Math.sin(pitch),p.z-Math.cos(lookYaw)*Math.cos(pitch));}
  camera.lookAt(target);
 }
-function renderNow(time){if(!renderer||!house)return;house.update(time/1000);cameraFrame(time);renderer.render(house.scene,camera);}
+function renderNow(time){if(!renderer||!house)return;cameraFrame(time);house.update(time/1000,camera,innerHeight);renderer.render(house.scene,camera);}
 function screenshot(){renderNow(performance.now());return canvas.toDataURL('image/png');}
 async function record(seconds=8){
  if(recording)throw Error('Ya hay una grabación en curso.');

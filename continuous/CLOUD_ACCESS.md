@@ -1,3 +1,16 @@
+# Publicación vigente verificada · 1 de noviembre de 2026
+
+Sites público V17, fuente `f89a17425b72ac792be2149b9f6d9ecc6cae419a`, publicado el 1 de noviembre a las 21:05:41 UTC. Dirección principal: https://atlas-personal.pablo-cunatlopez.chatgpt.site/ ; conversación: /chat/ ; actividad: /actividad/ . La inferencia sigue en el PC mediante el puente saliente; cambiar la IP del teléfono no exige acceder a 127.0.0.1.
+
+La casa muestra diez habitantes de cuatro tipos con gestos ligados a procesos recientes y marcas tomadas del contador real de cambios aceptados. Las etiquetas se limitan a 220 px al acercarse; se comprobaron a 390×844. La vista móvil se probó en un navegador del PC; no es una medición de rendimiento de un iPhone.
+
+El chat recibe la identidad y el inventario del programa completo. La petición «Continúa mejorándote» se comprobó en el hilo del usuario: encoló una revisión real. Las descripciones de capacidades se reconstruyen desde el inventario para impedir negaciones genéricas de funciones implementadas. El MCP OpenAI Docs dispone de búsqueda pública anónima; las demás extensiones de Codex no se han transferido por nombre ni se han sustituido por 32 roles.
+
+La guía `DIRECCIONES_ATLAS_2026-11-01.md` se incorpora al planificador y a conversaciones relevantes. El coordinador excluye nuevos lotes con la misma fuente/cobertura tras tres lotes completos sin contradicciones; las funciones del chat siguen disponibles. Esta saturación delimita presupuesto y no demuestra corrección universal. La ampliación a nuevas clases necesita evidencia y ejecutores verificables.
+
+Las publicaciones y verificaciones siguientes se conservan como historia; no sustituyen este estado de entrega.
+
+---
 # Atlas desde el móvil y la nube
 
 Dirección publicada: https://atlas-personal.pablo-cunatlopez.chatgpt.site/

@@ -5,7 +5,7 @@ import {chat} from './chat.mjs';
 export async function executePure(source,input){
  if(typeof source!=='string'||source.length>16000||JSON.stringify(input)?.length>30000)throw Error('Extensión o entrada demasiado grande');
  const Q=await getQuickJS();const runtime=Q.newRuntime();runtime.setMemoryLimit(16*1024*1024);runtime.setMaxStackSize(256*1024);const deadline=Date.now()+250;runtime.setInterruptHandler(()=>Date.now()>deadline);const vm=runtime.newContext();
- try{const result=vm.evalCode(`"use strict";\n${source}\n;JSON.stringify(transform(${JSON.stringify(input??null)}))`);
+ try{const result=vm.evalCode(`"use strict";\n${source}\n;JSON.stringify(transform(JSON.parse(${JSON.stringify(JSON.stringify(input??null))})))`);
   if(result.error){const error=vm.dump(result.error);result.error.dispose();throw Error('Ejecución aislada: '+(error.message||'fallo'));}
   try{const output=vm.getString(result.value);if(output.length>64000)throw Error('Salida demasiado larga');return JSON.parse(output);}finally{result.value.dispose();}
  }finally{vm.dispose();runtime.dispose();}

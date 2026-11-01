@@ -5,7 +5,7 @@ export const ROOMS=Object.freeze([
  {id:'lab',title:'Laboratorio',short:'Laboratorio',kind:'Experimentar',accent:'#89c9e2',bounds:[-12,-8,-4,0],spawn:[-6.8,-4],yaw:-Math.PI/2,hotspot:[-9.6,-4]},
  {id:'games',title:'Taller de mundos',short:'Mundos',kind:'Crear en 3D',accent:'#c3a6ec',bounds:[4,0,12,8],spawn:[6.8,4],yaw:Math.PI/2,hotspot:[9.4,4]},
  {id:'cinema',title:'Sala de cine',short:'Cine',kind:'Crear vídeo',accent:'#ecaa91',bounds:[4,-8,12,0],spawn:[6.8,-4],yaw:Math.PI/2,hotspot:[10,-4]},
- {id:'constellation',title:'Dios · Constelación',short:'Constelación',kind:'Suceso · mundo exterior',accent:'#c1cdee',bounds:[-4,-8,4,0],spawn:[0,-3.3],yaw:0,hotspot:[0,-6.3]},
+ {id:'constellation',title:'Cielo · Constelación',short:'Constelación',kind:'Suceso · mundo exterior',accent:'#c1cdee',bounds:[-4,-8,4,0],spawn:[0,-3.3],yaw:0,hotspot:[0,-6.3]},
  {id:'mind',title:'Mente · Archivo vivo',short:'Mente',kind:'Distinguir y recordar',accent:'#9acfe8',bounds:[-16,-16,-8,-8],spawn:[-10,-10],yaw:0,hotspot:[-12,-13.8]},
  {id:'body',title:'Animal · Cuerpo de Ion',short:'Ion',kind:'Recursos y consecuencias',accent:'#e5ba85',bounds:[-8,-16,0,-8],spawn:[-3,-10],yaw:0,hotspot:[-4,-13.8]},
  {id:'refutation',title:'Cámara de refutación',short:'Refutación',kind:'Probar y corregir',accent:'#e9a69f',bounds:[0,-16,8,-8],spawn:[3,-10],yaw:0,hotspot:[4,-13.8]},

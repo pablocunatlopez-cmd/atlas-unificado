@@ -26,5 +26,5 @@ export const CORE_PHASES=[
 export const CORE_VERTICES=[
  {name:'Animal · Cuerpo',actor:'Ion',description:'Percepción, regulación, herramientas y recursos disponibles.'},
  {name:'Mente · Lenguaje',actor:'Atlas',description:'Modelos, distinciones, memoria y símbolos.'},
- {name:'Dios · Suceso · Unidad',actor:'Constelación',description:'Azar, totalidad, sentido y límites. No es una causa empírica automática.'},
+ {name:'Dios · Suceso · Unidad',actor:'Dios / Suceso',description:'Azar, totalidad, sentido y límites. No es una causa empírica automática.'},
 ] as const;

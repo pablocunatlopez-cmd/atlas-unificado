@@ -29,8 +29,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 4556,
-      "sha256": "d45b41ac2c1e8ae1abc2a92c1a2e11faaf7d037f327fb8c6251cfb3d90c99342",
+      "bytes": 14652,
+      "sha256": "9a2681e93abb72cc3ec41f9e97ed21f29426900205cac9e29852b506381c4462",
       "adapted": true
     },
     {
@@ -71,8 +71,8 @@
     },
     {
       "path": "app/api/cloud/chat/route.ts",
-      "bytes": 759,
-      "sha256": "990b6357d77d4deab08d1883aaba818ca3fea6e9726b83003784bcd60562edc0",
+      "bytes": 887,
+      "sha256": "a437ea404260d811d62771ea730e6b42ac0ac844cb839bfc3b2c4a93820c1f17",
       "adapted": false
     },
     {
@@ -149,14 +149,14 @@
     },
     {
       "path": "app/atlas-house.module.css",
-      "bytes": 14659,
-      "sha256": "bb220ca5ab32dc1f47017c5e2b355772e1d7127f6ce87c6f959e4f8b96e21f31",
+      "bytes": 15515,
+      "sha256": "52deca2153cb4f2ed507da3b4785bbbb89ab846e763a2f1ea5a96d394b92939a",
       "adapted": true
     },
     {
       "path": "app/atlas-house.tsx",
-      "bytes": 14467,
-      "sha256": "46363dfa70095adffa60b948856e0bcc4b3ecadc72b75a9dbda9a74574e3ebe8",
+      "bytes": 16149,
+      "sha256": "07a10bac478054d049afab5a4c4b94c2e42635b60d20d6dd19076a09e1ca9f06",
       "adapted": false
     },
     {
@@ -209,14 +209,14 @@
     },
     {
       "path": "app/cloud-chat.tsx",
-      "bytes": 28309,
-      "sha256": "dfaeb6501827ea19c64076309c1fb372efc8ffe918e98727ca15869098c06958",
+      "bytes": 28804,
+      "sha256": "b56e3ff97d973a6c6d3a7d022e1685c8d754572b6600bbcc65f0d559494a6495",
       "adapted": false
     },
     {
       "path": "app/constellation-panel.tsx",
-      "bytes": 5018,
-      "sha256": "a0fdb477e01ab7666331993829da4362d7739819470960b4599d9890c25cf1b3",
+      "bytes": 6926,
+      "sha256": "eac09a755184c355356c63c87c9a0c972fb240440d2cffb45402acd78690552d",
       "adapted": false
     },
     {
@@ -229,6 +229,18 @@
       "path": "app/core-observatory.tsx",
       "bytes": 18690,
       "sha256": "ea0de62156c7302c39a8a1a11f316e758856de8e9d552bf5f5e2eca1942d644f",
+      "adapted": false
+    },
+    {
+      "path": "app/experience-creative-preview.module.css",
+      "bytes": 3206,
+      "sha256": "9ed9bb25757c841a9a659d1ba2a70bec09e16aad9f73956d61c0b391cba3cbaf",
+      "adapted": false
+    },
+    {
+      "path": "app/experience-creative-preview.tsx",
+      "bytes": 5352,
+      "sha256": "dcde47c11759a774fda634c3674893413695bbcb0ff71e21b4c4296b6b1cdc91",
       "adapted": false
     },
     {
@@ -245,8 +257,8 @@
     },
     {
       "path": "app/house-scene.tsx",
-      "bytes": 6139,
-      "sha256": "0a06d254e1584708827057529742e2a564bc47429c7f9e656b8258d90e61f500",
+      "bytes": 6159,
+      "sha256": "4cec1d146d34f86e5d1c531d6e66ab89a629ddda2e1535156d8307dcd567db94",
       "adapted": false
     },
     {
@@ -257,14 +269,14 @@
     },
     {
       "path": "app/learning-dashboard.module.css",
-      "bytes": 12890,
-      "sha256": "f26eb9f7e443080b557fa6f849a099a4200c1cc9063734b297628ba54f5f85b4",
+      "bytes": 17787,
+      "sha256": "49386f7ea4f6347dc3c19ed3ed8fec36b723f0e132415b4e41353e8d6b3db2c8",
       "adapted": false
     },
     {
       "path": "app/learning-dashboard.tsx",
-      "bytes": 18311,
-      "sha256": "d21e5482949af63a89085794158aaf74bcac3eae569be605ee84b24dd22e4e34",
+      "bytes": 29064,
+      "sha256": "84719bc7689159b6e06184a458b2be910b7ab37531d742a7eb06df1cf0a35b4c",
       "adapted": false
     },
     {
@@ -977,8 +989,8 @@
     },
     {
       "path": "lib/cloud/queue.mjs",
-      "bytes": 17023,
-      "sha256": "fe8aa5ec42cf07ab0ec701d354089678aa86dc8129062d608f9cc669ef2fa60b",
+      "bytes": 17032,
+      "sha256": "86b80594f4182d74c5ab9658f8ca5c931aef4e545a647f9aa82ecf021a6d2586",
       "adapted": false
     },
     {
@@ -1018,6 +1030,42 @@
       "adapted": true
     },
     {
+      "path": "lib/core/atlas-intent.mjs",
+      "bytes": 661,
+      "sha256": "0bd4097610c118893004a8fdc5f1e775124dd9591705e0e19f3ae1b48c2c002b",
+      "adapted": false
+    },
+    {
+      "path": "lib/core/atlas-intent.test.mjs",
+      "bytes": 684,
+      "sha256": "ed764d0ed7baa5566702d8bfb05d918577342e51fdc1f43b8998742c11f69843",
+      "adapted": false
+    },
+    {
+      "path": "lib/core/creative-preview.mjs",
+      "bytes": 1577,
+      "sha256": "c66ce2805aa40978ff2ca168965ae373d98794a82314cc0f39f7aa8b64847d8e",
+      "adapted": false
+    },
+    {
+      "path": "lib/core/creative-preview.test.mjs",
+      "bytes": 1341,
+      "sha256": "7cd8d8580c834d4083ec882dbf94e3257af29e46fe2bfa8d688439d4273ca246",
+      "adapted": false
+    },
+    {
+      "path": "lib/core/experience-status.mjs",
+      "bytes": 3189,
+      "sha256": "c2e3291c4e5f3495736d028359ece577f1aa737effa3889be884f48b2b5fa2ab",
+      "adapted": true
+    },
+    {
+      "path": "lib/core/experience-status.test.mjs",
+      "bytes": 2704,
+      "sha256": "fd6efbb7e272af1131d13f1ae2fc35ecad86bec5231de20566463af4da0c2b39",
+      "adapted": false
+    },
+    {
       "path": "lib/core/learning-status.mjs",
       "bytes": 2822,
       "sha256": "c8ab8f5c0e734d615e5fc4d595dede8d5243c49d0a1f00c0ec6593eae584de0b",
@@ -1032,13 +1080,19 @@
     {
       "path": "lib/core/lor-spec.ts",
       "bytes": 2396,
-      "sha256": "7ca040ba522328d35b58fb5823568f94ed88c755eddf729dfc80bab9ea15267c",
+      "sha256": "da9c847e26b92d78dbf6d883cbbc046bbd7265196c8cfd675deb9d36ca4e87d7",
       "adapted": false
     },
     {
       "path": "lib/core/process-telemetry.mjs",
-      "bytes": 3575,
-      "sha256": "517f27ad0fa2148c2d885f570d5901a29272fa7fa31632d0dd26a613b0a41008",
+      "bytes": 4458,
+      "sha256": "23fe27a6a5a1fd75c99c8a160827e611d5d53945dad4e9c8157a9a8b3259c133",
+      "adapted": true
+    },
+    {
+      "path": "lib/core/process-telemetry.test.mjs",
+      "bytes": 2490,
+      "sha256": "d18b76a354c7cddc1c17c3689224d83f37937f7c79b1ad8e8b9f3b4673b29731",
       "adapted": false
     },
     {
@@ -1055,8 +1109,8 @@
     },
     {
       "path": "lib/house/ERAS_PROVENANCE.md",
-      "bytes": 3433,
-      "sha256": "83ea698f98f2dfbb9eca03e563b024d5c9a68eef35f64a3cf4420c293034e12d",
+      "bytes": 4258,
+      "sha256": "e52cf1e1196909e65144cde68726100d3b1f22dc8ffc46f225a36bd55f50eec8",
       "adapted": false
     },
     {
@@ -1066,15 +1120,21 @@
       "adapted": false
     },
     {
+      "path": "lib/house/process-creatures.test.mjs",
+      "bytes": 5806,
+      "sha256": "8f58c8472f134b1238ac7a87887af71adac912e4c6c4b0279d3942786c941993",
+      "adapted": false
+    },
+    {
       "path": "lib/house/process-state.test.mjs",
-      "bytes": 2926,
-      "sha256": "595c42bc361cbccf895ceeb126e46f09e0b098f80784c4eb50eff9e6aa32811e",
+      "bytes": 4572,
+      "sha256": "4787c4ba9e09c6cad2e5d60e90d57297609f1f3ac00801af2c175124615f56ee",
       "adapted": false
     },
     {
       "path": "lib/house/scene.test.mjs",
-      "bytes": 1846,
-      "sha256": "1e7bc3c2c20f953c52ece0413d9902ab4c8190de7f130edfc30a5117d1e7496c",
+      "bytes": 2834,
+      "sha256": "4534d4be3f55a0d83e040f1bc33cd1dde35e07d5b42b3fa98bd50bbac9feb8a7",
       "adapted": false
     },
     {
@@ -1331,8 +1391,8 @@
     },
     {
       "path": "public/house/layout.js",
-      "bytes": 4274,
-      "sha256": "6bd9a697197947608aa874c272cbb378eedc3363027e03073bee31475d66f787",
+      "bytes": 4275,
+      "sha256": "29e6b561e302dba40bde3dcb6148e6607ae2454e379b8475190318904d9f8d22",
       "adapted": false
     },
     {
@@ -1343,15 +1403,15 @@
     },
     {
       "path": "public/house/process-creatures.js",
-      "bytes": 4622,
-      "sha256": "41bdac4aa2f237d39ade7e7d45246c0329e97219bc3be705c1566b7dcc040177",
-      "adapted": false
+      "bytes": 8507,
+      "sha256": "a2e9923d05c4d38c5f4a226a8e7f35901b0ea25ffd074b187e62a912a2d2d716",
+      "adapted": true
     },
     {
       "path": "public/house/process-state.js",
-      "bytes": 3280,
-      "sha256": "88caf8e73e42c1147972574635e8c6670c850b1e020cf18e93a17b2dea0f011e",
-      "adapted": false
+      "bytes": 4932,
+      "sha256": "240fa8db426b77f25efa5bcbad68c4f84622778dc0b788f5e50f9ed836d9834b",
+      "adapted": true
     },
     {
       "path": "public/house/render-engine.js",
@@ -1361,14 +1421,14 @@
     },
     {
       "path": "public/house/runtime.js",
-      "bytes": 13174,
-      "sha256": "d659d3f949b74998c7ae3d4c892257f3c69d11cd78ca3d3e00cdb750077f5e19",
+      "bytes": 13214,
+      "sha256": "e72ed62beba8d16bf375ad0353b9cdc593c4f9f0445280565595a5c937f93445",
       "adapted": false
     },
     {
       "path": "public/house/scene.js",
-      "bytes": 18230,
-      "sha256": "106d11933da44bb47e653a10d72b9dc86dcbbc1ec88e904bf0fba73fc159bae1",
+      "bytes": 18369,
+      "sha256": "725448b53583e9500359d2994680f8e420b1be4e6fd67fd4aac5285683ecfee3",
       "adapted": false
     },
     {
@@ -1546,7 +1606,7 @@
       "adapted": true
     }
   ],
-  "totalBytes": 4776051,
+  "totalBytes": 4843964,
   "scan": {
     "findings": 0,
     "privateConversationLinksRemoved": 1
@@ -1560,9 +1620,12 @@
     "q517-counterexample.json",
     "studio-runtime.json"
   ],
-  "updatedAt": "2026-11-01T18:23:44.703Z",
+  "updatedAt": "2026-11-01T22:28:45.575Z",
   "runtimeCodeSeeds": [
     "studio-runtime.json",
     "studio-runtime-legacy.json"
-  ]
+  ],
+  "sourcePublishedVersion": "V17",
+  "sourceCommit": "f89a17425b72ac792be2149b9f6d9ecc6cae419a",
+  "publishedAt": "2026-11-01T21:05:41Z"
 }

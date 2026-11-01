@@ -50,8 +50,8 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
    if(response.status===429){await sleep(3000);continue;}return response;
   }
  }
- async function chat(messages,jobSignal,{json=false,internet=false}={}){
-  const response=await localPost('/chat/message',{messages,sharedSession:true,internet:internet===true,tools:false,external:false,...(json?{json:true}:{})},jobSignal);
+ async function chat(messages,jobSignal,{json=false,internet=false,creativeMode=null}={}){
+  const response=await localPost('/chat/message',{messages,sharedSession:true,internet:internet===true,tools:false,external:false,...(json?{json:true}:{}),...(['world','game'].includes(creativeMode)?{creativeMode}:{})},jobSignal);
   const result=await response.json();
   if(!response.ok||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>16000||!['atlas-local','atlas-coordinator'].includes(result.model))throw Error('Respuesta local inválida.');
   return {answer:result.answer,model:result.model,modelName:typeof result.modelName==='string'?result.modelName.slice(0,160):'Qwen local'};
@@ -96,7 +96,7 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
    if(!job){emit({status:'online',modelName});return {status:'idle'};}
    if(typeof job.id!=='string'||typeof job.leaseToken!=='string'||!Array.isArray(job.messages))throw Error('Trabajo de nube inválido.');
    emit({status:'answering',jobId:job.id,modelName});
-   const kind=job.kind??'chat';if(!['chat','world','game','video','lor'].includes(kind))throw Error('Tipo de trabajo no disponible.');
+   const kind=job.kind??'chat';if(!['chat','world','game','video','lor','review'].includes(kind))throw Error('Tipo de trabajo no disponible.');
    const abort=new AbortController(),jobSignal=combined(kind==='video'?1800000:450000,abort.signal);
    let stage=kind==='video'?'video':kind==='chat'?null:'architect',progress=0,finished=false;
    const onProgress=event=>{if(STAGES.has(event.stage))stage=event.stage;const value=event.progress??(typeof event.value==='number'?event.value*100:undefined);if(Number.isFinite(value))progress=Math.max(progress,Math.min(99,Math.max(0,Math.round(value))));};
@@ -109,8 +109,15 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
     let safeResult;
     if(kind==='world'||kind==='game'){
      const prompt=typeof job.question==='string'?job.question:[...job.messages].reverse().find(message=>message.role==='user')?.content;
-     const creative=await planCreativeWorld(prompt,kind==='game'?'game':'3d',async text=>(await chat([{role:'user',content:text}],jobSignal,{json:true})).answer,{signal:jobSignal,onStage:event=>onProgress({...event,progress:({architect:10,repair:25,critic:65,revision:80})[event.stage]})});
+     const creative=await planCreativeWorld(prompt,kind==='game'?'game':'3d',async text=>(await chat([{role:'user',content:text}],jobSignal,{json:true,creativeMode:kind})).answer,{signal:jobSignal,onStage:event=>onProgress({...event,progress:({architect:10,repair:25,critic:65,revision:80})[event.stage]})});
      safeResult={answer:'He diseñado y validado el plan de un '+(kind==='game'?'prototipo de juego':'entorno 3D')+'.',model:'atlas-local',modelName,creative};
+    }else if(kind==='review'){
+     onProgress({stage:'critic',progress:25});
+     const response=await localPost('/autonomy/run',{},jobSignal),review=await response.json();
+     if(!response.ok||review.queued!==true)throw Error('El coordinador no pudo encolar la revisión.');
+     const current=await request(localBase+'/process/status',{redirect:'error',signal:jobSignal});
+     const experience=current.ok?sanitizeProcessTelemetry(await current.json())?.experience:null;
+     safeResult={answer:'He pedido al coordinador una revisión real de mi programa. Atlas elige la siguiente pregunta y trabaja con los ejecutores disponibles. '+(experience?`El registro comunica ${experience.experiences} experiencias y ${experience.learningChanges} ${experience.learningChanges===1?'cambio aceptado':'cambios aceptados'}. `:'')+'[Ver actividad de Atlas](/actividad/). Poner una revisión en marcha no significa que ya haya mejorado ni que se hayan cambiado los pesos de Qwen.',model:'atlas-coordinator',modelName:'Atlas · revisión autónoma'};
     }else if(kind==='lor'){
      onProgress({stage:'critic',progress:25});const response=await localPost('/lor/experiment',{},jobSignal),lor=await response.json();if(!response.ok||lor.synthetic!==true||typeof lor.verdict!=='string')throw Error('El experimento LOR no produjo evidencia válida.');
      const safeLor=sanitizeProcessTelemetry({lor})?.lor;if(!safeLor||![safeLor.baseline,safeLor.score,safeLor.delta,safeLor.negativeControlDelta].every(Number.isFinite))throw Error('El experimento LOR no devolvió medidas finitas.');

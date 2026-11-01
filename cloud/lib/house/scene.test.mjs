@@ -19,3 +19,14 @@ test('ten-room geometry builds with clear furniture spawns and finite animated i
   assert.ok(instances>=70,'each room has real 3D body parts');assert.ok(vertices<600000,'static geometry stays within the mobile mesh budget');assert.ok(staticMeshes<100,'static materials remain batched rather than a mesh per item');
  }finally{house?.dispose();if(prior===undefined)delete globalThis.document;else globalThis.document=prior;}
 });
+test('disposing the house releases instance buffers and shared resources only once',()=>{
+ const prior=globalThis.document,context=new Proxy({},{get:()=>()=>{},set:()=>true});globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>context})};
+ let house;
+ try{
+  house=buildHouse();let instanceDisposals=0,geometryDisposals=0;const geometries=new Set();
+  house.scene.traverse(item=>{if(item.isInstancedMesh)item.addEventListener('dispose',()=>instanceDisposals++);if(item.geometry)geometries.add(item.geometry);});
+  for(const geometry of geometries)geometry.addEventListener('dispose',()=>geometryDisposals++);
+  house.dispose();assert.equal(instanceDisposals,3);assert.equal(geometryDisposals,geometries.size);assert.equal(house.scene.children.length,0);
+  house.dispose();assert.equal(instanceDisposals,3);assert.equal(geometryDisposals,geometries.size);
+ }finally{house?.dispose();if(prior===undefined)delete globalThis.document;else globalThis.document=prior;}
+});

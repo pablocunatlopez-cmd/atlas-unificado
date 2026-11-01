@@ -2,6 +2,10 @@
 
 Asistente general local con chat Qwen, fuentes públicas, biblioteca GitHub, refutación, funciones JavaScript aisladas y prototipos. Su interfaz móvil es una casa 3D basada en ERAS, con diez salas: conversación, música, laboratorio, juegos, cine, constelación, mente, Ion, refutación y lenguaje. Esta distribución conserva el código y sus pruebas; excluye claves, conversaciones, memoria privada, pesos Qwen, checkpoints y datos de entrenamiento privados del equipo de origen. `cloud/` conserva seis semillas documentales o experimentales ya publicadas en Sites y dos fuentes JavaScript de runtime, incluido el pequeño MLP original necesario para compilar su interfaz histórica.
 
+El chat conoce el inventario del programa completo y permite solicitar una revisión real con «Continúa mejorándote». Atlas / Mente, Ion, Cielo / Constelación y Dios / Suceso tienen funciones distintas. El tiempo como tangente de la espiral y su atractor provisional forman parte del marco conceptual revisable del proyecto. Los habitantes de la casa reciben estados y cambios medidos; una animación no suma aprendizaje.
+
+El adaptador OpenAI Docs MCP busca documentación pública sin clave y envía solo vocabulario público del tema. Es una conexión documental real, con una herramienta de búsqueda invocable; no transfiere los plugins o credenciales de Codex. [Identidad y conexiones](continuous/IDENTIDAD_Y_CONEXIONES_2026-11-01.md).
+
 ## Ejecutar localmente
 
 1. Instala Node.js 22.20 o posterior y ejecuta `npm install`, después `npm run setup`.
@@ -21,6 +25,8 @@ El PC, su modelo y el puente deben permanecer encendidos para responder. Configu
 
 El observatorio `/actividad/` muestra los procesos, las fechas de revisión, los constructores y el catálogo público verificado. Consulta el estado cada diez segundos y deja de confirmar conexión cuando la señal caduca. Conserva el último informe con una etiqueta explícita; los contadores locales y las herramientas públicas son datos distintos. Los ejemplos del catálogo se preparan en el chat y requieren que el usuario los envíe.
 
+La espiral de experiencia muestra un objetivo revisable, sus fases, incógnitas acotadas y la próxima fecha comunicada. Las preguntas privadas se sustituyen por etiquetas canónicas. Mente formula; Ion ejecuta; Dios/Suceso conserva lo ocurrido y lo aún no explicado; lenguaje y lógica registran el contraste. Los focos no reducen las posibilidades a las seis herramientas del currículo. Una experiencia registrada y un cambio aceptado se cuentan por separado.
+
 ## Casa y herramientas creativas
 
 La casa renderiza geometría 3D real con Three.js, controles táctiles, colisiones y calidad adaptable. Sus diez salas reúnen las funciones creativas, Mente, Ion/Cuerpo, Refutación y LOR-ΩΣ; el chat completo sigue en `/chat/` y la interfaz histórica en `/origen/`. Los robots muestran estados y contadores del coordinador sin convertir movimiento en evidencia de aprendizaje. La casa y el secuenciador musical funcionan en el navegador sin inferencia del PC. El estudio dispone de cuatro pistas, piano sintetizado, mezcla, proyectos JSON y exportación WAV; no utiliza un modelo generativo musical.
@@ -28,6 +34,8 @@ La casa renderiza geometría 3D real con Three.js, controles táctiles, colision
 Para crear mundos y juegos desde el chat, el puente pide un plan JSON a Qwen, ejecuta comprobaciones de geometría, solicita una revisión y guarda un proyecto procedural en el taller. Arquitecto y revisor son dos pasadas del mismo modelo, sin presentarlas como agentes externos independientes. El taller permite recorrer y exportar los prototipos; la revisión no acredita calidad AAA.
 
 El cine graba MP4 o WebM del lienzo 3D según el navegador. La vía neuronal utiliza Wan2.1 T2V 1.3B mediante ComfyUI local y requiere instalar aparte su entorno y pesos. OpenField es un proyecto distinto: sus motores nativos no se consideran disponibles solo por instalar su interfaz. La reserva GPU descarga Qwen durante el trabajo de vídeo y lo restaura al liberar ComfyUI. Consulta [el contrato del entorno multimedia](docs/MEDIA_RUNTIME.md).
+
+Los experimentos creativos pueden conservar planes y artefactos con seis contratos geométricos externos. El observatorio reconstruye el plan 3D solo al pulsar un botón, dentro de un iframe aislado que se desmonta al cerrar u ocultar la pestaña. La reconstrucción no prueba coincidencia visual con el HTML del laboratorio, calidad gráfica, jugabilidad ni mejora del modelo. La valoración visual se mantiene pendiente hasta que exista evidencia independiente.
 
 ## Autonomía y colaboradores gratuitos
 

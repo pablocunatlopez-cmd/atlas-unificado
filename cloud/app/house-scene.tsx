@@ -10,14 +10,14 @@ export const HOUSE_ROOMS:ReadonlyArray<{id:HouseRoom;title:string;label:string}>
  {id:'lab',title:'Laboratorio',label:'Laboratorio'},
  {id:'games',title:'Taller de mundos',label:'Mundos'},
  {id:'cinema',title:'Sala de cine',label:'Cine'},
- {id:'constellation',title:'Dios · Constelación',label:'Constelación'},
+ {id:'constellation',title:'Cielo · Constelación',label:'Constelación'},
  {id:'mind',title:'Mente · Archivo vivo',label:'Mente'},
  {id:'body',title:'Animal · Cuerpo de Ion',label:'Ion'},
  {id:'refutation',title:'Cámara de refutación',label:'Refutación'},
  {id:'language',title:'LOR-ΩΣ · Lenguaje',label:'LOR-ΩΣ'},
 ];
 export type HouseProcess={id:string;room?:HouseRoom;label?:string;phase?:'observe'|'understand'|'connect'|'apply'|'refute'|'retain';state:'idle'|'running'|'passed'|'failed'|'waiting';counters?:{observations?:number;trials?:number;accepted?:number;rejected?:number}};
-export type HouseProcessState={at?:string;processes:HouseProcess[]};
+export type HouseProcessState={at?:string;connected?:boolean;processes:HouseProcess[]};
 export type HouseRecording={url:string;mime:string;filename:string;bytes:number;method:string};
 export type HousePerformance={fps:number;frames:number;drawCalls:number;triangles:number;backend:string};
 export type HouseAPI={

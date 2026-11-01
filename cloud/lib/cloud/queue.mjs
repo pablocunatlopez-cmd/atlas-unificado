@@ -46,7 +46,7 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   if(!input||typeof input.message!=='string'||!input.message.trim()||input.message.length>6000)fail('Escribe entre 1 y 6000 caracteres.');
   if(!validId(input.requestId))fail('El identificador de la solicitud no es válido.');
   if(input.conversationId!==undefined&&!validId(input.conversationId))fail('El identificador de la conversación no es válido.');
-  const kind=input.kind??'chat';if(!['chat','world','game','video','lor'].includes(kind))fail('Herramienta no disponible.');
+  const kind=input.kind??'chat';if(!['chat','world','game','video','lor','review'].includes(kind))fail('Herramienta no disponible.');
   const parameters=kind==='video'?{frames:input.parameters?.frames??17,steps:input.parameters?.steps??5,fps:8,width:480,height:272}:{};
   if(kind==='video'&&(![17,33,49,65,81].includes(parameters.frames)||!Number.isInteger(parameters.steps)||parameters.steps<5||parameters.steps>30))fail('La duración o los pasos de vídeo exceden los límites.');
   const serializedParameters=JSON.stringify(parameters);

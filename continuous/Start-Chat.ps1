@@ -16,6 +16,12 @@ try {
 } catch {}
 $atlasNine = Join-Path $atlasChatRoot 'models\Qwen3.5-9B-Q4_K_M.gguf'
 $atlasFour = Join-Path $atlasChatRoot 'models\Qwen3-4B-Instruct-2507-Q4_K_M.gguf'
+$atlasModelPaths = Join-Path $atlasData 'chat-model-paths.json'
+if (Test-Path -LiteralPath $atlasModelPaths) {
+    $atlasConfiguredModels = [IO.File]::ReadAllText($atlasModelPaths) | ConvertFrom-Json
+    if ($atlasConfiguredModels.primary) { $atlasNine = [string]$atlasConfiguredModels.primary }
+    if ($atlasConfiguredModels.fallback) { $atlasFour = [string]$atlasConfiguredModels.fallback }
+}
 $atlasCandidates = @()
 if (Test-Path -LiteralPath $atlasNine) { $atlasCandidates += [pscustomobject]@{Path=$atlasNine; Name='Qwen3.5-9B-Q4_K_M'} }
 $atlasCandidates += [pscustomobject]@{Path=$atlasFour; Name='Qwen3-4B-Instruct-2507 Q4_K_M'}

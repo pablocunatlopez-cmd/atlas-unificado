@@ -18,7 +18,7 @@ const rooms:Record<HouseRoom,{title:string;short:string;description:string;actio
  lab:{title:'El laboratorio',short:'Laboratorio',description:'Transforma una idea en un entorno 3D que puedas explorar.',action:'Crear en 3D',icon:FlaskConical,accent:'#a7cde4'},
  games:{title:'El taller de mundos',short:'Videojuegos',description:'Diseña un mundo, prueba una mecánica y empieza a jugar.',action:'Crear un videojuego',icon:Gamepad2,accent:'#c6afe6'},
  cinema:{title:'La sala de cine',short:'Cine',description:'Encuadra la casa, graba una toma y explora las herramientas de vídeo.',action:'Crear un vídeo',icon:Clapperboard,accent:'#e6ad91'},
- constellation:{title:'Dios · La constelación',short:'Constelación',description:'Perspectivas, sucesos y límites: contrasta una interpretación con lo que queda fuera de ella.',action:'Abrir constelación',icon:Orbit,accent:'#a7d8df'},
+ constellation:{title:'Cielo · La constelación',short:'Constelación',description:'Fuentes y colaboradores para contrastar. Dios / Suceso conserva también lo que ninguna perspectiva consigue explicar.',action:'Abrir constelación',icon:Orbit,accent:'#a7d8df'},
  mind:{title:'Mente · El archivo vivo',short:'Mente',description:'Observaciones, memoria y preguntas con una perspectiva situada.',action:'Explorar la mente',icon:Brain,accent:'#a6cfea'},
  body:{title:'Animal · El cuerpo de Ion',short:'Ion',description:'Herramientas, recursos y acciones que se pueden ejecutar y comprobar.',action:'Entrar en el cuerpo de Ion',icon:Wrench,accent:'#e2bd8e'},
  refutation:{title:'La cámara de refutación',short:'Refutación',description:'Prueba una candidata, conserva sus errores y compara antes de cambiar.',action:'Ver pruebas y refutaciones',icon:ShieldCheck,accent:'#d4b9e7'},
@@ -39,6 +39,8 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const walk=useCallback((next:HouseRoom)=>{setEntered(true);setRoom(next);setMenu(false);lastRequested.current=next;api?.teleport(next);},[api]);
  const open=useCallback((next:HouseRoom)=>{setRoom(next);setEntered(true);setMenu(false);previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setWorkspace(next);},[]);
  const close=useCallback(()=>setWorkspace(null),[]);
+ const deepLinkHandled=useRef(false);
+ useEffect(()=>{if(deepLinkHandled.current||!api)return;deepLinkHandled.current=true;const requested=new URLSearchParams(location.search).get('room');if(requested&&Object.hasOwn(rooms,requested)){const next=requested as HouseRoom;lastRequested.current=next;api.teleport(next);open(next);}},[api,open]);
  useEffect(()=>{
   const current=dialog.current;if(!current)return;
   if(workspace){if(!current.open)current.showModal();closeButton.current?.focus();}
@@ -51,7 +53,10 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const overview=()=>{setEntered(false);setMenu(false);lastRequested.current=null;api?.overview();};
  const initials=(displayName||'Tu espacio').slice(0,1).toUpperCase();
  const connected=status?.online===true&&!statusFailed;
- const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {processes:[]};return {at:telemetry.at||undefined,processes:connected?telemetry.processes:telemetry.processes.map(process=>({...process,state:'waiting' as const}))};},[status?.capabilities?.processTelemetry,connected]);
+ const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {connected:false,processes:[]};const age=telemetry.at?Date.now()-Date.parse(telemetry.at):Infinity,fresh=connected&&Number.isFinite(age)&&age>=0&&age<=75000;return {at:telemetry.at||undefined,connected:fresh,processes:fresh?telemetry.processes:telemetry.processes.map(process=>({...process,state:'waiting' as const}))};},[status?.capabilities?.processTelemetry,connected]);
+ const activeProcesses=processState.connected?processState.processes.filter(process=>process.state==='running').length:0;
+ const rawChanges=processState.processes.find(process=>process.id==='experience')?.counters?.accepted;
+ const acceptedChanges=typeof rawChanges==='number'&&Number.isSafeInteger(rawChanges)&&rawChanges>=0?rawChanges:null;
 
  return <main className={styles.house}>
   <div className={styles.scene}><HouseScene processState={processState} paused={workspace!==null&&workspace!=='cinema'} onRoomChange={setRoom} onInteract={open} onReady={ready} onPerformance={setPerformance} onError={message=>{setSceneError(message);setPerformance(null);}}/></div>
@@ -73,6 +78,14 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
    <p>{entered?active.description:'Una casa para hablar, hacer música, explorar preguntas y construir mundos. Recorre sus habitaciones o elige adónde quieres ir.'}</p>
    {!entered?<button className={styles.enter} type="button" onClick={()=>walk('salon')}>Entrar en la casa <ArrowUpRight size={15}/></button>:<button className={styles.overview} type="button" onClick={overview}><Home size={13}/> Ver toda la casa</button>}
    <div className={styles.roomFoot}><i/>{sceneError?'3D no disponible en este navegador':api?'Entorno 3D en tiempo real':'Preparando el entorno…'}{performance&&performance.fps>0&&<span>{Math.round(performance.fps)} FPS</span>}</div>
+   <details className={styles.mirrorLegend}>
+    <summary>Espejo de procesos <span>{processState.connected?`${activeProcesses} en acción`:'Sin señal reciente'}</span></summary>
+    <p>Figura humana: Mente. Robots: Ion y programación. Animal: exploración. Aves: Cielo. Cada residente conserva su identidad.</p>
+    <p>Los gestos siguen trabajo comunicado por el PC. Sin datos recientes se detienen; los adornos son cosméticos.</p>
+    <strong>Cambios medidos en la espiral: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</strong>
+    <p>Las marcas junto a Ion conservan ese contador; la animación no añade mejoras ni proyectos.</p>
+    <small title="ERAS · revisión 8a0fea077ccf84bed54d0b5c384dfc37b6aa4a86">Controles y render de ERAS · habitantes propios de Atlas</small>
+   </details>
   </section>
 
   <div className={styles.controlLegend} aria-label="Controles de la casa"><span>↔ Arrastra para mirar</span><span>◉ Joystick para caminar</span><span className={styles.keyboard}>W A S D · moverse / E · usar</span></div>

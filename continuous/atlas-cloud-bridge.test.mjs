@@ -2,6 +2,25 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createCloudBridge,publicBridgeCapabilities} from './atlas-cloud-bridge.mjs';
 const token='a'.repeat(64),siteUrl='https://atlas.example/';
+
+test('self-review enqueues a real coordinator action and publishes only measured public counters',async()=>{
+ for(const accepted of [true,false]){
+  const actions=[],local=[];
+  const request=async(url,options={})=>{
+   if(url===siteUrl+'api/cloud/bridge'){const input=JSON.parse(options.body);actions.push(input);return Response.json(input.action==='claim'?{job:{id:'job-review',leaseToken:'lease',kind:'review',messages:[{role:'user',content:'Mejórate'}]}}:{ok:true});}
+   local.push(url);
+   if(url.endsWith('/chat/health'))return Response.json({ready:true});
+   if(url.endsWith('/chat/'))return new Response('<meta name="atlas-token" content="aa">');
+   if(url.endsWith('/autonomy/run')){assert.equal(options.headers['X-Atlas-Token'],'aa');return Response.json({queued:accepted});}
+   if(url.endsWith('/process/status'))return Response.json({experience:{enabled:true,experiences:12,learningChanges:1,objective:{kind:'open-inquiry',focus:'suceso',taskId:null,question:'private hypothesis'}}});
+   return Response.json({ready:false});
+  };
+  assert.equal((await createCloudBridge({siteUrl,token,request}).tick()).status,accepted?'completed':'failed');
+  assert.equal(local.filter(url=>url.endsWith('/autonomy/run')).length,1);assert.equal(local.some(url=>/\/stop|\/chat\/message/.test(url)),false);
+  const done=actions.find(item=>item.action==='complete');
+  if(accepted){assert.match(done.result.answer,/12 experiencias y 1 cambio aceptado/);assert.match(done.result.answer,/no significa que ya haya mejorado/);assert.doesNotMatch(JSON.stringify(done),/private hypothesis/);}else assert.equal(done,undefined);
+ }
+});
 test('outbound bridge gives cloud only safe result and forces local shared privacy mode',async()=>{
  const requests=[],actions=[];
  const request=async(url,options={})=>{
@@ -68,7 +87,7 @@ test('world jobs repair and review actual bounded plans in shared JSON mode',asy
  const prompts=calls.filter(call=>call.url.endsWith('/chat/message'));
  assert.equal(prompts.length,4);
  for(const prompt of prompts){
-  const body=JSON.parse(prompt.options.body);assert.equal(body.sharedSession,true);assert.equal(body.json,true);assert.equal(body.tools,false);assert.equal(body.external,false);assert.equal(body.internet,false);assert.equal(body.messages.length,1);assert.equal(prompt.options.headers.Authorization,undefined);assert.equal(prompt.options.headers['X-Atlas-Token'],'aa');
+  const body=JSON.parse(prompt.options.body);assert.equal(body.sharedSession,true);assert.equal(body.json,true);assert.equal(body.creativeMode,'world');assert.equal(body.tools,false);assert.equal(body.external,false);assert.equal(body.internet,false);assert.equal(body.messages.length,1);assert.equal(prompt.options.headers.Authorization,undefined);assert.equal(prompt.options.headers['X-Atlas-Token'],'aa');
   assert.doesNotMatch(JSON.stringify(body),/Otra conversación anterior/);
  }
  assert.match(JSON.parse(prompts[1].options.body).messages[0].content,/validador externo/);

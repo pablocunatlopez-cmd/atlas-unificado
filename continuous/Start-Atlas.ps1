@@ -4,6 +4,18 @@ $atlasData = Join-Path $atlasServiceRoot 'data'
 $atlasStopMarker = Join-Path $atlasData 'service.stop'
 $atlasWatchdog = Join-Path $atlasServiceRoot 'Watch-Atlas.ps1'
 $atlasPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$atlasRuntimeConfig = [IO.File]::ReadAllText((Join-Path $atlasServiceRoot 'config.json')) | ConvertFrom-Json
+if ($atlasRuntimeConfig.tempRoot) {
+    $atlasTempRoot = [IO.Path]::GetFullPath([string]$atlasRuntimeConfig.tempRoot)
+    New-Item -ItemType Directory -Path $atlasTempRoot -Force | Out-Null
+    $env:TEMP = $atlasTempRoot
+    $env:TMP = $atlasTempRoot
+}
+if ($atlasRuntimeConfig.pipCacheRoot) {
+    $atlasPipCacheRoot = [IO.Path]::GetFullPath([string]$atlasRuntimeConfig.pipCacheRoot)
+    New-Item -ItemType Directory -Path $atlasPipCacheRoot -Force | Out-Null
+    $env:PIP_CACHE_DIR = $atlasPipCacheRoot
+}
 Remove-Item -LiteralPath $atlasStopMarker -Force -ErrorAction SilentlyContinue
 & (Join-Path $atlasServiceRoot 'Start-Chat.ps1')
 Start-Process -FilePath $atlasPowerShell -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',('"' + $atlasWatchdog + '"')) -WorkingDirectory $atlasServiceRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $atlasServiceRoot 'watchdog-stdout.log') -RedirectStandardError (Join-Path $atlasServiceRoot 'watchdog-stderr.log')

@@ -80,8 +80,16 @@ test('concurrent training requests reserve one process, preserve stop and report
   assert.equal((await lab.runSecondary('stop')).status, 'stop_requested');
   assert.ok(await fs.readFile(path.join(setup.root, 'data', 'secondary', 'autonomy', 'stop.request'), 'utf8'));
   finish({ status: 'stopped', run_id: 'test-run' });
-  for (let i = 0; i < 50; i++) { const job = JSON.parse(await fs.readFile(path.join(setup.root, 'data', 'secondary', 'process.json'))); if (job.status === 'stopped') break; await new Promise(resolve => setTimeout(resolve, 5)); }
-  const job = JSON.parse(await fs.readFile(path.join(setup.root, 'data', 'secondary', 'process.json'))); assert.equal(job.status, 'stopped');
+  // accepted returns before background completion is persisted. Wait for that
+  // observable condition, allowing disk contention when the full suite runs.
+  const deadline = performance.now() + 5000;
+  let job;
+  do {
+    job = JSON.parse(await fs.readFile(path.join(setup.root, 'data', 'secondary', 'process.json')));
+    if (job.status === 'stopped') break;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  } while (performance.now() < deadline);
+  assert.equal(job.status, 'stopped', `Background completion was not persisted: ${JSON.stringify(job)}`);
 });
 
 test('imported memory retrieval binds FTS terms, excludes conversations and caps reference text', async t => {
