@@ -39,3 +39,7 @@ test('public tool intent requires an appropriate bounded operation and actual in
  for(const text of ['Hola','¿Qué herramientas tienes?','¿Qué capacidades estadísticas tienes para [1,2]?','¿Tienes herramientas para validar {"S":{}}?','¿Puedes calcular estadísticas o validar LOR?','Explícame LOR con {"S":{}}','Investiga los mejores validadores JSON: {"S":{}}','Busca estadísticas de estos valores: [1,2]','Calcula una media','Calcula 42','Calcula lo de 2026-11-01','Valida JSON: {"S":','/atlas estado','Ejecuta PowerShell para calcular [1,2]','Borra archivos duplicados [1,2]','Instala un validador LOR {"S":{}}'])assert.equal(publicToolIntent(text),false,text);
  assert.equal(publicToolIntent(null),false);assert.equal(publicToolIntent('calcula '+ 'x'.repeat(6000)),false);
 });
+test('new planning and JSON Pointer tools require actual JSON and cannot unlock private actions',()=>{
+ for(const question of ['Resuelve JSON Pointer: {"document":{"a":1},"pointer":"/a"}','Consulta el puntero JSON: {"document":[4],"pointer":"/0"}','Planifica las dependencias: {"nodes":["a"],"edges":[]}'])assert.equal(publicToolIntent(question),true,question);
+ for(const question of ['¿Qué es JSON Pointer?','Planifica las dependencias del proyecto','¿Qué herramientas tienes para planificar dependencias {"nodes":[]}?','Ejecuta un script que resuelva JSON Pointer {"document":{},"pointer":""}','Instala herramientas de dependencias {"nodes":[]}'])assert.equal(publicToolIntent(question),false,question);
+});

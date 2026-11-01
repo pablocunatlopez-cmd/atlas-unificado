@@ -1,21 +1,27 @@
-# Verificación de la distribución
+# Verificación de la distribución de código
 
-El árbol compartible contiene código fuente, configuración de ejemplo y pruebas. No es una copia de la instalación privada. Su exportador usa una lista explícita de módulos y excluye datos de ejecución, pesos Qwen, checkpoints locales, memoria SQLite, informes privados, claves, capturas y paquetes de dependencias. La carpeta `cloud/data` es una excepción explícita: siete semillas estáticas de la versión original ya publicada en Sites, necesarias para compilar `/origen`, sin registros vivos de usuarios.
+Este árbol contiene código, configuración de ejemplo y pruebas. No es una copia de la instalación privada. El exportador usa una lista explícita de módulos y excluye claves, configuraciones de ejecución, historiales, bases locales, pesos Qwen/Wan, corpora, adaptadores, trabajos de agentes, capturas y paquetes instalados.
 
-Las adaptaciones sustituyen el import local de QuickJS por una dependencia npm; hacen configurables Python y la biblioteca de juegos; eliminan referencias a conversaciones y rutas personales; reemplazan los prompts privados por una semilla genérica que conserva el bucle de seis fases. No modifican el coordinador activo de origen.
+`cloud/` corresponde a Sites V11, commit `38849b3e8b063af91eeeeaff5c054b641128e14f`, con las adaptaciones de distribución documentadas. Conserva seis semillas documentales/experimentales ya publicadas y dos fuentes JavaScript de runtime (actual y legado compatible). No se ha vuelto a copiar historia privada; la semilla de continuidad conserva el identificador privado eliminado en la exportación inicial.
 
-Validación ejecutada con Node.js 22.20.0:
+## Pruebas desde este árbol
 
-- 226 pruebas Node aprobadas desde este árbol tras incorporar las reservas GPU, el puente creativo y el proveedor Wan, sin iniciar otro servidor ni entrenador durante las pruebas.
-- Preparación desde un directorio temporal vacío: configuración y clave local creadas, activos Three.js reconstruidos desde npm y segunda ejecución idempotente. La clave no se imprimió ni se creó en este árbol fuente.
-- Escaneo de patrones de credenciales, claves privadas, correos personales y rutas de usuario: cero hallazgos en los archivos compartibles. Es una comprobación preventiva, no una garantía universal de ausencia de información sensible.
+- 299/299 pruebas Node aprobadas con el mismo script que ejecuta `npm test`, incluidas las seis de AST/aislamiento, las siete del formateador de dependencias y dos de su integración en chat. Se seleccionó el Acorn instalado del entorno opcional; no se invocó Aider ni ningún modelo.
+- 45/45 pruebas cloud adicionales sobre cola SQLite real, privacidad, rangos, planes, navegación, estados, geometría, música y compatibilidad de runtime.
+- 4/4 pruebas Python de evolución aprobadas. Usan fixtures y comprobaciones de reserva/identidad; no cargan pesos ni entrenan en GPU.
 
-`source-export-manifest.json` registra los archivos copiados y sus adaptaciones. `github-upload-manifest.json` enumera los archivos exactos autorizados para el commit, incluidos README, scripts y lockfile. `node_modules/` solo se usa para comprobar las pruebas y debe permanecer fuera de Git.
+Las dependencias de framework de la web se instalan por separado con el gestor y lockfile fijados. La comprobación del export no arrancó otro coordinador, motor Qwen ni entrenador y no repitió el build de producción ya validado en la fuente canónica.
 
-El modelo Qwen y los checkpoints ATLAS-LM no se redistribuyen. La inferencia requiere un servidor llama.cpp configurado y autorizado por el propietario. Este árbol no convierte GitHub en un alojamiento GPU ni migra automáticamente las conversaciones privadas a la nube.
+## Integridad y saneado
 
-## Fuente de nube incorporada
+Los textos UTF-8 se normalizan a LF antes de calcular hashes; `.gitattributes` conserva ese formato en Git. Los binarios se preservan. Los hashes pueden contrastarse con el contenido publicado sin diferencias por conversión de finales de línea de Windows.
 
-`cloud/` contiene la aplicación Sites/Vinext, interfaz móvil, rutas de cola, esquema y migraciones D1, componentes históricos de `/origen`, estilos y licencias necesarias. TypeScript y las pruebas de la cola pasaron desde esta copia, utilizando temporalmente una instalación de dependencias existente; el enlace temporal se retiró antes de preparar la lista de subida.
+El escaneo de tokens, claves privadas, correos personales, rutas de usuario e identificadores de chats privados dio cero hallazgos. También se rechazan archivos de credenciales, pesos y ejecución por nombre o extensión. Es una comprobación preventiva, no una garantía universal.
 
-Las siete semillas estáticas originales se revisaron sin encontrar credenciales, correos personales ni rutas de usuario. El único enlace identificador de una conversación privada, en `continuity.json`, se sustituyó por `#origen` solo en esta distribución. La semilla del pequeño MLP original ya publicado en Sites se conserva por compatibilidad; no son pesos Qwen ni checkpoints privados del PC. `docs/cloud-export-manifest.json` documenta esa excepción y sus hashes.
+`source-export-manifest.json` registra módulos y adaptaciones; `cloud-export-manifest.json` documenta la copia web y la excepción de semillas. `github-upload-manifest.json` enumera los archivos exactos autorizados para el commit y sus SHA-256. El publicador comprueba sus hashes antes de preparar Git y contrasta la revisión remota tras el push. `node_modules/` permanece fuera de Git.
+
+## Alcance de las evidencias de origen
+
+La instalación de origen dispone de Aider, smolagents y el constructor nativo usando el mismo Qwen local. Su última ronda generó una herramienta de dependencias que aprobó ocho contratos y se probó con un proyecto nuevo; la candidata JSON Pointer se rechazó. El chat representa directamente el resultado verificado de dependencias sin pedir otra redacción al modelo. StrategyPolicy solo se promueve tras contratos; comparar enrutamiento no acredita capacidad general. Un entrenamiento real de adaptador Qwen9B terminó sin mejora en confirmación y no lo activó. Los resultados negativos se conservan; el repositorio no incluye esos pesos ni estados privados.
+
+La distribución comienza sin memoria, claves, modelos ni versiones activas del equipo de origen. GitHub almacena código; no proporciona su GPU, no migra historiales y no transfiere herramientas o credenciales de Codex a Atlas.

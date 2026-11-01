@@ -5,8 +5,14 @@
   "files": [
     {
       "path": ".env.example",
-      "bytes": 161,
-      "sha256": "5ae879570ab55a8e90d978fc7ff9f4b8e7eaebcf61c2901df0bc5b0916a84183",
+      "bytes": 226,
+      "sha256": "995b885040b3747009070897565487a165d6cbc2a13e2fac041705f19eda46e3",
+      "adapted": false
+    },
+    {
+      "path": ".gitattributes",
+      "bytes": 19,
+      "sha256": "d60f352d0db1404c70afb4bb8b2ca3fd1c610572aa40720e8a0b7baa7885418c",
       "adapted": false
     },
     {
@@ -17,8 +23,8 @@
     },
     {
       "path": "continuous/agent-tools.mjs",
-      "bytes": 1809,
-      "sha256": "c72cc7725f443c18cabff6f0b1127e459c3a26b91084d79df4db51584bee296f",
+      "bytes": 1898,
+      "sha256": "3566fa31b091d0fa05cd2237ce475e5f6d782c3b98b952b5b6003e8a81cda1f7",
       "adapted": false
     },
     {
@@ -28,10 +34,16 @@
       "adapted": false
     },
     {
+      "path": "continuous/AGENTS.md",
+      "bytes": 4383,
+      "sha256": "af0561b904b88266d94f6b04b25cb7a17db153e1218d8f4b79ae45766836def6",
+      "adapted": true
+    },
+    {
       "path": "continuous/ATLAS_MANDATO_UNIFICADO.md",
-      "bytes": 1175,
-      "sha256": "25de82c02ee8562c44bad4688d18a2af3e87cdfb32b004dc102067fc4c8e66c9",
-      "adapted": false
+      "bytes": 3289,
+      "sha256": "5e6deabc8f18c64941bb8395371185dfaa32b7615a67d24786a550c15f44f63d",
+      "adapted": true
     },
     {
       "path": "continuous/atlas-chat-relay.mjs",
@@ -95,26 +107,26 @@
     },
     {
       "path": "continuous/autonomous-programming.test.mjs",
-      "bytes": 9075,
-      "sha256": "83b45ee39d3fd5c11c685018f80b96d8c2c6d7a031c2f26c5d3af46bfce7e548",
+      "bytes": 13212,
+      "sha256": "3230e70c920555c548ef744c839c3dfbcaf22848d2c34533de8ba49ee231f6f3",
       "adapted": false
     },
     {
       "path": "continuous/autonomous-review.mjs",
-      "bytes": 3782,
-      "sha256": "5248d9e6e557c6141e51dd0461b5e5a5c780b9d3507647fd96b6f88ddbf228f1",
+      "bytes": 4583,
+      "sha256": "24d9b1208e0681a978b4ae597634de9243ba18974c54f757a4eb10a74d2880bf",
       "adapted": false
     },
     {
       "path": "continuous/autonomy-curriculum.mjs",
-      "bytes": 12730,
-      "sha256": "74e93e257892c72b5096ed8583c7f78fd5d7685264dad0cdb0118d8c3314a712",
+      "bytes": 19291,
+      "sha256": "d8a9c12663c3710cbe921d647be55d37ce614a31a2a2f1c2d25e610c5c7b9959",
       "adapted": false
     },
     {
       "path": "continuous/autonomy-curriculum.test.mjs",
-      "bytes": 9990,
-      "sha256": "75717c7e746e3852e0915419faa3c5e83f14bb01139bd71ff9ddf5fdc921ebbb",
+      "bytes": 13004,
+      "sha256": "e43edb9eef353ab79c30ed908c4a9bcb1588f962efa240b653a0769e2850df9b",
       "adapted": false
     },
     {
@@ -191,8 +203,8 @@
     },
     {
       "path": "continuous/chat.mjs",
-      "bytes": 20140,
-      "sha256": "334aa48dd0aa582e82671446457e03cfc7733c9799de2c9ead64b4f7b6ba723e",
+      "bytes": 20881,
+      "sha256": "e8ef51fef73a2b8da6124e5ade69e814881af550c5acbe0424d02bb4d19a1d59",
       "adapted": false
     },
     {
@@ -202,21 +214,27 @@
       "adapted": false
     },
     {
+      "path": "continuous/CLOUD_ACCESS.md",
+      "bytes": 5467,
+      "sha256": "c8855113596ec098a87f351f198e44ceb8678603567e2a7f0a06b7e373cbb750",
+      "adapted": true
+    },
+    {
       "path": "continuous/code-generation-mode.test.mjs",
-      "bytes": 10343,
-      "sha256": "d7208b912d7e833837195361545f4053b97ca5624a29895f08fcbc059055edf6",
+      "bytes": 10962,
+      "sha256": "90f89b8a655452642713204b2a4c55ddd9106d2d96768518f10f464067a58044",
       "adapted": false
     },
     {
       "path": "continuous/coding-collaborators.mjs",
-      "bytes": 3674,
-      "sha256": "e3cc6d2b8cdbe3a3c50c4d7aebf0d541551ecb89d3da711dc860e57a1491567e",
+      "bytes": 3833,
+      "sha256": "5199b68e78fe967e342d9965e9bb3a89bb24c92c1553c4b3d9c637e0bd275c2a",
       "adapted": false
     },
     {
       "path": "continuous/coding-collaborators.test.mjs",
-      "bytes": 3415,
-      "sha256": "fab0fe6737beee9efe9a22b80a4ebe438aded8c5ee813bcd9868966f4a6f0042",
+      "bytes": 4043,
+      "sha256": "eef306564865f63b295cc1ff5af6a6552baec074a7b21fe6073c70d62dfe05ec",
       "adapted": false
     },
     {
@@ -233,14 +251,14 @@
     },
     {
       "path": "continuous/cognitive-core.mjs",
-      "bytes": 19035,
-      "sha256": "2006b733de9103a1ca1693d596cf0db5c3e626c440911be8239643567e776f6b",
+      "bytes": 20993,
+      "sha256": "306b6dc210240c9ffe930331fbb271ff59946151d41549dae312ccc1e936b9e7",
       "adapted": false
     },
     {
       "path": "continuous/cognitive-core.test.mjs",
-      "bytes": 7738,
-      "sha256": "a847aba221d0d92bb48344c040da5d8645818cef61aaa5e955ebdaf8682ebe3b",
+      "bytes": 10383,
+      "sha256": "40f3ab7a410a532d9ef99caabaaa0b0112a11887f6579b3dfdc42febe1a8946c",
       "adapted": false
     },
     {
@@ -257,21 +275,21 @@
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/agent_cli.py",
-      "bytes": 739,
-      "sha256": "b930edfb750c9e0457818861ec595c9731ba6d94ca6655d1cffd3621ff6fa002",
-      "adapted": false
+      "bytes": 714,
+      "sha256": "87bb512982e70c870884550641a8bb90625b9ee90d0f2765774ee870141b5413",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/agent_runtime.py",
-      "bytes": 31983,
-      "sha256": "f697d739c506699d0e79411e25ed6f749842dbf5525e99777b838e11eea826da",
-      "adapted": false
+      "bytes": 31273,
+      "sha256": "d3e6a31909f41e76a7b5bffcb85c039b9344fc63644e94ea44d48c16000a33e4",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/atlas_agent_suite.py",
-      "bytes": 1989,
-      "sha256": "f309d3dae4f821cb978fd86aee40abefbc92cfd0ff63423b681d5e4ea0c37126",
-      "adapted": false
+      "bytes": 1938,
+      "sha256": "04f05239520e0f601b27aa6edba191038cc39a34184a4af2dec2793c30f2bcee",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/atlas_tinyworld.py",
@@ -317,9 +335,9 @@
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/council.py",
-      "bytes": 2943,
-      "sha256": "bd2fed03cb19cccd4c1823fd3b674a16182c88ba15927707007b4dd6510c24f2",
-      "adapted": false
+      "bytes": 2894,
+      "sha256": "b5b9ca58a5a89c632901a26df6898057d7cbd238f732b163e44d2f5381bfd39e",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/decision_corpus.py",
@@ -341,9 +359,9 @@
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/decision_runtime.py",
-      "bytes": 422,
-      "sha256": "f4255bcc87494869b5fda08750c81c43b8ddfdf3510e0406ffd8dcbb8c8098b0",
-      "adapted": false
+      "bytes": 421,
+      "sha256": "9eac93612fd3ba4aab5bd9c38fe59f5733cac11210eaf17f8aa1ad3dbb5e9148",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/evaluate.py",
@@ -359,27 +377,27 @@
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/game_cli.py",
-      "bytes": 698,
-      "sha256": "0fd6824c43bb0d4f9aeb6b86558765a892f579419cb56d2e0e2764b5a198a5b3",
-      "adapted": false
+      "bytes": 678,
+      "sha256": "e614b4fde26142d6050d9f0f8ff7873d61bf2ca324dff3293b1538db182c5db0",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/game_generator.py",
-      "bytes": 30473,
-      "sha256": "e4cd64b5d04627efb417013513a6517e5bc9b1e691e648465ff6919da9c87ae2",
-      "adapted": false
+      "bytes": 29700,
+      "sha256": "7aa3ff71bbe1888c6cf4189ad3c6c8821d14ebeaec7fa1fa840e134adfd7ef77",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/gpu_calibration.py",
-      "bytes": 5632,
-      "sha256": "846838e3e3531e32ec4ae7b3b2c1f1c0249172442c29f3fe3bf2d3770fe830ec",
-      "adapted": false
+      "bytes": 5631,
+      "sha256": "17680d022d24d275e826ac1628300ebd85fa31d24273dd6fca42d5d95b4fd108",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/gpu.py",
-      "bytes": 4152,
-      "sha256": "0f7c9c214c447dbb1af126696e36d602a8f8af4cf3266704bd02438bea00d758",
-      "adapted": false
+      "bytes": 4064,
+      "sha256": "15cf48a1a5aa345a16094c1c65aba1da74063d7da9932ffc649431b94667c491",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/hybrid_eval.py",
@@ -389,21 +407,21 @@
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/local_agent.py",
-      "bytes": 5194,
-      "sha256": "fb35a4f7e1f7b37c5f6938876452f5ab31b4a250e7c17ff5aa307a2e69e32f16",
-      "adapted": false
+      "bytes": 5102,
+      "sha256": "3ac58a2840b57748a0a9fec365ae147fd1b866ba37bf541287d6313355585b5e",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/memory_store.py",
-      "bytes": 11327,
-      "sha256": "557b5bc4806376a6ccb942a4df6213663500eb55060884103201874ccb4dfe80",
-      "adapted": false
+      "bytes": 11115,
+      "sha256": "01c5b1ddda41d4cd21c3bf11f34ec73fb485b1abf49d4d2284efcec553dce7d8",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/model.py",
-      "bytes": 11637,
-      "sha256": "011cfc51e3d103bd56cec0dd04b2181a9b85247f74afbeab65c898cd5ff0102d",
-      "adapted": false
+      "bytes": 11402,
+      "sha256": "ca18264ea62c66ff0ab333ab19de7d65e5c236934e9ff622a70ce9120ccad057",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/offline_curriculum.py",
@@ -419,9 +437,9 @@
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/runtime.py",
-      "bytes": 4505,
-      "sha256": "a5df816ccc3db791dd8426de3e99e7486b57dac78e65d7781d4e5374953d3c04",
-      "adapted": false
+      "bytes": 4403,
+      "sha256": "2362dbe078e5700777a0aa04b55ad08afd548b9b6b80ef48994c6c829bcf1ddb",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/scaling.py",
@@ -449,21 +467,21 @@
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/train_decision.py",
-      "bytes": 3970,
-      "sha256": "63e2e1e3f523fca8725e5543ada0668a7edc7605ab64433ee63e53ae76033a71",
-      "adapted": false
+      "bytes": 3922,
+      "sha256": "a414465b40963b0e1862fecb20ca2cee9a16541e65d96e2cac242f973a22a33a",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/train.py",
-      "bytes": 5037,
-      "sha256": "52f442d169db24165704f8bfa0516b46ce7d0b7d74f825ddacc8604efffcaaed",
-      "adapted": false
+      "bytes": 4971,
+      "sha256": "ea38e0971aebdd721ea78dcf4379e4031571a1de8f301bff824a7e56391e9e99",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/training_engine.py",
-      "bytes": 17220,
-      "sha256": "9ce3269b1e203f18914b727fd8a06f0d9ff3e8c3d0105c78e5d9e1c7c9cefb66",
-      "adapted": false
+      "bytes": 16891,
+      "sha256": "9298c8995e474fb88f5aa2abc8962a191e5640a954af2b61ccd8a0200218e80b",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/atlas_lm/web_evidence.py",
@@ -491,15 +509,15 @@
     },
     {
       "path": "continuous/components/atlas597/core/atlas_provider.py",
-      "bytes": 11371,
-      "sha256": "9cd1b2f7be5221d4c6d515cf52958f7c99b40121edf267b2711c63dd39552c98",
-      "adapted": false
+      "bytes": 11193,
+      "sha256": "7c5e19eb525018d5136b68c4e935adcee1765567ce950af2a228d57f6ae26530",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/core/atlas_runtime_v5.py",
-      "bytes": 11099,
-      "sha256": "f428f32cce0852ad5c9e829d46988270a58d06aa7ff004dbb750b1b489ecc9e9",
-      "adapted": false
+      "bytes": 10967,
+      "sha256": "a19968750b8046243b57de2d20c145d0c2ff63ee152b116af4a88b0da9dc1cc8",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/lor/discrete_holonomy.py",
@@ -521,9 +539,9 @@
     },
     {
       "path": "continuous/components/atlas597/scripts/download_torch_wheel.py",
-      "bytes": 5307,
-      "sha256": "f10b01eecbb8a34b4ae19f39d2c7bbecd992e49b630a7c3b2b7dbd74bc00ab9f",
-      "adapted": false
+      "bytes": 5306,
+      "sha256": "13eb2a5a4f0e08f856a9c2bed7711e829c5850eb5b46e6099932b25dda4c1a60",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/snapshot-manifest.json",
@@ -599,9 +617,9 @@
     },
     {
       "path": "continuous/components/atlas597/tests/test_collaborators_595.py",
-      "bytes": 3206,
-      "sha256": "5a817a782d86ed7fffd0eb8163be626c9a34c061df90800d03a26652056468d6",
-      "adapted": false
+      "bytes": 3139,
+      "sha256": "e19596cc19e31cf5b7c91d3dc9a6fc8c7eed9cc35d62ac7f33822ef7f0e6b397",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/tests/test_game_generator_playability.py",
@@ -611,15 +629,15 @@
     },
     {
       "path": "continuous/components/atlas597/tests/test_game_generator.py",
-      "bytes": 5084,
-      "sha256": "429ea3cb0d07301bfef93e368eff74f0bfc0ba4a5baa88d1526ccc2e72d0b1a0",
-      "adapted": false
+      "bytes": 4973,
+      "sha256": "ad9a3290b1467aebdcf548f006dcf6cec223690b2c9eb32e1aa7111201425696",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/tests/test_gpu_engine_511.py",
-      "bytes": 5935,
-      "sha256": "b19d2cb2d7154ce61df82dc61301ce6304f680f1497cedb2edab7a2b7854248c",
-      "adapted": false
+      "bytes": 5819,
+      "sha256": "1b48a133d46eb8d3fd623f19d6c017aaa5fc269349ba35cf3e218c9c6b63383b",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/tests/test_launcher_596.py",
@@ -629,15 +647,15 @@
     },
     {
       "path": "continuous/components/atlas597/tests/test_local_agent_mode.py",
-      "bytes": 5365,
-      "sha256": "9a433f584cf7acb9a8f56b472e8f13ecba18b17680fad87dd460724b9f9e161f",
-      "adapted": false
+      "bytes": 5252,
+      "sha256": "395dc77ab3632a5d8139df1555b6ffa46dbf15f1d278b0715327ce2320e52cc7",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/tests/test_local_memory_510.py",
-      "bytes": 8587,
-      "sha256": "817c6566c9fcbcc566e669944de00049b162d4715a9a483af2201c24e8fd2158",
-      "adapted": false
+      "bytes": 8417,
+      "sha256": "fc2a305b41b23fbe028198a97ab5d9d53f169eaa6f13459b48b25bb2c9b3244c",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/tests/test_offline_curriculum.py",
@@ -647,9 +665,9 @@
     },
     {
       "path": "continuous/components/atlas597/tests/test_own_engine_510.py",
-      "bytes": 4624,
-      "sha256": "bf82bb9c351da93a41cc13d6c91d670517d84dc52e204a1bc9bf434918a2022c",
-      "adapted": false
+      "bytes": 4623,
+      "sha256": "593424ca8be2aabf3f01bf2cf1343d4bfc543f7d5c09f085f3124a3167633d66",
+      "adapted": true
     },
     {
       "path": "continuous/components/atlas597/tests/test_v5.py",
@@ -698,6 +716,12 @@
       "bytes": 1166,
       "sha256": "54ae9d36ade2c78eedbd29281ae94866b26b80c2bb7d712f9a1ad9a6c9e134af",
       "adapted": false
+    },
+    {
+      "path": "continuous/EMPUJON_AUTONOMO_2026-11-01.md",
+      "bytes": 4883,
+      "sha256": "7866e39312c624495497c91765ec0ddcf8f24e8b71911a74ca70c34259d6da1b",
+      "adapted": true
     },
     {
       "path": "continuous/engine.mjs",
@@ -809,9 +833,9 @@
     },
     {
       "path": "continuous/index.html",
-      "bytes": 15838,
-      "sha256": "7f06e47589ee20c4010cc1c292980e9da19bd68ed57d2af64a9dff4761b9e33d",
-      "adapted": false
+      "bytes": 15837,
+      "sha256": "845e94cff1866bf6ab0e6cd66816ba50e0ebf22567e001fb20f5f5223b10c0bf",
+      "adapted": true
     },
     {
       "path": "continuous/internet.mjs",
@@ -839,8 +863,8 @@
     },
     {
       "path": "continuous/local-coding-agent.mjs",
-      "bytes": 11582,
-      "sha256": "2cec3e4c7c75210ee3badd9b975e62d5ef5c43b0f4728c4484c73da2fe8f12f6",
+      "bytes": 11978,
+      "sha256": "10351dff1e1c0327a8d1e2a507d052a89b21f49b80f8bc0023509c920526acff",
       "adapted": true
     },
     {
@@ -851,8 +875,8 @@
     },
     {
       "path": "continuous/local-coding-agent.test.mjs",
-      "bytes": 5894,
-      "sha256": "a40608b52305784531999bb5e6972bd7d2b4396ce6a83e92cdc728aaf1543893",
+      "bytes": 7389,
+      "sha256": "38ed6eb00ec36029545ab49cbb07ea81adfd6a95a62e22a65f50fb1fa30a38cb",
       "adapted": true
     },
     {
@@ -977,14 +1001,14 @@
     },
     {
       "path": "continuous/public-tools.mjs",
-      "bytes": 4583,
-      "sha256": "74ebdeb4ec8964c3925337c2966a968a7ea3b6110d1c385145f474c6e0b214b6",
+      "bytes": 4888,
+      "sha256": "5ee22e6f010cf9e53dfec6550d847e78a4b96b36360b7e7f65fd0e1c0b53dc77",
       "adapted": false
     },
     {
       "path": "continuous/public-tools.test.mjs",
-      "bytes": 4786,
-      "sha256": "ae2b89e601db8c830cc11cfe1482472e8aecb13be02d53b3e28e79c14f39d68f",
+      "bytes": 5501,
+      "sha256": "747bfdce97712b1db3c81f1766580f5790b92db235118a18f483084ef708669f",
       "adapted": false
     },
     {
@@ -1115,8 +1139,8 @@
     },
     {
       "path": "continuous/service.mjs",
-      "bytes": 73701,
-      "sha256": "038f78a17601272b5b8cce50c4ce3ffbc04382a3df2db137b0f34965c3dca55a",
+      "bytes": 73863,
+      "sha256": "b1c913072e89ef6fd3f746f8256d6f153db87245b00c8fa20c8c050c3dd224ff",
       "adapted": true
     },
     {
@@ -1265,8 +1289,26 @@
     },
     {
       "path": "continuous/VERIFICACION_AUTONOMIA_2026-11-01.md",
-      "bytes": 2956,
-      "sha256": "7b8355447e40f0129d4ee9e62c09280ee777148e621e749e9e7cd01e8666568e",
+      "bytes": 2940,
+      "sha256": "843df82682a2a13e329fffc92b19872550964cdc8b5c3bcee4a4bf04f481b52e",
+      "adapted": true
+    },
+    {
+      "path": "continuous/verified-tool-answer.mjs",
+      "bytes": 2892,
+      "sha256": "094ece744d5477c8387c50b3aa9ea0587c3fcb220cd3fe1d4e676842b83d0840",
+      "adapted": false
+    },
+    {
+      "path": "continuous/verified-tool-answer.test.mjs",
+      "bytes": 5900,
+      "sha256": "143ab07e0d9478df242465f61c8ca71f3ba914a26869b6857a54d11890a146d9",
+      "adapted": false
+    },
+    {
+      "path": "continuous/verified-tool-chat.test.mjs",
+      "bytes": 1697,
+      "sha256": "224246500492482b770468d6376ca5a1cbcbb3b661a885bc3c1fcae9cd95d722",
       "adapted": false
     },
     {
@@ -1324,7 +1366,7 @@
       "adapted": false
     }
   ],
-  "totalBytes": 1397680,
+  "totalBytes": 1445817,
   "scan": {
     "patterns": 6,
     "findings": 0
@@ -1338,5 +1380,6 @@
     "Local vendor packages restored from npm; cloud ERAS/Three source modules and MIT notices retained",
     "Qwen/Wan weights, training corpora and adapters, Aider jobs and environment, process status, private histories and keys are excluded"
   ],
-  "updatedAt": "2026-11-01T17:15:14.183Z"
+  "updatedAt": "2026-11-01T17:59:31.991Z",
+  "lineEndings": "UTF-8 source text normalized to LF before hashing; binary files preserved."
 }

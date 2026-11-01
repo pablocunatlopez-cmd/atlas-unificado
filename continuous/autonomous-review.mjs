@@ -20,6 +20,7 @@ export async function reviewCapabilities(extensions,key,{signal,assess=assessCap
   candidate=await build(target.task,key,target.acceptanceTests,localGenerate,{...(codeGeneration&&target.testOrigin==='external-contract'?{format:'code',name:target.name}:{}),signal});
   candidate.parentId=target.id;
   candidate.origin='autonomous-local-review';
+  if(target.curriculumTaskId)candidate.curriculumTaskId=target.curriculumTaskId;
   await retainContract(candidate,target);
  }else if(allowCreation){
   const task=selectAutonomousTask(extensions,history);
@@ -36,5 +37,15 @@ export async function reviewCapabilities(extensions,key,{signal,assess=assessCap
  }catch(e){signal?.throwIfAborted();assessment={diagnosis:'Comprobaciones ejecutadas; evaluación del modelo no disponible.',error:e.message,nextAction:'Reintentar la evaluación sin descartar las comprobaciones.',intervalMinutes:30};}
  signal?.throwIfAborted();
  const minutes=Number(assessment.intervalMinutes);
- return {at:new Date().toISOString(),checks,candidate,curriculum,assessment,assessmentStatus:'Opinión del modelo no verificada; solo checks y resultados ejecutados constituyen evidencia. Las opciones del turno no representan capacidades globales.',intervalMinutes:Number.isFinite(minutes)?Math.max(5,Math.min(allowCreation?15:120,minutes)):15,scope:'Programación, auditoría y reparación de herramientas; pesos Qwen sin cambios.'};
+ const at=new Date().toISOString();
+ const failedIds=new Set(checks.filter(check=>!check.passed).map(check=>check.id));
+ // Project this review's evidence without changing persisted tools/history.
+ // An invalidated approval cannot hide a current failure; the candidate's
+ // own outcome must also participate in cooldown and completion selection.
+ const projected=extensions.map(item=>failedIds.has(item.id)?{...item,passed:false,at}:item);
+ if(candidate)projected.push({...candidate,at:candidate.at||at});
+ const selectable=allowCreation?selectAutonomousTask(projected,candidate?[...history,{at,candidate}]:history):null;
+ const nextTask=selectable?{taskId:selectable.id,name:selectable.name}:null;
+ const intervalMinutes=nextTask?5:Number.isFinite(minutes)?Math.max(5,Math.min(allowCreation?15:120,minutes)):15;
+ return {at,checks,candidate,curriculum,nextTask,assessment,assessmentStatus:'Opinión del modelo no verificada; solo checks y resultados ejecutados constituyen evidencia. Las opciones del turno no representan capacidades globales.',intervalMinutes,scope:'Programación, auditoría y reparación de herramientas; pesos Qwen sin cambios.'};
 }

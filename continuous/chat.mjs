@@ -8,6 +8,7 @@ import {readModelStream} from './model-stream.mjs';
 import {selectChatWindow} from './chat-history.mjs';
 import {loadGenerationPolicy,generationPlan} from './generation-policy.mjs';
 import {sanitizeModelAnswer} from './visible-output.mjs';
+import {formatVerifiedToolAnswer} from './verified-tool-answer.mjs';
 export const CHAT_MODEL='atlas-local';
 const stopwords=new Set('hola gracias responde responder respuesta espanol brevemente breve cuanto cuantos por para que puedes puede puedo hacer como cual cuales quien donde cuando desde hasta sobre entre con sin una uno unos unas los las del esta este esto estos estas son ser eres soy es hay tengo tienes quiero dime explica explicame favor atlas tambien muy mas menos mi mis tu tus sus bien ahora prueba chat frase haz palabras'.split(' '));
 export function memoryQuery(text){return (text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[a-z_]{3,}/g)||[]).filter(t=>!stopwords.has(t)).join(' ');}
@@ -50,6 +51,8 @@ export async function chat(input,documents,request=fetch,apiKey='',providerKey='
  const attachments=validateAttachments(input.attachments);
  const historyLimit=attachments.length?6000:input.toolRepair===true?24000:10000;
  const messages=selectChatWindow(validateMessages(input.messages),{maxMessages:15,maxCharacters:historyLimit});
+ const verifiedAnswer=input.json!==true&&input.internet!==true&&input.external!==true&&input.refute!==true&&!attachments.length?formatVerifiedToolAnswer(toolRun):null;
+ if(verifiedAnswer!==null)return {answer:verifiedAnswer,model:'atlas-coordinator',modelName:'Atlas · herramienta verificada',sources:[],warnings:[],webRead:false,failedWebUrls:[],attachmentCount:0,collaborator:null,collaborators:[],reflectionMemoryUsed:0,toolRun,reviewed:false,reviewError:null,reviewScope:'Resultado de la herramienta ejecutada y validado; redacción determinista del coordinador.',trained:false,tokens:0,performance:{totalMs:Date.now()-startedAt,firstContentMs:null,generations:[]}};
  const generationPolicy=await loadGenerationPolicy();
  let coreDirective=null;
  try{coreDirective=await runtime.cognitiveCore?.decide(messages.at(-1).content,{json:input.json===true,hasMemory:runtime.sharedSession!==true&&documents.length>0,internet:input.internet===true,tools:input.tools===true});}catch{}

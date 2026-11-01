@@ -397,7 +397,8 @@ server=http.createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname==='/status'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({...status(),media:{busy:mediaBusy,progress:mediaProgress}}));}
  if(req.method==='GET'&&url.pathname==='/process/status'){
   res.setHeader('Content-Type','application/json');try{
-   const core=await cognitiveCore.status(),lor=await lorLab.status(),evolution={...await qwenEvolution.status(),autonomy:await weightAutonomy.status()},agents=await codingCollaborators.status(),coding=await localCodingAgent.status();
+   const core=await cognitiveCore.status(),lor=await lorLab.status(),evolution={...await qwenEvolution.status(),autonomy:await weightAutonomy.status()},agents=await codingCollaborators.status();
+   const coding=[agents.aider,agents.smolagents,agents.native],agentCounters=coding.reduce((sum,item)=>({trials:sum.trials+item.attempts,accepted:sum.accepted+item.passed,rejected:sum.rejected+item.failed}),{trials:0,accepted:0,rejected:0});
    return res.end(JSON.stringify(sanitizeProcessTelemetry({at:new Date().toISOString(),core:{...core,version:core.activeId},lor:lor.last,evolution,agents,processes:[
     {id:'chat',state:chatBusy?'running':mediaBusy?'waiting':'idle',phase:'understand'},
     {id:'research',state:libraryBusy?'running':state.paused?'waiting':'idle',phase:'observe',counters:{observations:documents.filter(document=>document.role==='reference').length}},
@@ -408,7 +409,7 @@ server=http.createServer(async(req,res)=>{
     {id:'video',state:gpuActivity==='video'?'running':'idle',phase:'apply'},
     {id:'weights',state:gpuActivity==='training'?'running':evolution.download?.status==='downloading'?'running':'waiting',phase:gpuActivity==='training'?'apply':'observe',counters:{trials:evolution.candidatesPrepared,accepted:0}},
     {id:'external',state:providerKey?'idle':'waiting',phase:'connect'},
-    {id:'agents',state:coding.busy?'running':coding.ready?'idle':'waiting',phase:'apply',counters:{trials:agents.aider.attempts,accepted:agents.aider.passed,rejected:agents.aider.failed}},
+    {id:'agents',state:coding.some(item=>item.busy)?'running':coding.some(item=>item.ready)?'idle':'waiting',phase:'apply',counters:agentCounters},
    ]})));
   }catch{res.writeHead(503);return res.end(JSON.stringify({error:'Telemetría no disponible.'}));}
  }

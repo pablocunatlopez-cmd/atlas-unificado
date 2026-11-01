@@ -26,6 +26,48 @@ const TASKS = [
     ]
   },
   {
+    id: 'json-pointer-resolve',
+    name: 'Resolver referencias JSON Pointer',
+    task: 'Implementa function transform(input) como función pura de JSON para consultar documentación estructurada. Entrada: {document:valorJSON,pointer:cadena}. Usa la representación de cadena de JSON Pointer de RFC 6901, no fragmentos URI: la cadena vacía selecciona el documento entero; cualquier otra comienza por /. Divide en tokens por / y decodifica ~1 como / y después ~0 como ~, sin doble decodificación: ~01 significa ~1. Los tokens vacíos son claves válidas; no decodifiques porcentajes. Valida toda la sintaxis antes de recorrer: un ~ que no vaya seguido de 0 o 1 es inválido. En objetos busca solo claves propias exactas, nunca propiedades heredadas. En arrays solo admite índices 0 o un entero decimal sin ceros iniciales y dentro del rango; - no selecciona ningún elemento. No conviertas tipos ni sigas rutas a través de null o primitivos. Éxito exacto: {found:true,value:valor}, incluso si el valor es null. Si la entrada no es un objeto no nulo y no array, falta la clave propia document o pointer no es cadena: {found:false,error:"invalid_input"}. Si la sintaxis de pointer es inválida: {found:false,error:"invalid_pointer"}. Si no se resuelve algún token: {found:false,error:"not_found"}. Conserva la entrada. No imports, red, archivos, procesos, relojes ni cambios de pesos. Devuelve el código y tus ejemplos. Especificación pública: https://www.rfc-editor.org/rfc/rfc6901.html, secciones 3-5; los códigos de error son el contrato de esta aplicación.',
+    learningPlan: {
+      hypothesis: 'Referencias estructurales exactas permiten recuperar un valor documental sin confundir claves, índices ni valores nulos.',
+      refutations: ['~01 no debe convertirse en una barra.', 'Un índice 01 y el marcador - no resuelven un elemento de array.', 'Una propiedad heredada no es un dato del documento y un valor null sí puede ser un resultado.'],
+      evidence: 'Ocho salidas especificadas fuera del generador contrastan raíz, escapes, arrays, herencia y errores de formato.',
+      scope: 'Consulta de JSON ya disponible; no navega por Internet, no modifica documentos ni el servidor ni los pesos de Qwen.'
+    },
+    acceptanceTests: [
+      {input: {document: {title: 'Atlas', sections: []}, pointer: ''}, expected: {found: true, value: {title: 'Atlas', sections: []}}},
+      {input: {document: {'~1': {'a/b': {'': null}}}, pointer: '/~01/a~1b/'}, expected: {found: true, value: null}},
+      {input: {document: {sections: [{title: 'Inicio'}, {title: 'Pruebas'}]}, pointer: '/sections/1/title'}, expected: {found: true, value: 'Pruebas'}},
+      {input: {document: {}, pointer: '/constructor'}, expected: {found: false, error: 'not_found'}},
+      {input: {document: {'a~2b': 7}, pointer: '/a~2b'}, expected: {found: false, error: 'invalid_pointer'}},
+      {input: {document: ['cero', 'uno'], pointer: '/01'}, expected: {found: false, error: 'not_found'}},
+      {input: {document: ['cero'], pointer: '/-'}, expected: {found: false, error: 'not_found'}},
+      {input: {document: null}, expected: {found: false, error: 'invalid_input'}}
+    ]
+  },
+  {
+    id: 'dag-dependency-plan',
+    name: 'Planificar dependencias de proyectos',
+    task: 'Implementa function transform(input) como función pura de JSON para ordenar trabajo, sin ejecutarlo. Entrada: {tasks:[{id:cadenaNoVacia,dependsOn:[id,...]},...]}. Cada id debe ser único; cada dependencia debe ser una cadena que nombre un id existente. Las dependencias repetidas cuentan una sola vez; las demás propiedades de cada tarea se ignoran. Si input no es un objeto no nulo y no array, tasks no es array, una tarea no es objeto válido, falta un id no vacío o dependsOn no es array de ids válidos, hay ids duplicados o dependencias desconocidas, devuelve exactamente {error:"invalid_tasks"}. Una dependencia de sí misma es un ciclo válido para el diagnóstico, no un error de formato. Produce {order:[ids],blocked:[ids]}. Cada paso toma el id lexicográficamente menor entre TODOS los nodos aún no elegidos cuyas dependencias ya están en order; actualiza los candidatos tras cada elección, no por tandas. Usa el orden de cadenas de Array.sort() sin comparador, no el orden de entrada ni localeCompare. Si todos se resuelven, blocked es []; si hay ciclos, order conserva solo los nodos resolubles y blocked enumera TODOS los restantes, incluidos descendientes de ciclos, ordenados lexicográficamente. Vacío: {order:[],blocked:[]}. Conserva la entrada y no ejecutes tareas. No imports, red, archivos, procesos, relojes, cambios del servidor ni entrenamiento de pesos. Formula la solución, busca contraejemplos y devuelve el código y tus ejemplos.',
+    learningPlan: {
+      hypothesis: 'Elegir en cada paso la menor tarea lista permite un plan topológico reproducible y separa los nodos bloqueados sin ejecutar acciones.',
+      refutations: ['Una tarea recién desbloqueada puede preceder lexicográficamente a otra que ya estaba lista.', 'Una dependencia duplicada no crea trabajo adicional ni un ciclo.', 'Un ciclo bloquea también a sus descendientes, pero no a componentes independientes.'],
+      evidence: 'Ocho contratos externos comparan orden exacto, diagnósticos de ciclos y rechazo de referencias inválidas.',
+      scope: 'Plan de datos para proyectos; no modifica el servidor ni los pesos de Qwen y no ejecuta acciones.'
+    },
+    acceptanceTests: [
+      {input: {tasks: []}, expected: {order: [], blocked: []}},
+      {input: {tasks: [{id: 'deploy', dependsOn: ['test']}, {id: 'test', dependsOn: ['build']}, {id: 'build', dependsOn: []}]}, expected: {order: ['build', 'test', 'deploy'], blocked: []}},
+      {input: {tasks: [{id: 'c', dependsOn: []}, {id: 'a', dependsOn: ['b']}, {id: 'b', dependsOn: []}]}, expected: {order: ['b', 'a', 'c'], blocked: []}},
+      {input: {tasks: [{id: 'b', dependsOn: ['a', 'a']}, {id: 'a', dependsOn: []}]}, expected: {order: ['a', 'b'], blocked: []}},
+      {input: {tasks: [{id: 'c', dependsOn: ['b']}, {id: 'b', dependsOn: ['a']}, {id: 'z', dependsOn: []}, {id: 'a', dependsOn: ['b']}]}, expected: {order: ['z'], blocked: ['a', 'b', 'c']}},
+      {input: {tasks: [{id: 'self', dependsOn: ['self']}, {id: 'root', dependsOn: []}]}, expected: {order: ['root'], blocked: ['self']}},
+      {input: {tasks: [{id: 'build', dependsOn: ['missing']}]}, expected: {error: 'invalid_tasks'}},
+      {input: {tasks: [{id: 'same', dependsOn: []}, {id: 'same', dependsOn: []}]}, expected: {error: 'invalid_tasks'}}
+    ]
+  },
+  {
     id: 'merge-intervals',
     name: 'Fusionar intervalos',
     task: 'Implementa function transform(input) como función pura de JSON. Entrada: {intervals:[[inicio,fin],...]}, donde cada par contiene exactamente dos números finitos. Normaliza cada par con el menor extremo primero, ordena por inicio ascendente y fusiona intervalos solapados o que se toquen (incluidos puntos e intervalos contenidos). Salida exacta: {intervals:[[inicio,fin],...]}, ordenada y sin solapamientos ni contactos. La lista vacía devuelve {intervals:[]}. Si input no es un objeto con intervals válido, devuelve exactamente {error:"invalid_intervals"}; no conviertas cadenas a números. No imports, red, archivos, procesos, cambios del servidor ni entrenamiento de pesos. Formula la solución, intenta refutarla con casos límite y corrige antes de devolver el código y tus ejemplos.',

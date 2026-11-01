@@ -19,11 +19,14 @@ export async function validatePureAgentSource(source,{root=DEFAULT_ROOT,parse}={
  const ast=parser(source,{ecmaVersion:2022,sourceType:'script'});
  if(!ast.body.length||ast.body.some(node=>node.type!=='FunctionDeclaration')||ast.body.filter(node=>node.id?.name==='transform').length!==1)throw Error('Solo se admiten funciones declaradas, incluida transform(input).');
  const transform=ast.body.find(node=>node.id?.name==='transform');if(transform.async||transform.generator||transform.params.length!==1||transform.params[0].type!=='Identifier')throw Error('transform debe ser una función síncrona de una entrada JSON.');
- const queue=[ast];let nodes=0;
- while(queue.length){const node=queue.pop();if(!node||typeof node!=='object')continue;if(++nodes>6000)throw Error('El código excede el presupuesto de complejidad.');
-  if(['ImportExpression','ImportDeclaration','ExportNamedDeclaration','ExportDefaultDeclaration','ThisExpression','WithStatement','DebuggerStatement'].includes(node.type)||node.type==='Identifier'&&forbidden.has(node.name))throw Error('El código intenta usar una capacidad fuera de las funciones puras.');
+ const queue=[{node:ast,parent:null,field:null}];let nodes=0;
+ while(queue.length){const {node,parent,field}=queue.pop();if(!node||typeof node!=='object')continue;if(++nodes>6000)throw Error('El código excede el presupuesto de complejidad.');
+  // A JSON field name is data, not a reference to a browser or Node global.
+  // Computed keys and shorthand values are still walked as expressions.
+  const dataKey=node.type==='Identifier'&&((parent?.type==='MemberExpression'&&!parent.computed&&field==='property')||(parent?.type==='Property'&&!parent.computed&&field==='key'));
+  if(['ImportExpression','ImportDeclaration','ExportNamedDeclaration','ExportDefaultDeclaration','ThisExpression','WithStatement','DebuggerStatement'].includes(node.type)||node.type==='Identifier'&&forbidden.has(node.name)&&!dataKey)throw Error('El código intenta usar una capacidad fuera de las funciones puras.');
   if(node.type==='MemberExpression'&&((!node.computed&&['constructor','__proto__','prototype'].includes(node.property?.name))||(node.computed&&['constructor','__proto__','prototype'].includes(node.property?.value))||node.object?.name==='Math'&&(node.property?.name==='random'||node.property?.value==='random'||node.computed&&node.property?.type!=='Literal')))throw Error('No se admite acceso dinámico al entorno ni aleatoriedad.');
-  for(const [key,value] of Object.entries(node)){if(['start','end','raw','type'].includes(key))continue;if(Array.isArray(value))queue.push(...value);else if(value&&typeof value==='object')queue.push(value);}
+  for(const [key,value] of Object.entries(node)){if(['start','end','raw','type'].includes(key))continue;if(Array.isArray(value)){for(const child of value)queue.push({node:child,parent:node,field:key});}else if(value&&typeof value==='object')queue.push({node:value,parent:node,field:key});}
  }
  return {syntax:true,pureAst:true,nodes};
 }

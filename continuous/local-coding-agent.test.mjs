@@ -13,6 +13,28 @@ agentTest('syntax gate permits JSON computation but rejects host capabilities an
  assert.equal((await validatePureAgentSource('function transform(input){ return {message:"process is data",value:input}; }',{parse})).syntax,true);
  for(const code of ['import fs from "node:fs"; function transform(input){return input}', 'function transform(input){return process.env}', 'function transform(input){return globalThis}', 'function transform(input){return input.constructor}', 'function transform(input){return Math.random()}', 'const x=fetch("x"); function transform(input){return input}', 'async function transform(input){return input}', 'function transform(a,b){return a}'])await assert.rejects(validatePureAgentSource(code,{parse}));
 });
+agentTest('host-like names are accepted only as ordinary JSON keys, not global references or shorthand values',async()=>{
+ for(const code of [
+  'function transform(input){return {document:input.document,process:input.process,fetch:input.fetch};}',
+  'function transform(input){const copy={document:input.document};return copy.document;}',
+  'function transform(input){return {value:input["document"],data:input["process"]};}'
+ ])assert.equal((await validatePureAgentSource(code,{parse})).pureAst,true,code);
+ for(const code of [
+  'function transform(input){return document;}',
+  'function transform(input){return fetch("https://example.invalid");}',
+  'function transform(input){return {document};}',
+  'function transform(input){return {fetch};}',
+  'function transform(input){return {document:document};}',
+  'function transform(input){return input[document];}',
+  'function transform(input){return input[fetch("https://example.invalid")];}',
+  'function transform(input){return {[document]:input};}',
+  'function transform(input){return {[fetch("https://example.invalid")]:input};}'
+ ])await assert.rejects(validatePureAgentSource(code,{parse}),/capacidad/,code);
+ for(const key of ['constructor','__proto__','prototype']){
+  await assert.rejects(validatePureAgentSource('function transform(input){return input.'+key+';}',{parse}),/acceso dinámico/);
+  await assert.rejects(validatePureAgentSource('function transform(input){return input["'+key+'"];}',{parse}),/acceso dinámico/);
+ }
+});
 agentTest('Aider receives only a local credential in an isolated environment and external tests gate the artifact',async t=>{
  let environment,invocation;const {agent,root}=await fixture(t,async(command,args,options)=>{environment=options.env;invocation=args;await fs.writeFile(path.join(options.cwd,'artifact.mjs'),'function transform(input){ return input.filter((x,i,a)=>a.indexOf(x)===i); }');return {ok:true,tokensReceived:64};});
  const contract=[{input:[1,1,2],expected:[1,2]},{input:[],expected:[]},{input:[false,0,false,0],expected:[false,0]}];

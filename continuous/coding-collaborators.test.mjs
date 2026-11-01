@@ -11,3 +11,10 @@ test('adding an untried free agent preserves earlier measurements and explores i
  assert.equal(result.collaborator.framework,'smolagents');assert.equal(used,1);
  const state=await instance.status();assert.equal(state.smolagents.passed,1);assert.deepEqual(Object.fromEntries(Object.keys(old).map(k=>[k,state.aider[k]])),old);assert.equal(state.native.attempts,2);
 });
+test('native work reports its real running state and clears it after completion',async t=>{
+ let release,entered;const gate=new Promise(resolve=>release=resolve),started=new Promise(resolve=>entered=resolve);
+ const instance=createCodingCollaborators({directory:await directory(t),buildNative:async()=>{entered();await gate;return{passed:true};}});
+ const pending=instance.build('Identity','',[{input:1,expected:1}],async()=>({answer:'unused'}),{provider:'native'});
+ await started;assert.equal((await instance.status()).native.busy,true);
+ release();await pending;assert.equal((await instance.status()).native.busy,false);
+});

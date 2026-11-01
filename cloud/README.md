@@ -2,7 +2,9 @@
 
 Esta aplicación Sites/Vinext sirve una casa 3D navegable y herramientas creativas junto al chat HTTPS compartible. La cola D1 conserva conversaciones y proyectos separados por usuario; R2 almacena los MP4 neuronales privados. La ruta `/origen` conserva la interfaz, los documentos estáticos y los experimentos procedurales de la versión original de Sites. El chat nuevo en `/chat/` envía trabajos al puente saliente del ordenador, que usa Qwen local.
 
-La casa reutiliza el motor y el joystick de ERAS con módulos Three.js y geometría procedural. Sus seis habitaciones reúnen conversación, música WebAudio/WAV, laboratorio 3D, juegos, cine y constelación. El taller guarda diseños Qwen que superan la validación de esquema y geometría, y permite exportar HTML y glTF. Arquitecto y revisor usan el mismo Qwen; no representan modelos externos conectados. La captura del entorno 3D funciona en el navegador. Wan/ComfyUI genera vídeo neuronal en el PC cuando su instalación separada está preparada.
+La casa reutiliza el motor y el joystick de ERAS con módulos Three.js y geometría procedural. Sus diez salas reúnen conversación, música WebAudio/WAV, laboratorio 3D, juegos, cine, constelación, Mente, Ion/Cuerpo, Refutación y LOR-ΩΣ. Los robots representan estados y contadores reales del proceso; una animación no acredita aprendizaje. El taller guarda diseños Qwen que superan la validación de esquema y geometría, y permite exportar HTML y glTF. Arquitecto y revisor usan el mismo Qwen. La captura del entorno 3D funciona en el navegador. Wan/ComfyUI genera vídeo neuronal en el PC cuando su instalación separada está preparada.
+
+La prioridad es la autonomía comprobable. El coordinador puede seleccionar Aider, smolagents o el generador nativo según resultados de contratos, con exploración y recuperación. Los tres usan el mismo Qwen; no son tres modelos independientes ni transfieren conectores de otros asistentes. La política StrategyPolicy se versiona y solo se promueve tras pruebas; LOR-ΩΣ conserva su notación original y registra los resultados negativos. Los ensayos LoRA tienen un circuito separado, con reserva GPU y comparación: un entrenamiento terminado no significa que el adaptador esté activo.
 
 ## Arquitectura
 
@@ -20,4 +22,4 @@ Ejecuta `node node_modules/typescript/bin/tsc --noEmit --incremental false` y la
 
 ## Datos de semilla y licencias
 
-`data/` contiene únicamente siete semillas estáticas de la versión original ya publicada, necesarias para compilar `/origen`; no son conversaciones D1 ni memoria del PC. Se quitó el enlace identificador de la conversación privada de la semilla de continuidad. Se conservan CSS y avisos de licencia del starter. Las migraciones y sus metadatos se mantienen íntegros. La copia de código no concede una licencia nueva a componentes o modelos de terceros.
+`data/` conserva seis semillas documentales/experimentales ya publicadas y dos fuentes de runtime JavaScript (actual y legado compatible). No son conversaciones D1 ni memoria del PC. Se quitó el enlace identificador de la conversación privada de la semilla de continuidad. Se conservan CSS y avisos de licencia del starter. Las migraciones y sus metadatos se mantienen íntegros. La copia de código no concede una licencia nueva a componentes o modelos de terceros.

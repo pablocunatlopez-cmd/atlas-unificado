@@ -6,14 +6,15 @@ import {validateAcceptance} from './extensions.mjs';
 
 const ids = ['merge-intervals', 'stable-dedupe', 'numeric-statistics'];
 const lorId = 'lor-omega-schema';
-const allIds = [lorId, ...ids];
+const newIds = ['json-pointer-resolve', 'dag-dependency-plan'];
+const allIds = [lorId, ...newIds, ...ids];
 const now = Date.parse('2026-10-31T12:00:00.000Z');
 const hour = 60 * 60 * 1000;
 const accepted = id => ({curriculumTaskId: id, passed: true});
 const failed = (id, hoursAgo = 25, extra = {}) => ({taskId: id, passed: false, at: new Date(now - hoursAgo * hour).toISOString(), ...extra});
-// Preserve every pre-existing selector regression with the new priority task
-// already completed. The original histories and failure budgets are unchanged.
-const selectAutonomousTask = (extensions=[],history=[],options={}) => selectAllTasks(Array.isArray(extensions)?[accepted(lorId),...extensions]:extensions,history,options);
+// Preserve older selector regressions with newer priorities already complete.
+// Their original histories and failure budgets remain unchanged.
+const selectAutonomousTask = (extensions=[],history=[],options={}) => selectAllTasks(Array.isArray(extensions)?[accepted(lorId),...newIds.map(accepted),...extensions]:extensions,history,options);
 
 // Independent reference functions verify the manually specified JSON results
 // in the real sandbox. These implementations are not given to the generator.
@@ -49,7 +50,7 @@ test('callers cannot mutate the canonical tasks or acceptance cases', () => {
   assert.deepEqual(getAutonomousTask(ids[0]), original);
 });
 
-for (const id of allIds) {
+for (const id of Object.keys(references)) {
   test(`${id}: independently written reference satisfies every sandbox contract`, async () => {
     const item = getAutonomousTask(id);
     const result = await checkToolContract({name: item.name, source: references[id], tests: item.acceptanceTests.slice(0, 2), acceptanceTests: item.acceptanceTests});
@@ -72,12 +73,62 @@ test('external cases refute a constant function despite its passing model exampl
 test('LOR is the next pending priority while previous approvals, failures and exhaustion remain intact',()=>{
  assert.equal(selectAllTasks([],[],{now}).id,lorId);
  assert.equal(selectAllTasks(ids.map(accepted),[],{now}).id,lorId);
- assert.equal(selectAllTasks([accepted(lorId)],[],{now}).id,ids[0]);
- assert.equal(selectAllTasks([], [failed(lorId,1)], {now}).id,ids[0]);
- assert.equal(selectAllTasks([accepted(ids[0])], [failed(lorId,1)], {now}).id,ids[1]);
+ assert.equal(selectAllTasks([accepted(lorId),...newIds.map(accepted)],[],{now}).id,ids[0]);
+ assert.equal(selectAllTasks(newIds.map(accepted), [failed(lorId,1)], {now}).id,ids[0]);
+ assert.equal(selectAllTasks([accepted(ids[0]),...newIds.map(accepted)], [failed(lorId,1)], {now}).id,ids[1]);
  const history=[failed(lorId,90),failed(lorId,60),failed(lorId,25)];
- assert.equal(selectAllTasks([],history,{now}).id,ids[0]);
+ assert.equal(selectAllTasks(newIds.map(accepted),history,{now}).id,ids[0]);
  assert.equal(selectAllTasks(allIds.map(accepted),history,{now}),null);
+});
+
+test('new documentary and planning tasks resume exhausted curricula without resetting previous evidence',()=>{
+ const previous=[lorId,...ids].map(accepted);
+ const history=ids.flatMap(id=>[90,60,25].map(hours=>failed(id,hours)));
+ const before=structuredClone({previous,history});
+ assert.equal(selectAllTasks(previous,history,{now}).id,newIds[0]);
+ assert.equal(selectAllTasks([...previous,accepted(newIds[0])],history,{now}).id,newIds[1]);
+ assert.equal(selectAllTasks([accepted(lorId)],[],{now}).id,newIds[0]);
+ assert.equal(selectAllTasks(previous,[...history,failed(newIds[0],1)],{now}).id,newIds[1]);
+ assert.equal(selectAllTasks(previous,[...history,...newIds.map(id=>failed(id,1))],{now}),null);
+ assert.deepEqual({previous,history},before);
+});
+
+test('JSON Pointer oracles distinguish escaped keys, root, arrays and invalid references',()=>{
+ const task=getAutonomousTask(newIds[0]);
+ assert.match(task.task,/RFC 6901/);
+ assert.deepEqual(task.acceptanceTests.map(item=>item.expected),[
+  {found:true,value:{title:'Atlas',sections:[]}}, {found:true,value:null},
+  {found:true,value:'Pruebas'}, {found:false,error:'not_found'},
+  {found:false,error:'invalid_pointer'}, {found:false,error:'not_found'},
+  {found:false,error:'not_found'}, {found:false,error:'invalid_input'}
+ ]);
+ assert.equal(task.acceptanceTests[1].input.pointer,'/~01/a~1b/');
+ assert.equal(Object.hasOwn(task.acceptanceTests[1].input.document,'~1'),true);
+ assert.equal(task.acceptanceTests[3].input.pointer,'/constructor');
+ assert.equal(task.acceptanceTests[5].input.pointer,'/01');
+ assert.equal(task.acceptanceTests[6].input.pointer,'/-');
+ const before=getAutonomousTask(task.id);task.acceptanceTests[0].input.document.title='changed';
+ assert.deepEqual(getAutonomousTask(task.id),before);
+});
+
+test('DAG oracles require dynamic tie breaking, duplicate-edge handling and cycle descendants',()=>{
+ const task=getAutonomousTask(newIds[1]);
+ assert.deepEqual(task.acceptanceTests.map(item=>item.expected),[
+  {order:[],blocked:[]}, {order:['build','test','deploy'],blocked:[]},
+  {order:['b','a','c'],blocked:[]}, {order:['a','b'],blocked:[]},
+  {order:['z'],blocked:['a','b','c']}, {order:['root'],blocked:['self']},
+  {error:'invalid_tasks'}, {error:'invalid_tasks'}
+ ]);
+ for(const item of task.acceptanceTests.filter(item=>item.expected.order)){
+  const {tasks}=item.input,{order,blocked}=item.expected;
+  assert.deepEqual([...order,...blocked].sort(),tasks.map(node=>node.id).sort());
+  for(const [index,id] of order.entries()){
+   const node=tasks.find(node=>node.id===id);
+   assert.ok(node.dependsOn.every(dependency=>order.indexOf(dependency)>=0&&order.indexOf(dependency)<index));
+  }
+ }
+ const before=getAutonomousTask(task.id);task.acceptanceTests[2].expected.order.reverse();
+ assert.deepEqual(getAutonomousTask(task.id),before);
 });
 
 test('LOR contracts preserve the original twelve symbols, null presence and deterministic diagnostics',()=>{

@@ -54,7 +54,9 @@ export function publicToolIntent(question){
  const dedupe=/\b(?:deduplica|deduplicar|deduplicate|quita\s+duplicados|elimina\s+duplicados|sin\s+duplicados|valores\s+unicos)\b/.test(text);
  const merge=/\b(?:fusiona|fusionar|une|unir|merge)\b/.test(text)&&/\bintervalos?\b/.test(text);
  const validate=/\b(?:valida|validar|validate|comprueba|comprobar|verifica|verificar)\b/.test(text)&&/\b(?:lor|omega|esquema|estructura|json)\b|s\*/.test(text);
- if(!compute&&!dedupe&&!merge&&!validate)return false;
+ const pointer=/\b(?:resuelve|resolver|resolve|consulta|consultar)\b/.test(text)&&/\b(?:json\s*pointer|puntero\s+json)\b/.test(text);
+ const dependencies=/\b(?:planifica|planificar|ordena|ordenar|plan|sort)\b/.test(text)&&/\b(?:dependencias|dependencies|dag|grafo)\b/.test(text);
+ if(!compute&&!dedupe&&!merge&&!validate&&!pointer&&!dependencies)return false;
  if(hasStructuredInput(question))return true;
  // Plain numeric lists support small requests such as “mediana de 10, 2, 3”.
  // A lone number, a date or a capabilities question is not an executable input.

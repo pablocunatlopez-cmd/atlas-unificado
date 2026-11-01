@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildExtension} from './extensions.mjs';
-import {reviewCapabilities} from './autonomous-review.mjs';
+import {reviewCapabilities as reviewAllCapabilities} from './autonomous-review.mjs';
 import {getAutonomousTask} from './autonomy-curriculum.mjs';
 
 const task = 'Devuelve {doubled: input.value * 2} para entradas numéricas.';
@@ -16,6 +16,13 @@ const diagnosis = {diagnosis: 'Contratos ejecutados.', limitations: 'No es una p
 function approvedLor(){
  const item=getAutonomousTask('lor-omega-schema');
  return {id:'known-lor-tool',curriculumTaskId:item.id,passed:true,name:item.name,source:'function transform(input){const required=["O","A","X","R","T","I","C","E","M","P","F","Σ"],s=input&&typeof input==="object"&&!Array.isArray(input)?input.S:null;if(!s||typeof s!=="object"||Array.isArray(s))return{valid:false,missing:required,extra:[]};const keys=Object.keys(s),missing=required.filter(k=>!keys.includes(k)),extra=keys.filter(k=>!required.includes(k)).sort();return{valid:!missing.length&&!extra.length,missing,extra};}',tests:item.acceptanceTests.slice(0,2),acceptanceTests:item.acceptanceTests};
+}
+
+// Keep the older generation/repair regressions on their original tasks.
+// New priorities are temporarily cooling down only in these fixtures.
+function reviewCapabilities(extensions,key,options={}){
+ const newerHistory=['json-pointer-resolve','dag-dependency-plan'].map(taskId=>({taskId,passed:false,at:new Date().toISOString()}));
+ return reviewAllCapabilities(extensions,key,{...options,history:[...newerHistory,...(options.history||[])]});
 }
 
 function offline(t) {
@@ -137,8 +144,10 @@ test('reviewCapabilities codeGeneration creates and verifies a plain-code curric
     assess: async evidence => {
       assessed++;
       assert.equal(evidence.candidate.passed, true);
-      assert.equal(evidence.capabilities.coreEditing, false);
-      assert.equal(evidence.capabilities.qwenWeightTraining, false);
+      assert.equal(evidence.capabilities.corePolicyEditing, true);
+      assert.equal(evidence.capabilities.arbitraryServerEditing, false);
+      assert.equal(evidence.capabilities.qwenWeightCandidates, true);
+      assert.equal(evidence.capabilities.activeQwenAdapter, false);
       return diagnosis;
     }
   });

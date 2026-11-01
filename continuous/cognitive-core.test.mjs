@@ -54,3 +54,21 @@ test('cancellation changes neither active version nor learning counters; corrupt
  await assert.rejects(core.propose(async()=>{controller.abort(Error('yield to chat'));return improved();},{signal:controller.signal}),/yield to chat/);assert.equal((await core.status()).attempts,0);
  const file=path.join(directory,'state.json'),state=JSON.parse(await fs.readFile(file));state.versions[0].policy.name='tampered';await fs.writeFile(file,JSON.stringify(state));await assert.rejects(createCognitiveCore({directory}).status(),/integridad/);assert.equal(JSON.parse(await fs.readFile(file)).versions[0].policy.name,'tampered');assert.equal(before.generation,0);
 });
+
+test('the next proposal receives the actual validated rule and public development deltas, never reserved evaluation data',async t=>{
+ const {core,directory}=await setup(t),change=improvementChange(),first=await core.propose(async()=>change);
+ assert.equal(first.accepted,true);assert.deepEqual(first.change,{operation:'upsert-rule',ruleId:'definition'});
+ assert.deepEqual(first.proposedRule,{...change.rule,when:{all:['definition'],any:[],none:['creative','research','recall']}});
+ assert.deepEqual(Object.keys(first.developmentMetrics.before).sort(),['passed','cases','score','meanThinkingTokens'].sort());assert.equal(first.developmentMetrics.after.passed,first.developmentMetrics.after.cases);assert.ok(first.developmentMetrics.after.score>first.developmentMetrics.before.score);
+ const file=path.join(directory,'state.json'),state=JSON.parse(await fs.readFile(file,'utf8')),saved=state.history.at(-1);
+ const reservedHash=first.evaluation.hash;
+ saved.evaluation.before.results[0].family='HELDOUT_ONLY_FAMILY';saved.evaluation.after.results[0].question='HELDOUT_ONLY_QUESTION';saved.evaluation.secret='HELDOUT_ONLY_FIELD';saved.developmentMetrics.before.extra='PRIVATE_EXTRA_METRIC';await fs.writeFile(file,JSON.stringify(state));
+ const noop={schema:'atlas-strategy-change/v1',name:'Mismo saludo',rationale:'No cambia la ejecución.',operation:'upsert-rule',rule:clone(BASELINE_POLICY.rules[0])};let sent;
+ const second=await core.propose(async prompt=>{sent=prompt;return noop;});
+ const historyPrefix='Resumen histórico y refutaciones de desarrollo, sin casos reservados: ',summary=JSON.parse(sent.split(historyPrefix)[1]);
+ assert.equal(summary.length,1);assert.deepEqual(summary[0].proposedRule,first.proposedRule);assert.deepEqual(summary[0].developmentMetrics,first.developmentMetrics);
+ assert.equal(sent.includes(reservedHash),false);assert.doesNotMatch(sent,/HELDOUT_ONLY|PRIVATE_EXTRA_METRIC/);assert.match(sent,/Todos los casos de desarrollo actuales pasan/);assert.match(sent,/NO inventes un fallo/);assert.match(sent,/No repitas una regla refutada/);
+ assert.equal(second.accepted,false);assert.equal(second.reason,'no_measured_improvement');assert.deepEqual(second.proposedRule,BASELINE_POLICY.rules[0]);assert.deepEqual(second.developmentMetrics.before,second.developmentMetrics.after);
+ let next;await core.propose(async prompt=>{next=prompt;return noop;});const feedback=JSON.parse(next.split(historyPrefix)[1]);
+ assert.equal(feedback.length,2);assert.equal(feedback[1].reason,'no_measured_improvement');assert.deepEqual(feedback[1].proposedRule,second.proposedRule);assert.equal((await core.status()).accepted,1);
+});

@@ -87,20 +87,32 @@ export function evaluateStrategy(policy,cases){
  });
  return {cases:results.length,passed:results.filter(item=>item.passed).length,score:results.filter(item=>item.passed).length/Math.max(1,results.length),meanThinkingTokens:results.reduce((sum,item)=>sum+item.thinkingTokens,0)/Math.max(1,results.length),results};
 }
+const developmentSummary=value=>({passed:value.passed,cases:value.cases,score:value.score,meanThinkingTokens:value.meanThinkingTokens});
+function historicalDevelopmentSummary(value){
+ if(!plain(value)||!Number.isInteger(value.passed)||!Number.isInteger(value.cases)||value.cases<1||value.passed<0||value.passed>value.cases||!Number.isFinite(value.score)||value.score<0||value.score>1||!Number.isFinite(value.meanThinkingTokens)||value.meanThinkingTokens<0||value.meanThinkingTokens>1536)return null;
+ return developmentSummary(value);
+}
+function historicalProposedRule(rule){
+ if(!rule)return null;
+ try{return validateStrategyPolicy({...BASELINE_POLICY,rules:[rule]}).rules[0];}catch{return null;}
+}
 export function strategyProposalPrompt(policy,development,history=[]){
  const example={schema:CHANGE_SCHEMA,name:'Ejemplo de tipos',rationale:'Este ejemplo conserva el saludo y no supone una mejora.',operation:'upsert-rule',rule:{id:'greeting',priority:100,when:{all:['greeting'],any:[],none:[]},then:A('direct',0)}};
+ const allDevelopmentPassed=development.length>0&&development.every(item=>item.result?.passed===true);
  return [
   'Propón UN cambio pequeño de StrategyPolicy para corregir un fallo observado. NO es el lenguaje LOR-ΩΣ original, ni los pesos Qwen, ni JavaScript. Devuelve SOLO un objeto JSON de cambio, no una política completa.',
   'Este ejemplo fija los TIPOS; copiarlo sin una mejora medida será rechazado: '+JSON.stringify(example),
   'schema debe ser exactamente "'+CHANGE_SCHEMA+'". name y rationale son textos. operation debe ser exactamente "upsert-rule". rule es UN objeto, nunca un array. No devuelvas rules, fallback, código ni otras operaciones. El intérprete conservará todas las demás reglas y el fallback sin alterarlos. Si rule.id ya existe, reemplazará solo esa regla; si es nuevo, añadirá solo esa regla, hasta doce reglas totales.',
-  'Elige el primer fallo de desarrollo y resuélvelo con UNA regla general. Cada id contiene letras minúsculas, guiones o números; priority es UN número entero entre0y100. when contiene all,any,none como arrays de nombres de predicados. then contiene SOLO strategy,thinkingTokens,review,seekEvidence.',
+  allDevelopmentPassed?'Todos los casos de desarrollo actuales pasan: NO inventes un fallo para justificar un cambio. Busca solo una mejora pequeña y medible de coste que conserve todos los comportamientos correctos y sus presupuestos mínimos. Si no encuentras una, no afirmes haber mejorado: la evaluación rechazará un cambio sin mejora medida.':'Elige el primer fallo de desarrollo y resuélvelo con UNA regla general.',
+  'Cada id contiene letras minúsculas, guiones o números; priority es UN número entero entre0y100. when contiene all,any,none como arrays de nombres de predicados. then contiene SOLO strategy,thinkingTokens,review,seekEvidence.',
   'strategy es UN texto elegido de esta lista: '+JSON.stringify(STRATEGIES)+'. Ejemplo correcto: "strategy":"reason". No combines nombres ni uses un array. thinkingTokens es un entero entre0y1536; review y seekEvidence son booleanos verdaderos, no textos.',
   'Solo se admiten estos predicados booleanos: '+JSON.stringify(FEATURES)+'. all exige todos, any al menos uno si no está vacío, none prohíbe todos. Una condición debe incluir al menos un predicado.',
   'Las definiciones sencillas deben responder directamente con presupuesto pequeño incluso si mencionan programación: definition y programming pueden ser verdaderas a la vez. La prioridad más alta es la que se ejecuta; no basta con añadir una regla que otra regla oculta. Depuración y demostraciones requieren análisis y revisión. creative tiene prioridad sobre programming cuando ambas son verdaderas. recall solo se activa con memoria disponible. No pidas campos, código, rutas, regex ni permisos nuevos.',
   'No reescribas toda la política. Conserva los comportamientos correctos mediante un cambio mínimo; decide por condiciones generales, nunca por cadenas o identificadores de ejemplos. Una mejora se acepta SOLO tras ejecutar contratos externos separados de estos ejemplos.',
+  'Revisa las reglas propuestas y las métricas de desarrollo antes/después del historial. No repitas una regla refutada ni una operación que ya produjo no_measured_improvement: cambiar su nombre o explicación no cambia su comportamiento. Un nuevo intento debe explicar qué modificación concreta evita esa refutación; no se proporciona información de los casos reservados.',
   'Política vigente: '+JSON.stringify(policy),
   'Casos de desarrollo y fallos ejecutados: '+JSON.stringify(development),
-  'Resumen histórico y refutaciones de desarrollo, sin casos reservados: '+JSON.stringify(history.slice(-3).map(item=>({accepted:item.accepted,reason:item.reason,error:item.error||null,developmentFailures:item.developmentFailures||[]}))),
+  'Resumen histórico y refutaciones de desarrollo, sin casos reservados: '+JSON.stringify(history.slice(-3).map(item=>({accepted:item.accepted,reason:item.reason,error:item.error||null,proposedRule:historicalProposedRule(item.proposedRule),developmentMetrics:{before:historicalDevelopmentSummary(item.developmentMetrics?.before),after:historicalDevelopmentSummary(item.developmentMetrics?.after)},developmentFailures:item.developmentFailures||[]}))),
  ].join('\n');
 }
 
@@ -126,18 +138,19 @@ export function createCognitiveCore({directory=DEFAULT_DIRECTORY,now=()=>new Dat
   if(typeof generate!=='function')throw Error('Falta un generador local de candidatos.');signal?.throwIfAborted();
   const state=await read(),current=state.versions.find(version=>version.id===state.activeId),id='candidate-'+randomUUID(),at=now();
   onStage('observe');const dev=evaluateStrategy(current.policy,DEVELOPMENT_CASES),development=DEVELOPMENT_CASES.map((item,index)=>({...item,result:dev.results[index]}));
-  const record={id,at,parentId:current.id,phase:'observing',accepted:false,source:'local-qwen',observedDevelopment:{passed:dev.passed,cases:dev.cases},qwenWeightsChanged:false};
+  const record={id,at,parentId:current.id,phase:'observing',accepted:false,source:'local-qwen',observedDevelopment:{passed:dev.passed,cases:dev.cases},developmentMetrics:{before:developmentSummary(dev),after:null},qwenWeightsChanged:false};
   let candidate,rawProposal=null;
   try{
    record.phase='proposing';onStage('connect');const output=await generate(strategyProposalPrompt(current.policy,development,state.history),{signal});rawProposal=typeof output==='string'?output.slice(0,50000):null;signal?.throwIfAborted();
    const raw=typeof output==='string'?JSON.parse(output):output?.answer?JSON.parse(output.answer):output;
    candidate=raw?.schema===CHANGE_SCHEMA?applyStrategyChange(current.policy,raw):validateStrategyPolicy(raw);
    record.proposalFormat=raw?.schema===CHANGE_SCHEMA?'single-rule-change':'legacy-full-policy';
-   if(raw?.schema===CHANGE_SCHEMA)record.change={operation:raw.operation,ruleId:raw.rule.id};
+   if(raw?.schema===CHANGE_SCHEMA){record.change={operation:raw.operation,ruleId:raw.rule.id};record.proposedRule=clone(candidate.rules.find(rule=>rule.id===raw.rule.id));}
    record.candidateHash=digest(candidate);
    const held=evaluationCases(),evaluationHash=digest(held);if(!Array.isArray(held)||held.length<5||new Set(held.map(item=>item.family)).size<5)throw Error('La evaluación necesita al menos cinco familias externas.');
    if(state.usedEvaluations.includes(evaluationHash))throw Error('Esta evaluación ya se consumió; hace falta un lote distinto.');state.usedEvaluations.push(evaluationHash);
    record.phase='refuting';onStage('refute');const before=evaluateStrategy(current.policy,held),after=evaluateStrategy(candidate,held),nextDev=evaluateStrategy(candidate,DEVELOPMENT_CASES);
+   record.developmentMetrics.after=developmentSummary(nextDev);
    record.developmentFailures=nextDev.results.flatMap((result,index)=>result.passed?[]:[{question:DEVELOPMENT_CASES[index].question,expected:DEVELOPMENT_CASES[index].expected,actual:result}]);
    const regressions=before.results.filter((result,index)=>result.passed&&!after.results[index].passed).map(result=>result.family);
    const better=after.score>before.score||after.score===before.score&&after.meanThinkingTokens<before.meanThinkingTokens*.85;

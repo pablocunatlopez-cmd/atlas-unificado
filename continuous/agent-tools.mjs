@@ -9,6 +9,6 @@ export async function useExtension(messages,extensions,key,generate=chat){
  if(selection.toolId===null)return {used:false,reason:'Ninguna herramienta corresponde a la petición.'};
  const tool=available.find(x=>x.id===selection.toolId);
  if(!tool||!Object.hasOwn(selection,'input'))return {used:false,reason:'Plan rechazado: herramienta o entrada inválida.'};
- try{return {used:true,toolId:tool.id,name:tool.name,input:selection.input,result:await executePure(tool.source,selection.input),at:new Date().toISOString(),scope:'Resultado real de una ejecución QuickJS aislada.'};}
+ try{return {used:true,toolId:tool.id,name:tool.name,...(typeof tool.curriculumTaskId==='string'?{curriculumTaskId:tool.curriculumTaskId}:{}),input:selection.input,result:await executePure(tool.source,selection.input),at:new Date().toISOString(),scope:'Resultado real de una ejecución QuickJS aislada.'};}
  catch(e){return {used:false,toolId:tool.id,name:tool.name,input:selection.input,error:e.message};}
 }
