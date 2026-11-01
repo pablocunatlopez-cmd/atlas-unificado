@@ -22,3 +22,4 @@
  .house .introCard .roomFoot{margin-top:11px;padding-top:9px}
 }
 @media(prefers-reduced-motion:reduce){.house *{scroll-behavior:auto!important;transition:none!important}}
+.activityLink{display:inline-flex;align-items:center;gap:7px;color:#b5dec9;font-size:11px;text-decoration:none;padding:8px 10px;border:1px solid #6b948744;border-radius:9px;background:#15382a55}.activityLink:hover{background:#285341aa}.activityLink:focus-visible{outline:2px solid #c9edd9;outline-offset:3px}@media(max-width:600px){.activityLink{padding:8px}.activityLink span{display:none}}

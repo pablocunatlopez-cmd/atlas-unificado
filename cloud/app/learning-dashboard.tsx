@@ -1,0 +1,91 @@
+'use client';
+
+import {useEffect,useState} from 'react';
+import styles from './learning-dashboard.module.css';
+
+type ProcessState='idle'|'running'|'passed'|'failed'|'waiting';
+type Process={id:string;label:string;state:ProcessState;counters:{observations?:number;trials?:number;accepted?:number;rejected?:number}};
+type Provider={installed:boolean;ready:boolean;inferenceVerified:boolean;attempts:number;passed:number;failed:number};
+type PublicTool={taskId:string;name:string;cases:8;passed:8;createdAt:string|null};
+export type LearningTelemetry={reviewEnabled:boolean;paused:boolean;running:boolean;lastCycleAt:string|null;nextRun:string|null;pendingTask:{taskId:string;name:string;cases:8}|null;tools:PublicTool[];approvedTools:number};
+export type LearningStatus={online:boolean;modelName:string;lastSeen:string|null;capabilities:{gpuMode:'chat'|'video'|'training';processTelemetry:{at:string|null;processes:Process[];core:{generation:number;attempts:number;accepted:number;rejected:number}|null;agents:{aider:Provider;smolagents:Provider;native:Provider}|null;evolution:{candidatesTrained:number;activeAdapter:false}|null;learning:LearningTelemetry|null}|null}};
+type Snapshot={value:LearningStatus;receivedAt:number};
+const POLL_MS=10000,REQUEST_MS=8000,FRESH_MS=75000;
+const record=(value:unknown):Record<string,unknown>=>value!==null&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
+const count=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?Math.min(value,1000000000):0;
+const text=(value:unknown,fallback='')=>typeof value==='string'?value.slice(0,160):fallback;
+const date=(value:unknown)=>typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():null;
+const states=new Set<ProcessState>(['idle','running','passed','failed','waiting']);
+const providers=[{id:'aider',name:'Aider',mark:'A'},{id:'smolagents',name:'smolagents',mark:'s'},{id:'native',name:'Constructor nativo',mark:'N'}] as const;
+const examples:Record<string,string>={
+ 'lor-omega-schema':'Comprueba la estructura LOR-ΩΣ de este ejemplo sintético: '+JSON.stringify({S:{O:['jardín'],A:{luz:'día'},X:[],R:[],T:[],I:[],C:[],E:'metros',M:[],P:[],F:[],'Σ':[]}}),
+ 'json-pointer-resolve':'Resuelve este JSON Pointer en el documento sintético: '+JSON.stringify({document:{estudio:{instrumentos:['piano','bajo']}},pointer:'/estudio/instrumentos/1'}),
+ 'dag-dependency-plan':'Planifica las dependencias de este proyecto de ejemplo: '+JSON.stringify({tasks:[{id:'publicar',dependsOn:['revisar']},{id:'boceto',dependsOn:[]},{id:'revisar',dependsOn:['prototipo']},{id:'prototipo',dependsOn:['boceto']}]}),
+ 'merge-intervals':'Fusiona estos intervalos de ejemplo: '+JSON.stringify({intervals:[[2,5],[4,9],[12,14]]}),
+ 'stable-dedupe':'Elimina duplicados conservando orden y tipos: '+JSON.stringify({values:['luna','sol','luna',2,'2',false,false]}),
+ 'numeric-statistics':'Calcula estadísticas de estos datos sintéticos: '+JSON.stringify({values:[14,7,21,10]})
+};
+
+/** Read only the public status contract. Unknown runtime fields never reach the UI. */
+export function readLearningStatus(input:unknown):LearningStatus{
+ const source=record(input),capabilities=record(source.capabilities),telemetry=record(capabilities.processTelemetry),learning=record(telemetry.learning),core=record(telemetry.core),agents=record(telemetry.agents),evolution=record(telemetry.evolution);
+ const provider=(value:unknown):Provider=>{const p=record(value);return {installed:p.installed===true,ready:p.ready===true,inferenceVerified:p.inferenceVerified===true,attempts:count(p.attempts),passed:count(p.passed),failed:count(p.failed)};};
+ const processes=(Array.isArray(telemetry.processes)?telemetry.processes:[]).slice(0,12).flatMap(value=>{const p=record(value);if(typeof p.id!=='string'||!states.has(p.state as ProcessState))return [];const c=record(p.counters),counters:Process['counters']={};for(const key of ['observations','trials','accepted','rejected'] as const)if(typeof c[key]==='number'&&Number.isSafeInteger(c[key])&&Number(c[key])>=0)counters[key]=count(c[key]);return [{id:text(p.id),label:text(p.label,'Proceso'),state:p.state as ProcessState,counters}];});
+ const tools=(Array.isArray(learning.tools)?learning.tools:[]).slice(0,24).flatMap(value=>{const tool=record(value);return typeof tool.taskId==='string'&&tool.cases===8&&tool.passed===8?[{taskId:text(tool.taskId),name:text(tool.name,'Herramienta verificada'),cases:8 as const,passed:8 as const,createdAt:date(tool.createdAt)}]:[];});
+ const pending=record(learning.pendingTask);
+ return {online:source.online===true,modelName:text(source.modelName,'Qwen local'),lastSeen:date(source.lastSeen),capabilities:{gpuMode:capabilities.gpuMode==='video'?'video':capabilities.gpuMode==='training'?'training':'chat',processTelemetry:source.capabilities&&capabilities.processTelemetry?{at:date(telemetry.at),processes,core:telemetry.core?{generation:count(core.generation),attempts:count(core.attempts),accepted:count(core.accepted),rejected:count(core.rejected)}:null,agents:telemetry.agents?{aider:provider(agents.aider),smolagents:provider(agents.smolagents),native:provider(agents.native)}:null,evolution:telemetry.evolution?{candidatesTrained:count(evolution.candidatesTrained),activeAdapter:false}:null,learning:telemetry.learning?{reviewEnabled:learning.reviewEnabled===true,paused:learning.paused===true,running:learning.running===true,lastCycleAt:date(learning.lastCycleAt),nextRun:date(learning.nextRun),pendingTask:typeof pending.taskId==='string'&&pending.cases===8?{taskId:text(pending.taskId),name:text(pending.name,'Tarea pendiente'),cases:8}:null,tools,approvedTools:count(learning.approvedTools)}:null}:null}};
+}
+
+export function isLearningStatusFresh(value:LearningStatus,receivedAt:number,now:number){
+ const lastSeen=value.lastSeen?Date.parse(value.lastSeen):NaN;
+ return value.online&&Number.isFinite(lastSeen)&&lastSeen<=now+5000&&now-lastSeen<FRESH_MS&&now-receivedAt<FRESH_MS;
+}
+
+function Stamp({value,empty='Sin dato recibido'}:{value:string|null|undefined;empty?:string}){
+ return value?<time dateTime={value}>{new Date(value).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</time>:<span>{empty}</span>;
+}
+function Arrow(){return <svg viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>;}
+function AtlasMark(){return <svg viewBox="0 0 48 48" width="36" height="36" fill="none" aria-hidden="true"><path d="M4 24s7-12 20-12 20 12 20 12-7 12-20 12S4 24 4 24Z" stroke="currentColor" strokeWidth="1.2"/><circle cx="24" cy="24" r="7" stroke="currentColor" strokeWidth="1.2"/><circle cx="24" cy="24" r="2" fill="currentColor"/><path d="M24 3v5m0 32v5M6 7l4 4m28 26 4 4M42 7l-4 4M10 37l-4 4" stroke="currentColor" strokeWidth="1.2"/></svg>;}
+
+export default function LearningDashboard(){
+ const [snapshot,setSnapshot]=useState<Snapshot|null>(null),[clock,setClock]=useState(0),[fetching,setFetching]=useState(true),[networkError,setNetworkError]=useState(false);
+ useEffect(()=>{
+  let disposed=false,busy=false,refreshQueued=false,controller:AbortController|null=null;
+  const tick=()=>setClock(Date.now());
+  async function poll(){
+   if(disposed||busy||document.visibilityState==='hidden')return;
+   busy=true;controller=new AbortController();const active=controller;const timeout=setTimeout(()=>active.abort(),REQUEST_MS);setFetching(true);
+   try{const response=await fetch('/api/cloud/status',{cache:'no-store',credentials:'same-origin',signal:active.signal});if(!response.ok)throw Error('status');const value=readLearningStatus(await response.json());if(disposed)return;const now=Date.now();setSnapshot({value,receivedAt:now});setClock(now);setNetworkError(false);}
+   catch{if(!disposed){setNetworkError(true);tick();}}
+   finally{clearTimeout(timeout);busy=false;if(controller===active)controller=null;if(!disposed){setFetching(false);if(refreshQueued){refreshQueued=false;void poll();}}}
+  }
+  function visibility(){tick();if(document.visibilityState==='visible'){if(busy)refreshQueued=true;else void poll();}else controller?.abort();}
+  tick();void poll();const pollTimer=setInterval(()=>void poll(),POLL_MS),clockTimer=setInterval(tick,1000);document.addEventListener('visibilitychange',visibility);
+  return()=>{disposed=true;controller?.abort();clearInterval(pollTimer);clearInterval(clockTimer);document.removeEventListener('visibilitychange',visibility);};
+ },[]);
+ const data=snapshot?.value,telemetry=data?.capabilities.processTelemetry,learning=telemetry?.learning,core=telemetry?.core,tools=learning?.tools||[],coordinatorTools=telemetry?.processes.find(process=>process.id==='tools')?.counters.accepted;
+ const connected=!!snapshot&&isLearningStatusFresh(snapshot.value,snapshot.receivedAt,clock),loading=!snapshot&&fetching;
+ const running=connected?telemetry?.processes.filter(process=>process.state==='running')||[]:[];
+ const status=loading?'Comprobando Atlas':!connected?'Sin conexión con el PC':!learning?'Esperando telemetría':learning.paused?'Atlas está en pausa':!learning.reviewEnabled?'Revisión desactivada':learning.running?'Revisión en curso':'Esperando el siguiente ciclo';
+ const description=loading?'Buscando una señal del coordinador local.':!connected?'Mostramos el último estado recibido. La actividad del PC no está confirmada.':!learning?'El puente está conectado; aún no ha comunicado los datos de aprendizaje.':learning.paused?'El ciclo conserva su estado y respeta la pausa.':!learning.reviewEnabled?'El coordinador no tiene habilitada la revisión autónoma.':learning.running?'Atlas está construyendo o contrastando una propuesta. Solo contará como mejora si supera sus pruebas.':learning.pendingTask?'Hay una tarea pendiente. El coordinador decide cuándo probarla, con prioridad para el chat.':'No hay una tarea elegible comunicada. Atlas conserva sus resultados y espera el siguiente ciclo.';
+ const next=learning?.nextRun,overdue=!!next&&Date.parse(next)<=clock;
+ return <main className={styles.shell}>
+  <div className={styles.container}>
+   <header className={styles.header}><a className={styles.brand} href="/" aria-label="Atlas, volver a la casa"><AtlasMark/><span>atlas<small>MENTE · CONSTELACIÓN · ION</small></span></a><nav className={styles.navigation} aria-label="Navegación de Atlas"><a href="/">Casa</a><a className={styles.chatLink} href="/chat/">Conversar <Arrow/></a></nav></header>
+   <section className={styles.heading}><div><p className={styles.eyebrow}>OBSERVATORIO / ACTIVIDAD</p><h1>Aprender,<br/><em>con pruebas.</em></h1><p className={styles.intro}>Una ventana al Atlas de tu ordenador. Lo que intenta, lo que supera y lo que todavía no sabe.</p></div><div className={styles.connection}><span className={`${styles.connectionBadge} ${connected?styles.connected:styles.disconnected}`}><i/>{loading?'Conectando':connected?'PC conectado':'PC sin verificar'}</span><span>{data?.modelName||'Qwen local'}</span><small className={styles.smallrefresh}>Se actualiza cada 10 s.<br/>Últimos datos: <Stamp value={telemetry?.at||data?.lastSeen}/></small>{networkError&&<small className={styles.fetchWarning}>La última consulta no respondió. Reintentando.</small>}</div></section>
+
+   <section className={`${styles.current} ${connected&&learning?.running?styles.currentRunning:''}`} aria-labelledby="current-heading"><div className={styles.currentTop}><p className={styles.eyebrow}>{connected?'AHORA EN ATLAS':'ÚLTIMO ESTADO / SIN CONFIRMAR'}</p><span className={styles.quietTag}>{connected?data?.capabilities.gpuMode==='training'?'GPU · candidata de pesos':data?.capabilities.gpuMode==='video'?'GPU · vídeo':'GPU · conversación':'Sin señal reciente'}</span></div><div className={styles.currentBody}><div className={styles.orbit} data-active={connected&&learning?.running?'true':'false'} aria-hidden="true"><span/><span/><span/><i/></div><div className={styles.currentText}><h2 id="current-heading">{status}</h2><p>{description}</p>{learning?.pendingTask&&<div className={styles.pending}><span>PRÓXIMA TAREA</span><strong>{learning.pendingTask.name}</strong><small>{learning.pendingTask.cases} contratos externos</small></div>}</div></div><dl className={styles.times}><div><dt>Último ciclo comunicado</dt><dd><Stamp value={learning?.lastCycleAt}/></dd></div><div><dt>Próxima revisión prevista</dt><dd>{next?<><Stamp value={next}/>{overdue&&<small>{connected?'Hora prevista alcanzada; esperando el siguiente informe.':'Previsión del último estado recibido.'}</small>}</>:<span>Sin fecha comunicada</span>}</dd></div><div><dt>Última señal del PC</dt><dd><Stamp value={data?.lastSeen}/></dd></div></dl></section>
+
+   <div className={styles.metrics}><article><span>Herramientas públicas</span><strong>{learning?tools.length:'—'}<small>disponibles aquí</small></strong><p>Con ocho contratos aprobados.</p></article><article><span>Catálogo del coordinador</span><strong>{coordinatorTools??'—'}<small>aprobadas en el PC</small></strong><p>Puede incluir herramientas locales.</p></article><article><span>Núcleo de estrategias</span><strong>{core?String(core.generation).padStart(2,'0'):'—'}<small>generación de política</small></strong><p>Una política no equivale a nuevos pesos.</p></article></div>
+
+   <div className={styles.columns}><section className={styles.section} aria-labelledby="process-heading"><div className={styles.sectionHead}><div><p className={styles.eyebrow}>01 / EL PRESENTE</p><h2 id="process-heading">Procesos</h2></div><span className={styles.sectionMeta}>{connected?`${running.length} trabajando`:'Último estado'}</span></div>{telemetry?.processes.length?<ul className={styles.processList}>{telemetry.processes.map(process=><li key={process.id}><i className={`${styles.processDot} ${connected&&process.state==='running'?styles.dotRunning:process.state==='passed'?styles.dotPassed:process.state==='failed'?styles.dotRefuted:''}`}/><div><strong>{process.label}</strong><span>{!connected?'Último: ':''}{process.state==='running'?'En ejecución':process.state==='passed'?'Última prueba aprobada':process.state==='failed'?'Último intento no aprobado':'En espera'}</span></div>{process.counters.trials!==undefined?<small>{process.counters.trials} pruebas</small>:process.counters.observations!==undefined?<small>{process.counters.observations} observaciones</small>:null}</li>)}</ul>:<p className={styles.empty}>Los procesos aparecerán al recibir telemetría del coordinador.</p>}<p className={styles.note}>La actividad indica trabajo. Una refutación conserva un resultado negativo; no es un error de conexión ni una mejora acreditada.</p></section>
+
+   <section className={styles.section} aria-labelledby="agents-heading"><div className={styles.sectionHead}><div><p className={styles.eyebrow}>02 / LA CONSTELACIÓN</p><h2 id="agents-heading">Constructores</h2></div><span className={styles.sectionMeta}>Mismo Qwen local</span></div>{telemetry?.agents?<ul className={styles.agentList}>{providers.map(provider=>{const value=telemetry.agents![provider.id];return <li key={provider.id}><span className={styles.agentMark}>{provider.mark}</span><div><strong>{provider.name}</strong><span>{value.inferenceVerified?'Inferencia comprobada':value.ready?'Entorno preparado':value.installed?'Instalado · sin verificar':'Sin preparar'}</span></div><div className={styles.agentCounts}><strong>{value.passed}<small> / {value.attempts}</small></strong><span>intentos aprobados</span></div></li>;})}</ul>:<p className={styles.empty}>Aún no hay un informe de los constructores.</p>}<p className={styles.note}>Aider, smolagents y el constructor nativo son vías distintas para usar Qwen. El coordinador compara sus resultados; no representan tres modelos independientes.</p></section></div>
+
+   <section className={styles.toolsSection} aria-labelledby="tools-heading"><div className={styles.sectionHead}><div><p className={styles.eyebrow}>03 / LO QUE YA SE PUEDE USAR</p><h2 id="tools-heading">Herramientas verificadas</h2></div><span className={styles.sectionMeta}>Catálogo público {learning?`· ${tools.length}`:''}</span></div><p className={styles.toolsIntro}>Funciones generadas por Atlas y contrastadas con casos externos. Cada ejemplo se prepara en el chat; tú decides cuándo enviarlo.</p>{tools.length?<div className={styles.toolGrid}>{tools.map((tool,index)=><article className={styles.toolCard} key={tool.taskId}><div className={styles.toolTop}><span>{String(index+1).padStart(2,'0')}</span><span className={styles.contractBadge}>✓ {tool.passed}/{tool.cases}</span></div><h3>{tool.name}</h3><p className={styles.toolDate}>Verificada <Stamp value={tool.createdAt} empty="sin fecha comunicada"/></p>{examples[tool.taskId]?<a href={'/chat/?prompt='+encodeURIComponent(examples[tool.taskId])}>Preparar ejemplo <Arrow/></a>:<span className={styles.noExample}>Disponible desde el chat</span>}</article>)}</div>:<div className={styles.catalogEmpty}><span>⟡</span><h3>{learning?'Sin herramientas públicas comunicadas':'Esperando el catálogo'}</h3><p>Este panel solo mostrará funciones aprobadas que el coordinador haya autorizado para el chat compartido.</p></div>}</section>
+
+   <section className={styles.evidence} aria-labelledby="evidence-heading"><div><p className={styles.eyebrow}>CONSERVAR LO QUE RESISTE</p><h2 id="evidence-heading">Los fallos también dejan huella.</h2><p>{core?`${core.accepted} cambios de política aceptados y ${core.rejected} propuestas no aceptadas en el registro comunicado.`:'Las propuestas de política se contrastan antes de promoverse.'} Los resultados sin mejora conservan la versión anterior.</p></div><div className={styles.weights}><span className={styles.quietTag}>PESOS QWEN · SIN CAMBIO ACTIVO</span><p>{telemetry?.evolution?`${telemetry.evolution.candidatesTrained} candidatas entrenadas comunicadas. `:''}Entrenar un adaptador no basta para activarlo. La política de Atlas y los pesos del modelo tienen evaluaciones separadas.</p></div></section>
+   <footer className={styles.footer}><span>Atlas observa, contrasta y conserva.</span><a href="/chat/">Hablar con Atlas <Arrow/></a></footer>
+  </div>
+ </main>;
+}

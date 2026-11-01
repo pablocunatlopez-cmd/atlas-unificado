@@ -36,8 +36,11 @@ import {createQwenEvolution} from './qwen-evolution.mjs';
 import {createLocalCodingAgent} from './local-coding-agent.mjs';
 import {createSmolCodingAgent} from './smol-coding-agent.mjs';
 import {createCodingCollaborators} from './coding-collaborators.mjs';
+import {createCodingReferences} from './coding-references.mjs';
 import {createWeightAutonomy} from './weight-autonomy.mjs';
 import {publicTools,publicToolIntent} from './public-tools.mjs';
+import {sanitizeLearningTelemetry} from './learning-telemetry.mjs';
+import {selectAutonomousTask} from './autonomy-curriculum.mjs';
 let chatBusy=false;
 let mediaBusy=false,mediaAbort=null,mediaProgress=null,gpuActivity=null,autonomousWeights=false,mediaDone=Promise.resolve();
 const root=path.dirname(fileURLToPath(import.meta.url));
@@ -62,7 +65,8 @@ try{chatModelName=(await fs.readFile(path.join(data,'active-chat-model.txt'),'ut
 const chatKey=(await fs.readFile(path.join(data,'chat-local.key'),'utf8')).trim();
 const localCodingAgent=createLocalCodingAgent({key:chatKey});
 const smolCodingAgent=createSmolCodingAgent({key:chatKey});
-const codingCollaborators=createCodingCollaborators({directory:data,agent:localCodingAgent,smolAgent:smolCodingAgent});
+const codingReferences=createCodingReferences({directory:data});
+const codingCollaborators=createCodingCollaborators({directory:data,agent:localCodingAgent,smolAgent:smolCodingAgent,referenceLibrary:codingReferences});
 const providerKeyPath=path.join(data,'openrouter.key');
 let providerKey='';try{providerKey=(await fs.readFile(providerKeyPath,'utf8')).trim();}catch(e){if(e.code!=='ENOENT')throw e;}
 let extensionBusy=false;
@@ -398,8 +402,10 @@ server=http.createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname==='/process/status'){
   res.setHeader('Content-Type','application/json');try{
    const core=await cognitiveCore.status(),lor=await lorLab.status(),evolution={...await qwenEvolution.status(),autonomy:await weightAutonomy.status()},agents=await codingCollaborators.status();
+   const pendingTask=selectAutonomousTask(extensions,autonomy.history||[]);
+   const learning=sanitizeLearningTelemetry({reviewEnabled:autonomy.enabled!==false,paused:state.paused,running:autonomousBusy,lastCycleAt:autonomy.history?.at(-1)?.at,nextRun:autonomy.nextRun,pendingTask:pendingTask?{taskId:pendingTask.id}:null,tools:extensions});
    const coding=[agents.aider,agents.smolagents,agents.native],agentCounters=coding.reduce((sum,item)=>({trials:sum.trials+item.attempts,accepted:sum.accepted+item.passed,rejected:sum.rejected+item.failed}),{trials:0,accepted:0,rejected:0});
-   return res.end(JSON.stringify(sanitizeProcessTelemetry({at:new Date().toISOString(),core:{...core,version:core.activeId},lor:lor.last,evolution,agents,processes:[
+   return res.end(JSON.stringify(sanitizeProcessTelemetry({at:new Date().toISOString(),core:{...core,version:core.activeId},lor:lor.last,evolution,agents,learning,processes:[
     {id:'chat',state:chatBusy?'running':mediaBusy?'waiting':'idle',phase:'understand'},
     {id:'research',state:libraryBusy?'running':state.paused?'waiting':'idle',phase:'observe',counters:{observations:documents.filter(document=>document.role==='reference').length}},
     {id:'tools',state:extensionBusy&&!coreReviewBusy?'running':'idle',phase:'apply',counters:{trials:extensions.length,accepted:extensions.filter(item=>item.passed).length,rejected:extensions.filter(item=>!item.passed).length}},
@@ -439,8 +445,8 @@ server=http.createServer(async(req,res)=>{
    const cases=[{input:{values:[1,2,1]},expected:[1,2]},{input:{values:['a','b','a']},expected:['a','b']},{input:{values:[]},expected:[]},{input:{values:[null,false,null,false]},expected:[null,false]},{input:{values:[1,'1',1,false,0,false]},expected:[1,'1',false,0]},{input:{},expected:[]},{input:null,expected:[]},{input:{values:'abc'},expected:[]}];
    const task='Recibe input={values:[primitivos JSON]} y devuelve el array sin valores repetidos, conservando el orden de la primera aparición. No confundas número 1 con texto "1", false con 0, ni null con otros valores. Si input o values no tienen el formato esperado devuelve []. No modifica la entrada.';
    const provider=url.searchParams.get('provider')==='smolagents'?'smolagents':'aider';
-   const result=await codingCollaborators.build(task,chatKey,cases,(input)=>chat(input,[],fetch,chatKey,'',null,'',[],'',{signal,sharedSession:true,cognitiveCore}),{provider,format:'code',name:'Deduplicación estable · benchmark de agentes',signal});
-   await write('agent-benchmark.json',result);return res.end(JSON.stringify({passed:result.passed,collaborator:result.collaborator,cases:result.acceptanceResults?.length,attempts:result.attempt}));
+   const result=await codingCollaborators.build(task,chatKey,cases,(input)=>chat(input,[],fetch,chatKey,'',null,'',[],'',{signal,sharedSession:true,cognitiveCore}),{provider,format:'code',name:'Deduplicación estable · benchmark de agentes',curriculumTaskId:'stable-dedupe',signal});
+   await write('agent-benchmark.json',result);return res.end(JSON.stringify({passed:result.passed,collaborator:result.collaborator,cases:result.acceptanceResults?.length,attempts:result.attempt,sourceReferences:result.sourceReferences||[],referenceErrors:result.referenceErrors||[],referenceContextProvided:result.referenceContextProvided===true}));
   }catch(error){res.writeHead(400);return res.end(JSON.stringify({error:error.message}));}finally{extensionBusy=false;coreAbort=null;res.off('close',close);}
  }
  if(req.method==='GET'&&url.pathname==='/media/status'){

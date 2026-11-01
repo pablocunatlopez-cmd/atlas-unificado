@@ -113,6 +113,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
   return()=>{active=false;mounted.current=false;sequence.current++;pollAbort.current?.abort();clearInterval(interval);document.removeEventListener('visibilitychange',visible);};
  },[]);
  useEffect(()=>{void refreshArchive();},[refreshArchive]);
+ useEffect(()=>{const prompt=new URLSearchParams(window.location.search).get('prompt');if(prompt&&prompt.length<=6000)setDraft(previous=>previous||prompt);},[]);
  useEffect(()=>{
   if(!messages.length&&!job){scrollRef.current?.scrollTo({top:0,behavior:'auto'});return;}
   if(nearBottom.current)bottomRef.current?.scrollIntoView({behavior:'smooth',block:'end'});
@@ -201,7 +202,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
    <a href="/" target="_top" className={styles.brand}><Eye/><span>atlas<small>Una perspectiva, con memoria.</small></span></a>
    <button className={styles.newChat} type="button" onClick={newConversation} disabled={submitting}><Icon name="plus" size={17}/><span>Nueva conversación</span><span className={styles.newArrow}>↗</span></button>
    <div className={styles.sideLabel}>TU ESPACIO</div>
-   <nav className={styles.navigation} aria-label="Navegación principal"><a className={styles.activeNav} href="/chat/"><Icon name="chat" size={17}/>Conversar<span>AHORA</span></a><a href="/" target="_top"><Icon name="branch" size={17}/>Volver a la casa<Icon name="external" size={13}/></a></nav>
+   <nav className={styles.navigation} aria-label="Navegación principal"><a className={styles.activeNav} href="/chat/"><Icon name="chat" size={17}/>Conversar<span>AHORA</span></a><a href="/actividad/" target="_top"><Icon name="branch" size={17}/>Actividad y herramientas<Icon name="external" size={13}/></a><a href="/" target="_top"><Icon name="branch" size={17}/>Volver a la casa<Icon name="external" size={13}/></a></nav>
    <section className={styles.archive} aria-label="Conversaciones en la nube"><div className={styles.archiveHeading}><span>CONVERSACIONES</span><span>EN LA NUBE</span></div>
     {!signedIn?<p className={styles.archiveEmpty}>Inicia sesión para guardar tus conversaciones y abrirlas desde otros dispositivos.</p>:<>
      {archiveLoading&&!conversations.length?<p className={styles.archiveEmpty}>Cargando tus conversaciones…</p>:null}

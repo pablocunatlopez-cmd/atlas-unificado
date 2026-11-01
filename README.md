@@ -19,6 +19,8 @@ GitHub almacena y comparte código; no ejecuta este servidor ni ofrece una GPU p
 
 El PC, su modelo y el puente deben permanecer encendidos para responder. Configura `ATLAS_BRIDGE_TOKEN` en el alojamiento y guarda el mismo valor únicamente en el archivo local ignorado `continuous/data/cloud-bridge.key`. Su compañero `cloud-bridge.json` declara el origen HTTPS del Site. `Start-Cloud-Bridge.ps1` y el supervisor inician el puente solo cuando existen esos archivos. No copies claves de la instalación original. Consulta `cloud/README.md` para compilación, migraciones y límites.
 
+El observatorio `/actividad/` muestra los procesos, las fechas de revisión, los constructores y el catálogo público verificado. Consulta el estado cada diez segundos y deja de confirmar conexión cuando la señal caduca. Conserva el último informe con una etiqueta explícita; los contadores locales y las herramientas públicas son datos distintos. Los ejemplos del catálogo se preparan en el chat y requieren que el usuario los envíe.
+
 ## Casa y herramientas creativas
 
 La casa renderiza geometría 3D real con Three.js, controles táctiles, colisiones y calidad adaptable. Sus diez salas reúnen las funciones creativas, Mente, Ion/Cuerpo, Refutación y LOR-ΩΣ; el chat completo sigue en `/chat/` y la interfaz histórica en `/origen/`. Los robots muestran estados y contadores del coordinador sin convertir movimiento en evidencia de aprendizaje. La casa y el secuenciador musical funcionan en el navegador sin inferencia del PC. El estudio dispone de cuatro pistas, piano sintetizado, mezcla, proyectos JSON y exportación WAV; no utiliza un modelo generativo musical.
@@ -30,6 +32,8 @@ El cine graba MP4 o WebM del lienzo 3D según el navegador. La vía neuronal uti
 ## Autonomía y colaboradores gratuitos
 
 La prioridad es mejorar el funcionamiento antes que ampliar gráficos. El coordinador selecciona Aider, smolagents o el constructor nativo mediante resultados de contratos y exploración acotada; los errores se conservan y permiten volver a otro constructor. Todos utilizan el mismo Qwen local, sin requerir OpenRouter ni otro proveedor de pago. No son modelos independientes ni reciben las credenciales o conectores del asistente que mantuvo el proyecto.
+
+Las tareas del currículo pueden consultar una lista fija de documentos oficiales de MDN y RFC 6901. El coordinador comprueba su procedencia y conserva hashes y fechas; los agentes reciben extractos acotados como referencia, sin cambiar los contratos externos. La caché del equipo no se redistribuye. Consultar documentación no cuenta por sí mismo como una mejora.
 
 Los adaptadores de agentes comprueban AST; todas las funciones se validan en QuickJS con contratos definidos fuera del generador. Solo las funciones canónicas aprobadas se ofrecen al chat compartido. StrategyPolicy permite modificar una regla del núcleo, evaluar el cambio y recuperar una versión anterior; no habilita edición arbitraria del servidor. LOR-ΩΣ conserva objetos, ambiente, estados, relaciones, transformaciones, invariantes, restricciones, escala, medida, predicciones, falsadores y cadena semiótica. Ver [núcleo y lenguaje](continuous/COGNITIVE_CORE.md), [Aider](continuous/LOCAL_CODING_AGENT.md) y [smolagents](continuous/SMOL_CODING_AGENT.md).
 

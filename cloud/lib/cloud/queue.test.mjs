@@ -16,6 +16,13 @@ function fixture(t,options={}){
 const next=(message='Hola Atlas',extra={})=>({message,requestId:crypto.randomUUID(),...extra});
 const bridge={agentId:'atlas-pc',modelName:'Qwen3.5 local GPU'};
 const result={answer:'Respuesta local comprobada.',model:'atlas-local',modelName:'Qwen local'};
+test('live learning summaries survive heartbeat storage while private tool details stay on the PC',async t=>{
+ const {queue,advance,now}=fixture(t),at=new Date(now()).toISOString();
+ await queue.heartbeat({...bridge,capabilities:{processTelemetry:{at,learning:{reviewEnabled:true,paused:false,running:true,lastCycleAt:at,nextRun:at,pendingTask:{taskId:'json-pointer-resolve',name:'private task'},tools:[{taskId:'dag-dependency-plan',name:'private name',cases:8,passed:8,createdAt:at,source:'private code',prompt:'private prompt'}],approvedTools:999,token:'private key'}}}});
+ const live=await queue.status(),learning=live.capabilities.processTelemetry.learning;
+ assert.equal(live.online,true);assert.equal(learning.approvedTools,1);assert.equal(learning.tools[0].name,'Planificar dependencias de proyectos');assert.equal(learning.pendingTask.name,'Resolver referencias JSON Pointer');assert.equal(learning.running,true);assert.doesNotMatch(JSON.stringify(learning),/private|999/);
+ advance(46000);assert.equal((await queue.status()).online,false);
+});
 test('actual migrations support isolated conversations, atomic claim and exactly-once completion',async t=>{
  const {queue}=fixture(t);const input=next('El motor se llama Zafiro.');const accepted=await queue.enqueue('pablo',input);
  assert.equal(accepted.status,'queued');await assert.rejects(queue.getJob('otro',accepted.jobId),error=>error.status===404);await assert.rejects(queue.conversation('otro',accepted.conversationId),error=>error.status===404);

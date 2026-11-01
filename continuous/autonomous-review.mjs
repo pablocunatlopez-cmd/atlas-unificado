@@ -17,7 +17,7 @@ export async function reviewCapabilities(extensions,key,{signal,assess=assessCap
  const localGenerate=async(...args)=>{signal?.throwIfAborted();const value=await generator(...args);signal?.throwIfAborted();return value;};
  let candidate=null,curriculum=null;
  if(target?.acceptanceTests?.length){
-  candidate=await build(target.task,key,target.acceptanceTests,localGenerate,{...(codeGeneration&&target.testOrigin==='external-contract'?{format:'code',name:target.name}:{}),signal});
+  candidate=await build(target.task,key,target.acceptanceTests,localGenerate,{...(codeGeneration&&target.testOrigin==='external-contract'?{format:'code',name:target.name}:{}),...(target.curriculumTaskId?{curriculumTaskId:target.curriculumTaskId}:{}),signal});
   candidate.parentId=target.id;
   candidate.origin='autonomous-local-review';
   if(target.curriculumTaskId)candidate.curriculumTaskId=target.curriculumTaskId;
@@ -26,7 +26,7 @@ export async function reviewCapabilities(extensions,key,{signal,assess=assessCap
   const task=selectAutonomousTask(extensions,history);
   if(task){
    curriculum={taskId:task.id,name:task.name,learningPlan:task.learningPlan};
-   candidate=await build(task.task,key,task.acceptanceTests,localGenerate,{...(codeGeneration?{format:'code',name:task.name}:{}),signal});
+   candidate=await build(task.task,key,task.acceptanceTests,localGenerate,{...(codeGeneration?{format:'code',name:task.name}:{}),curriculumTaskId:task.id,signal});
    candidate.curriculumTaskId=task.id;candidate.origin='autonomous-local-programming';
   }
  }

@@ -29,9 +29,15 @@
     },
     {
       "path": "README.md",
-      "bytes": 4092,
-      "sha256": "79de6731274819dfa4e0950a1fab9a692e3d0d7176cc51f862a4e33b8cc439d5",
+      "bytes": 4556,
+      "sha256": "d45b41ac2c1e8ae1abc2a92c1a2e11faaf7d037f327fb8c6251cfb3d90c99342",
       "adapted": true
+    },
+    {
+      "path": "app/actividad/page.tsx",
+      "bytes": 272,
+      "sha256": "5b03d2146e52a9f76530d9beb9ea853614c6e3e4af8f7364be672ac3749396e4",
+      "adapted": false
     },
     {
       "path": "app/api/archive/route.ts",
@@ -143,14 +149,14 @@
     },
     {
       "path": "app/atlas-house.module.css",
-      "bytes": 14267,
-      "sha256": "3c235616fdb8dce3cd94b7922a44c0bec4e46a40a25e15ce16cf065174cf3065",
-      "adapted": false
+      "bytes": 14659,
+      "sha256": "bb220ca5ab32dc1f47017c5e2b355772e1d7127f6ce87c6f959e4f8b96e21f31",
+      "adapted": true
     },
     {
       "path": "app/atlas-house.tsx",
-      "bytes": 14313,
-      "sha256": "2a4da4fad90c9d15715aff0f8e5dcd51a547b9a5b736c82f6faad4b9e8734816",
+      "bytes": 14467,
+      "sha256": "46363dfa70095adffa60b948856e0bcc4b3ecadc72b75a9dbda9a74574e3ebe8",
       "adapted": false
     },
     {
@@ -203,8 +209,8 @@
     },
     {
       "path": "app/cloud-chat.tsx",
-      "bytes": 28019,
-      "sha256": "05c03afadfe9843470350212df7044c0e4cd783d42a24b2e12c4162c2b38d3cf",
+      "bytes": 28309,
+      "sha256": "dfaeb6501827ea19c64076309c1fb372efc8ffe918e98727ca15869098c06958",
       "adapted": false
     },
     {
@@ -248,6 +254,18 @@
       "bytes": 561,
       "sha256": "0c47a523f05223125afb1048585cf5781bb8555de13f3a5c843c716fb359fc86",
       "adapted": true
+    },
+    {
+      "path": "app/learning-dashboard.module.css",
+      "bytes": 12890,
+      "sha256": "f26eb9f7e443080b557fa6f849a099a4200c1cc9063734b297628ba54f5f85b4",
+      "adapted": false
+    },
+    {
+      "path": "app/learning-dashboard.tsx",
+      "bytes": 18311,
+      "sha256": "d21e5482949af63a89085794158aaf74bcac3eae569be605ee84b24dd22e4e34",
+      "adapted": false
     },
     {
       "path": "app/music-studio.module.css",
@@ -965,8 +983,8 @@
     },
     {
       "path": "lib/cloud/queue.test.mjs",
-      "bytes": 20438,
-      "sha256": "bd98cc984e403517098b6c29cb931f42a02ff3550a16239fcfb1b83eb32ca1e2",
+      "bytes": 21491,
+      "sha256": "5c146c008c995571e16bfa77d59c28fe32760b527508e3017c395dc8c635167e",
       "adapted": false
     },
     {
@@ -1000,6 +1018,18 @@
       "adapted": true
     },
     {
+      "path": "lib/core/learning-status.mjs",
+      "bytes": 2822,
+      "sha256": "c8ab8f5c0e734d615e5fc4d595dede8d5243c49d0a1f00c0ec6593eae584de0b",
+      "adapted": false
+    },
+    {
+      "path": "lib/core/learning-status.test.mjs",
+      "bytes": 3129,
+      "sha256": "4bf0752776f4b21424c8a6f1a559647759ad395fd392a8a0afcb2dc57a9a3c6a",
+      "adapted": false
+    },
+    {
       "path": "lib/core/lor-spec.ts",
       "bytes": 2396,
       "sha256": "7ca040ba522328d35b58fb5823568f94ed88c755eddf729dfc80bab9ea15267c",
@@ -1007,8 +1037,8 @@
     },
     {
       "path": "lib/core/process-telemetry.mjs",
-      "bytes": 3465,
-      "sha256": "77f936b8a872fe567aa9fa095a18ff1ac21f7607ca94f4572211f89efbbde59a",
+      "bytes": 3575,
+      "sha256": "517f27ad0fa2148c2d885f570d5901a29272fa7fa31632d0dd26a613b0a41008",
       "adapted": false
     },
     {
@@ -1516,7 +1546,7 @@
       "adapted": true
     }
   ],
-  "totalBytes": 4736164,
+  "totalBytes": 4776051,
   "scan": {
     "findings": 0,
     "privateConversationLinksRemoved": 1
@@ -1530,7 +1560,7 @@
     "q517-counterexample.json",
     "studio-runtime.json"
   ],
-  "updatedAt": "2026-11-01T17:59:32.118Z",
+  "updatedAt": "2026-11-01T18:23:44.703Z",
   "runtimeCodeSeeds": [
     "studio-runtime.json",
     "studio-runtime-legacy.json"
