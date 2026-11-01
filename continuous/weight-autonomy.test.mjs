@@ -1,0 +1,23 @@
+import{test}from'node:test';import assert from'node:assert/strict';import fs from'node:fs/promises';import os from'node:os';import path from'node:path';import{createWeightAutonomy}from'./weight-autonomy.mjs';
+test('autonomous weight trials require novel executed-tool evidence and preserve the live model',async t=>{const directory=await fs.mkdtemp(path.join(os.tmpdir(),'atlas-weight-loop-'));t.after(()=>fs.rm(directory,{recursive:true,force:true}));let time=0,trials=0;const tools=[{passed:true,testOrigin:'external-contract',curriculumTaskId:'dedupe',source:'function transform(x){return x}',acceptanceTests:Array.from({length:4},(_,i)=>({input:i,expected:i}))}];const loop=createWeightAutonomy({directory,now:()=>time,evolution:{status:async()=>({ready:true}),prepareFromVerifiedTools:async()=>({id:'candidate'})},runExclusive:async()=>{trials++;return{trained:true,gate:{canActivate:false}};}});assert.equal((await loop.tick(tools)).status,'waiting');time+=6*3600000;assert.equal((await loop.tick([])).status,'waiting');assert.equal((await loop.tick(tools,{isIdle:false})).status,'waiting');const result=await loop.tick(tools);assert.equal(result.active,false);assert.equal(trials,1);time+=6*3600000;assert.equal((await loop.tick(tools)).status,'waiting');assert.equal(trials,1);assert.equal((await loop.status()).waitReason,'new_evidence');});
+test('failed candidate preparation never activates a model and cancellation yields resources',async t=>{const directory=await fs.mkdtemp(path.join(os.tmpdir(),'atlas-weight-loop-'));t.after(()=>fs.rm(directory,{recursive:true,force:true}));let time=0;const controller=new AbortController(),loop=createWeightAutonomy({directory,now:()=>time,evolution:{status:async()=>({ready:true}),prepareFromVerifiedTools:async()=>{controller.abort(Error('foreground'));throw controller.signal.reason;}},runExclusive:async()=>{throw Error('Should not train');}});await loop.status();time+=6*3600000;const tools=[{passed:true,testOrigin:'external-contract',curriculumTaskId:'tool',source:'code',acceptanceTests:Array(4).fill({input:1,expected:1})}];await assert.rejects(loop.tick(tools,{signal:controller.signal}),/foreground/);assert.equal((await loop.status()).activeAdapter,false);assert.equal((await loop.status()).running,false);});
+
+test('fresh tool UUIDs and contract representations do not retrain the same canonical learning corpus after the budget resets',async t=>{
+ const directory=await fs.mkdtemp(path.join(os.tmpdir(),'atlas-weight-loop-'));t.after(()=>fs.rm(directory,{recursive:true,force:true}));
+ let time=0,trials=0,prepared=0;
+ const tool=(id,source,tests)=>({id,passed:true,testOrigin:'external-contract',curriculumTaskId:'stable-dedupe',source,acceptanceTests:tests});
+ const rows=[{input:[1,1],expected:[1]},{input:[],expected:[]},{input:['a','a','b'],expected:['a','b']},{input:[2,1,2],expected:[2,1]}];
+ const first=tool('source-uuid-a','function transform(x){return [...new Set(x)]}',rows);
+ // The verified-data builder finds the same canonical examples despite a new
+ // source identity, equivalent implementation and differently ordered contracts.
+ const second=tool('source-uuid-b','function transform(x){ return Array.from(new Set(x)); }',[...rows].reverse());
+ const third=tool('source-uuid-c','function transform(x){const seen=new Set();return x.filter(v=>seen.has(v)?false:(seen.add(v),true));}',[rows[2],rows[0],rows[3],rows[1]]);
+ const loop=createWeightAutonomy({directory,now:()=>time,evolution:{status:async()=>({ready:true}),prepareFromVerifiedTools:async records=>{prepared++;assert.equal(records.length,1);return {id:'candidate-'+prepared,learningDataFingerprint:'same-canonical-learning-data'};}},runExclusive:async()=>{trials++;return {trained:true,gate:{canActivate:false}};}});
+ await loop.status();time+=6*3600000;assert.equal((await loop.tick([first])).status,'candidate_evaluated');assert.equal(trials,1);
+ time+=6*3600000;assert.equal((await loop.tick([second])).status,'waiting');assert.equal(prepared,2);assert.equal(trials,1);assert.equal((await loop.status()).waitReason,'new_evidence');
+ // The new source hash is retained too, so polling it cannot rebuild the same
+ // corpus or reserve the GPU again on every autonomous cycle.
+ assert.equal((await loop.tick([second])).status,'waiting');assert.equal(prepared,2);
+ time+=6*3600000;assert.equal((await loop.tick([third])).status,'waiting');assert.equal(prepared,3);assert.equal(trials,1);
+ const saved=await loop.status();assert.equal(saved.attempts,1);assert.equal(saved.trained,1);assert.equal(saved.activeAdapter,false);assert.equal(saved.running,false);
+});

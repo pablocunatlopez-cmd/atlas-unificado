@@ -14,3 +14,4 @@ continuous/studio/vendor/
 .env.*
 !.env.example
 verification/
+**/*.tsbuildinfo

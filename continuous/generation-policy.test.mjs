@@ -32,3 +32,30 @@ test('chat transmite el presupuesto de cada fase y conserva la revisión',async(
  assert.equal(calls[0].max_tokens,3624);assert.equal(result.reviewed,true);
  assert.equal(result.performance.generations.length,2);assert.equal(result.performance.generations[0].thinkingBudgetTokens,1024);
 });
+
+test('an evolved strategy changes actual generation budget and review calls without adding permission',async()=>{
+ const calls=[],decisions=[];
+ const cognitiveCore={async decide(question,context){decisions.push({question,context});return {strategy:'direct',thinkingTokens:64,review:false,seekEvidence:true,versionId:'measured-policy'};}};
+ const result=await chat({messages:messages('¿Qué es una función de JavaScript?')},[],async(url,options)=>{assert.equal(url,'http://127.0.0.1:11435/v1/chat/completions');calls.push(JSON.parse(options.body));return response('Una función agrupa una operación reutilizable.');},'','',null,'',[],'',{sharedSession:true,cognitiveCore});
+ assert.equal(calls.length,1);assert.equal(calls[0].thinking_budget_tokens,64);assert.equal(calls[0].chat_template_kwargs.enable_thinking,true);assert.equal(calls[0].max_tokens,2664);assert.equal(result.reviewed,false);
+ assert.equal(decisions.length,1);assert.equal(decisions[0].context.internet,false);assert.equal(decisions[0].context.tools,false);assert.equal(decisions[0].context.hasMemory,false);
+});
+
+test('learned review requests a real second pass and an explicit refutation still overrides learned direct mode',async()=>{
+ for(const [review,refute] of [[true,false],[false,true]]){
+  const calls=[];const cognitiveCore={decide:async()=>({strategy:'reason',thinkingTokens:512,review})};
+  const result=await chat({messages:messages('Explica la idea con precisión.'),refute},[],async(_url,options)=>{calls.push(JSON.parse(options.body));return response(calls.length===1?'Borrador.':'Respuesta revisada.');},'','',null,'',[],'',{cognitiveCore});
+  assert.equal(calls.length,2);assert.equal(result.reviewed,true);assert.equal(result.answer,'Respuesta revisada.');assert.equal(calls[0].thinking_budget_tokens,512);assert.equal(calls[1].thinking_budget_tokens,512);
+ }
+});
+
+test('learned strategies cannot spend thinking tokens or start a second pass inside structured transport',async()=>{
+ const coreDirective={strategy:'reason',thinkingTokens:1536,review:true};
+ for(const flag of ['json','structured','forceDirect']){
+  const plan=generationPlan(messages('Depura un videojuego'),undefined,{[flag]:true,coreDirective});assert.equal(plan.thinkingBudgetTokens,0);
+ }
+ assert.equal(generationPlan(messages('Depura un videojuego'),undefined,{coreDirective:{strategy:'reason',thinkingTokens:100000}}).thinkingBudgetTokens,1024);
+ const calls=[];const cognitiveCore={decide:async()=>coreDirective};
+ const result=await chat({json:true,messages:messages('Diseña un videojuego y revisa el resultado')},[],async(_url,options)=>{calls.push(JSON.parse(options.body));return response('{"ok":true}');},'','',null,'',[],'',{cognitiveCore});
+ assert.equal(calls.length,1);assert.equal(calls[0].thinking_budget_tokens,0);assert.deepEqual(calls[0].response_format,{type:'json_object'});assert.equal(result.reviewed,false);assert.deepEqual(JSON.parse(result.answer),{ok:true});
+});

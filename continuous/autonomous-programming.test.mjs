@@ -22,6 +22,10 @@ const constantSpec = {
 };
 const answer = spec => ({answer: JSON.stringify(spec)});
 const diagnosis = {diagnosis: 'Evaluación de prueba.', limitations: 'Solo contratos ejecutados.', nextAction: 'Conservar resultados.', intervalMinutes: 60};
+function approvedLor(){
+ const item=getAutonomousTask('lor-omega-schema');
+ return {id:'known-lor-tool',curriculumTaskId:item.id,passed:true,name:item.name,source:'function transform(input){const required=["O","A","X","R","T","I","C","E","M","P","F","Σ"],s=input&&typeof input==="object"&&!Array.isArray(input)?input.S:null;if(!s||typeof s!=="object"||Array.isArray(s))return{valid:false,missing:required,extra:[]};const keys=Object.keys(s),missing=required.filter(k=>!keys.includes(k)),extra=keys.filter(k=>!required.includes(k)).sort();return{valid:!missing.length&&!extra.length,missing,extra};}',tests:item.acceptanceTests.slice(0,2),acceptanceTests:item.acceptanceTests};
+}
 
 function offline(t) {
   return t.mock.method(globalThis, 'fetch', async () => { throw new Error('La prueba no permite solicitudes de red.'); });
@@ -30,7 +34,7 @@ function offline(t) {
 test('creation remains disabled unless explicitly enabled for the review', async t => {
   const request = offline(t);
   let generated = 0;
-  const review = await reviewCapabilities([], 'test-local-key', {
+  const review = await reviewCapabilities([approvedLor()], 'test-local-key', {
     generate: async () => { generated++; return answer(correctSpec); },
     assess: async () => diagnosis
   });
@@ -44,7 +48,7 @@ test('autonomous creation accepts a real pure function after all eight independe
   const request = offline(t);
   const generationInputs = [];
   let evidence;
-  const review = await reviewCapabilities([], 'test-local-key', {
+  const review = await reviewCapabilities([approvedLor()], 'test-local-key', {
     allowCreation: true,
     generate: async (input, documents, _request, key) => {
       generationInputs.push(input);
@@ -69,8 +73,10 @@ test('autonomous creation accepts a real pure function after all eight independe
   for (const result of review.candidate.acceptanceResults) assert.deepEqual(result.actual, result.expected);
   assert.equal(review.curriculum.taskId, 'merge-intervals');
   assert.equal(evidence.candidate.passed, true);
-  assert.equal(evidence.capabilities.coreEditing, false);
-  assert.equal(evidence.capabilities.qwenWeightTraining, false);
+  assert.equal(evidence.capabilities.corePolicyEditing, true);
+  assert.equal(evidence.capabilities.arbitraryServerEditing, false);
+  assert.equal(evidence.capabilities.qwenWeightCandidates, true);
+  assert.equal(evidence.capabilities.activeQwenAdapter, false);
   assert.equal(review.intervalMinutes, 15);
   assert.equal(request.mock.callCount(), 0);
 });
@@ -79,7 +85,7 @@ test('passing model examples cannot publish a constant candidate rejected by ind
   const request = offline(t);
   const prompts = [];
   let evidence;
-  const review = await reviewCapabilities([], 'test-local-key', {
+  const review = await reviewCapabilities([approvedLor()], 'test-local-key', {
     allowCreation: true,
     generate: async input => { prompts.push(input.messages[0].content); return answer(constantSpec); },
     assess: async input => { evidence = input; return diagnosis; }
@@ -103,7 +109,7 @@ test('passing model examples cannot publish a constant candidate rejected by ind
 test('a counterexample can repair the next candidate without discarding failed evidence', async t => {
   const request = offline(t);
   let generated = 0;
-  const review = await reviewCapabilities([], 'test-local-key', {
+  const review = await reviewCapabilities([approvedLor()], 'test-local-key', {
     allowCreation: true,
     generate: async () => answer(++generated === 1 ? constantSpec : correctSpec),
     assess: async () => diagnosis
@@ -124,7 +130,7 @@ test('persisted failures in cooldown prevent creation from restarting on the nex
     at: new Date().toISOString(),
     candidate: {curriculumTaskId, passed: false}
   }));
-  const review = await reviewCapabilities([], 'test-local-key', {
+  const review = await reviewCapabilities([approvedLor()], 'test-local-key', {
     allowCreation: true,
     history,
     generate: async () => { generated++; return answer(correctSpec); },
@@ -142,7 +148,7 @@ test('pre-cancelled review never generates or assesses and preserves the cancell
   const reason = new Error('El usuario ha detenido la revisión.');
   controller.abort(reason);
   let generated = 0, assessed = 0;
-  await assert.rejects(reviewCapabilities([], 'test-local-key', {
+  await assert.rejects(reviewCapabilities([approvedLor()], 'test-local-key', {
     allowCreation: true,
     signal: controller.signal,
     generate: async () => { generated++; return answer(correctSpec); },
@@ -158,7 +164,7 @@ test('cancellation during generation prevents retries, assessment, and a success
   const controller = new AbortController();
   const reason = new Error('Detenido mientras se generaba la candidata.');
   let generated = 0, assessed = 0;
-  await assert.rejects(reviewCapabilities([], 'test-local-key', {
+  await assert.rejects(reviewCapabilities([approvedLor()], 'test-local-key', {
     allowCreation: true,
     signal: controller.signal,
     generate: async () => {

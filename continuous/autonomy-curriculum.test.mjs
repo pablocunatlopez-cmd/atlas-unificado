@@ -1,25 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {getAutonomousTask, selectAutonomousTask} from './autonomy-curriculum.mjs';
+import {getAutonomousTask, selectAutonomousTask as selectAllTasks} from './autonomy-curriculum.mjs';
 import {checkToolContract} from './tool-contract.mjs';
 import {validateAcceptance} from './extensions.mjs';
 
 const ids = ['merge-intervals', 'stable-dedupe', 'numeric-statistics'];
+const lorId = 'lor-omega-schema';
+const allIds = [lorId, ...ids];
 const now = Date.parse('2026-10-31T12:00:00.000Z');
 const hour = 60 * 60 * 1000;
 const accepted = id => ({curriculumTaskId: id, passed: true});
 const failed = (id, hoursAgo = 25, extra = {}) => ({taskId: id, passed: false, at: new Date(now - hoursAgo * hour).toISOString(), ...extra});
+// Preserve every pre-existing selector regression with the new priority task
+// already completed. The original histories and failure budgets are unchanged.
+const selectAutonomousTask = (extensions=[],history=[],options={}) => selectAllTasks(Array.isArray(extensions)?[accepted(lorId),...extensions]:extensions,history,options);
 
 // Independent reference functions verify the manually specified JSON results
 // in the real sandbox. These implementations are not given to the generator.
 const references = {
+  'lor-omega-schema': 'function transform(input) { const required=["O","A","X","R","T","I","C","E","M","P","F","Σ"]; const s=input && typeof input === "object" && !Array.isArray(input) ? input.S : null; if(!s || typeof s !== "object" || Array.isArray(s)) return {valid:false,missing:required,extra:[]}; const keys=Object.keys(s), missing=required.filter(key=>!keys.includes(key)), extra=keys.filter(key=>!required.includes(key)).sort(); return {valid:missing.length===0 && extra.length===0,missing,extra}; }',
   'merge-intervals': 'function transform(input) { if (!input || !Array.isArray(input.intervals) || input.intervals.some(x => !Array.isArray(x) || x.length !== 2 || x.some(v => typeof v !== "number" || !Number.isFinite(v)))) return {error:"invalid_intervals"}; const ranges=input.intervals.map(x => [Math.min(...x),Math.max(...x)]).sort((a,b) => a[0]-b[0]); const out=[]; for(const range of ranges) { const last=out[out.length-1]; if(last && range[0]<=last[1]) last[1]=Math.max(last[1],range[1]); else out.push(range); } return {intervals:out}; }',
   'stable-dedupe': 'function transform(input) { if(!input || !Array.isArray(input.values) || input.values.some(v => v !== null && !(typeof v === "string" || typeof v === "boolean" || (typeof v === "number" && Number.isFinite(v))))) return {error:"invalid_values"}; return {values:input.values.filter((v,i,values) => values.indexOf(v)===i)}; }',
   'numeric-statistics': 'function transform(input) { if(!input || !Array.isArray(input.values) || input.values.some(v => typeof v !== "number" || !Number.isFinite(v))) return {error:"invalid_numbers"}; const a=input.values; let sum=0; for(const v of a) {sum+=v;if(!Number.isFinite(sum)) return {error:"invalid_numbers"};} if(!a.length) return {count:0,sum:0,min:null,max:null,mean:null,median:null}; const sorted=[...a].sort((a,b)=>a-b), n=sorted.length, m=Math.floor(n/2); return {count:n,sum,min:sorted[0],max:sorted[n-1],mean:sum/n,median:n%2?sorted[m]:(sorted[m-1]+sorted[m])/2}; }'
 };
 
-test('three tasks have bounded independent contracts and refutable learning plans', () => {
-  for (const id of ids) {
+test('all tasks have bounded independent contracts and refutable learning plans', () => {
+  for (const id of allIds) {
     const item = getAutonomousTask(id);
     assert.equal(item.id, id);
     assert.ok(item.task.length <= 4000);
@@ -43,7 +49,7 @@ test('callers cannot mutate the canonical tasks or acceptance cases', () => {
   assert.deepEqual(getAutonomousTask(ids[0]), original);
 });
 
-for (const id of ids) {
+for (const id of allIds) {
   test(`${id}: independently written reference satisfies every sandbox contract`, async () => {
     const item = getAutonomousTask(id);
     const result = await checkToolContract({name: item.name, source: references[id], tests: item.acceptanceTests.slice(0, 2), acceptanceTests: item.acceptanceTests});
@@ -53,7 +59,7 @@ for (const id of ids) {
 }
 
 test('external cases refute a constant function despite its passing model examples', async () => {
-  for (const id of ids) {
+  for (const id of allIds) {
     const item = getAutonomousTask(id);
     const first = item.acceptanceTests[0];
     const result = await checkToolContract({name: item.name, source: `function transform(input) { return ${JSON.stringify(first.expected)}; }`, tests: [first], acceptanceTests: item.acceptanceTests});
@@ -61,6 +67,30 @@ test('external cases refute a constant function despite its passing model exampl
     assert.equal(result.passed, false);
     assert.ok(result.contractResults.some(t => !t.passed));
   }
+});
+
+test('LOR is the next pending priority while previous approvals, failures and exhaustion remain intact',()=>{
+ assert.equal(selectAllTasks([],[],{now}).id,lorId);
+ assert.equal(selectAllTasks(ids.map(accepted),[],{now}).id,lorId);
+ assert.equal(selectAllTasks([accepted(lorId)],[],{now}).id,ids[0]);
+ assert.equal(selectAllTasks([], [failed(lorId,1)], {now}).id,ids[0]);
+ assert.equal(selectAllTasks([accepted(ids[0])], [failed(lorId,1)], {now}).id,ids[1]);
+ const history=[failed(lorId,90),failed(lorId,60),failed(lorId,25)];
+ assert.equal(selectAllTasks([],history,{now}).id,ids[0]);
+ assert.equal(selectAllTasks(allIds.map(accepted),history,{now}),null);
+});
+
+test('LOR contracts preserve the original twelve symbols, null presence and deterministic diagnostics',()=>{
+ const task=getAutonomousTask(lorId),fields=['O','A','X','R','T','I','C','E','M','P','F','Σ'];
+ assert.deepEqual(Object.keys(task.acceptanceTests[0].input.S),fields);
+ assert.deepEqual(task.acceptanceTests[0].expected,{valid:true,missing:[],extra:[]});
+ assert.deepEqual(task.acceptanceTests[1].expected.missing,['E']);
+ assert.deepEqual(task.acceptanceTests[2].expected.extra,['bar','foo']);
+ for(const index of [3,4,5,6])assert.deepEqual(task.acceptanceTests[index].expected.missing,fields);
+ assert.match(task.task,/E significa escala y A ambiente/);
+ assert.match(task.learningPlan.scope,/no modifica.*pesos.*teoría física/);
+ const before=getAutonomousTask(lorId);task.acceptanceTests[0].input.S.E='changed';
+ assert.deepEqual(getAutonomousTask(lorId),before);
 });
 
 test('selects the first unapproved task and stops when every task is approved', () => {

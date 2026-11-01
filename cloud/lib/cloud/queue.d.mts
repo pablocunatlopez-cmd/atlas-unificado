@@ -1,5 +1,5 @@
 export class CloudQueueError extends Error {status:number;constructor(message:string,status?:number);}
-export function createCloudQueue(db:D1Database,options?:{now?:()=>number;uuid?:()=>string}):{
+export function createCloudQueue(db:D1Database,options?:{now?:()=>number;uuid?:()=>string;compileCreative?:(prompt:string,mode:'3d'|'game',options:any)=>{brief:any;code:string}}):{
  enqueue(userId:string,input:Record<string,unknown>):Promise<{jobId:string;conversationId:string;status:string}>;
  status():Promise<Record<string,unknown>>;
  conversations(userId:string):Promise<Record<string,unknown>>;

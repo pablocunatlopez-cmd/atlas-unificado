@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {byteRange} from './media-range.mjs';
+test('Safari video ranges support initial bytes, seeks and suffixes',()=>{assert.deepEqual(byteRange('bytes=0-1',100),{offset:0,length:2,end:1});assert.deepEqual(byteRange('bytes=20-',100),{offset:20,length:80,end:99});assert.deepEqual(byteRange('bytes=-10',100),{offset:90,length:10,end:99});assert.equal(byteRange(null,100),null);});
+test('unsatisfiable or multiple ranges do not read outside the file',()=>{for(const value of ['bytes=100-101','bytes=9-2','bytes=0-1,3-4','bytes=-0','items=1-3'])assert.throws(()=>byteRange(value,100));});

@@ -5,6 +5,27 @@ const FAILURE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // evidence for a bounded JSON tool, never evidence of general intelligence.
 const TASKS = [
   {
+    id: 'lor-omega-schema',
+    name: 'LOR-ΩΣ · estructura S*',
+    task: 'Implementa function transform(input) como función pura de JSON. Comprueba SOLO la estructura de input.S del lenguaje original LOR-ΩΣ. Los doce campos obligatorios, en este orden, son O,A,X,R,T,I,C,E,M,P,F,Σ. E significa escala y A ambiente; no cambies esos símbolos. S debe ser un objeto JSON no nulo y no un array. Salida exacta: {valid:boolean,missing:string[],extra:string[]}. missing enumera los campos obligatorios ausentes en el orden indicado; extra enumera las claves propias desconocidas de S ordenadas lexicográficamente. valid es true únicamente si S tiene formato correcto, no faltan campos y no hay claves desconocidas. Se comprueba presencia de claves, no sus valores: un campo presente con null cuenta como presente. Si input o S no tienen formato correcto, devuelve valid:false, missing con los doce símbolos y extra:[]. No escribas una explicación física ni evalúes la verdad de una hipótesis. No imports, exports, red, archivos, procesos, relojes ni cambios de pesos. Conserva la entrada y devuelve únicamente el código completo.',
+    learningPlan: {
+      hypothesis: 'Un contrato de claves convierte la estructura S* original en una herramienta ejecutable que Atlas puede construir y refutar.',
+      refutations: ['Un campo presente con null no está ausente.', 'E es escala y su omisión debe detectarse sin confundirlo con A, ambiente.', 'Arrays, cadenas, valores nulos y claves adicionales no cumplen el esquema.'],
+      evidence: 'Ejecutar ocho contratos escritos fuera del modelo, conservar fallos y publicar la herramienta únicamente si todos pasan.',
+      scope: 'Validador estructural de JSON para LOR-ΩΣ; no modifica el servidor ni los pesos de Qwen, ni demuestra una teoría física.'
+    },
+    acceptanceTests: [
+      {input: {S: {O: null, A: null, X: null, R: null, T: null, I: null, C: null, E: null, M: null, P: null, F: null, 'Σ': null}}, expected: {valid: true, missing: [], extra: []}},
+      {input: {S: {O: [], A: 'ambiente', X: [], R: [], T: [], I: [], C: [], M: [], P: [], F: [], 'Σ': []}}, expected: {valid: false, missing: ['E'], extra: []}},
+      {input: {S: {O: 0, A: 0, X: 0, R: 0, T: 0, I: 0, C: 0, E: 0, M: 0, P: 0, F: 0, 'Σ': 0, foo: 1, bar: 2}}, expected: {valid: false, missing: [], extra: ['bar', 'foo']}},
+      {input: null, expected: {valid: false, missing: ['O', 'A', 'X', 'R', 'T', 'I', 'C', 'E', 'M', 'P', 'F', 'Σ'], extra: []}},
+      {input: {}, expected: {valid: false, missing: ['O', 'A', 'X', 'R', 'T', 'I', 'C', 'E', 'M', 'P', 'F', 'Σ'], extra: []}},
+      {input: {S: []}, expected: {valid: false, missing: ['O', 'A', 'X', 'R', 'T', 'I', 'C', 'E', 'M', 'P', 'F', 'Σ'], extra: []}},
+      {input: {S: 'O,A,X,R,T,I,C,E,M,P,F,Σ'}, expected: {valid: false, missing: ['O', 'A', 'X', 'R', 'T', 'I', 'C', 'E', 'M', 'P', 'F', 'Σ'], extra: []}},
+      {input: {S: {O: []}}, expected: {valid: false, missing: ['A', 'X', 'R', 'T', 'I', 'C', 'E', 'M', 'P', 'F', 'Σ'], extra: []}}
+    ]
+  },
+  {
     id: 'merge-intervals',
     name: 'Fusionar intervalos',
     task: 'Implementa function transform(input) como función pura de JSON. Entrada: {intervals:[[inicio,fin],...]}, donde cada par contiene exactamente dos números finitos. Normaliza cada par con el menor extremo primero, ordena por inicio ascendente y fusiona intervalos solapados o que se toquen (incluidos puntos e intervalos contenidos). Salida exacta: {intervals:[[inicio,fin],...]}, ordenada y sin solapamientos ni contactos. La lista vacía devuelve {intervals:[]}. Si input no es un objeto con intervals válido, devuelve exactamente {error:"invalid_intervals"}; no conviertas cadenas a números. No imports, red, archivos, procesos, cambios del servidor ni entrenamiento de pesos. Formula la solución, intenta refutarla con casos límite y corrige antes de devolver el código y tus ejemplos.',

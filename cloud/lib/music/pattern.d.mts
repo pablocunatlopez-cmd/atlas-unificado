@@ -1,0 +1,11 @@
+export type TrackId='kick'|'snare'|'hat'|'bass';
+export type Track={steps:boolean[];volume:number;mute:boolean};
+export type Pattern={version:1;bpm:number;swing:number;master:number;tracks:Record<TrackId,Track>;bassNotes:number[]};
+export const TRACK_IDS:readonly TrackId[];
+export const PRESETS:readonly {id:string;name:string;description:string}[];
+export function validatePattern(input:unknown):Pattern;
+export function createPattern(presetId?:string):Pattern;
+export function clonePattern(input:Pattern):Pattern;
+export function varyPattern(input:Pattern,seed?:number):Pattern;
+export function patternDuration(input:Pattern,bars?:number):number;
+export function stepTime(step:number,bpm:number,swing?:number):number;

@@ -1,0 +1,13 @@
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const provider=process.argv[2]||'smolagents';
+assert.ok(['smolagents','aider'].includes(provider));
+const origin='http://127.0.0.1:8788',html=await(await fetch(origin+'/chat/')).text();
+const token=html.match(/name="atlas-token" content="([^"]+)/)?.[1];assert.ok(token);
+const response=await fetch(origin+'/agents/benchmark?provider='+provider,{method:'POST',headers:{'X-Atlas-Token':token,Origin:origin},signal:AbortSignal.timeout(240000)});
+const result=await response.json();assert.equal(response.status,200,JSON.stringify(result));
+assert.equal(result.collaborator?.framework,provider==='smolagents'?'smolagents':'Aider');
+const status=await(await fetch(origin+'/agents/status')).json();
+const proof={at:new Date().toISOString(),provider,result,status:status[provider],independentModels:0};
+await fs.writeFile(new URL('./verification/'+provider+'-live-2026-11-01.json',import.meta.url),JSON.stringify(proof,null,2)+'\n');
+console.log(JSON.stringify(proof));

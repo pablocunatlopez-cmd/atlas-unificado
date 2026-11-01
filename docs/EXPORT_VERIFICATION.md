@@ -6,7 +6,7 @@ Las adaptaciones sustituyen el import local de QuickJS por una dependencia npm; 
 
 Validación ejecutada con Node.js 22.20.0:
 
-- 211 pruebas Node aprobadas desde este árbol tras añadir el puente saliente y el aislamiento de sesiones compartidas, sin iniciar otro servidor ni entrenador.
+- 226 pruebas Node aprobadas desde este árbol tras incorporar las reservas GPU, el puente creativo y el proveedor Wan, sin iniciar otro servidor ni entrenador durante las pruebas.
 - Preparación desde un directorio temporal vacío: configuración y clave local creadas, activos Three.js reconstruidos desde npm y segunda ejecución idempotente. La clave no se imprimió ni se creó en este árbol fuente.
 - Escaneo de patrones de credenciales, claves privadas, correos personales y rutas de usuario: cero hallazgos en los archivos compartibles. Es una comprobación preventiva, no una garantía universal de ausencia de información sensible.
 

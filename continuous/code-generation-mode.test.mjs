@@ -13,6 +13,10 @@ const contract = [
 const source = 'function transform(input) {\n  return {doubled: input.value * 2};\n}';
 const mergeSource = 'function transform(input) { if (!input || !Array.isArray(input.intervals) || input.intervals.some(x => !Array.isArray(x) || x.length !== 2 || x.some(v => typeof v !== "number" || !Number.isFinite(v)))) return {error:"invalid_intervals"}; const ranges=input.intervals.map(x => [Math.min(...x),Math.max(...x)]).sort((a,b) => a[0]-b[0]); const out=[]; for(const range of ranges) { const last=out[out.length-1]; if(last && range[0]<=last[1]) last[1]=Math.max(last[1],range[1]); else out.push(range); } return {intervals:out}; }';
 const diagnosis = {diagnosis: 'Contratos ejecutados.', limitations: 'No es una prueba general.', nextAction: 'Conservar evidencia.', intervalMinutes: 10};
+function approvedLor(){
+ const item=getAutonomousTask('lor-omega-schema');
+ return {id:'known-lor-tool',curriculumTaskId:item.id,passed:true,name:item.name,source:'function transform(input){const required=["O","A","X","R","T","I","C","E","M","P","F","Σ"],s=input&&typeof input==="object"&&!Array.isArray(input)?input.S:null;if(!s||typeof s!=="object"||Array.isArray(s))return{valid:false,missing:required,extra:[]};const keys=Object.keys(s),missing=required.filter(k=>!keys.includes(k)),extra=keys.filter(k=>!required.includes(k)).sort();return{valid:!missing.length&&!extra.length,missing,extra};}',tests:item.acceptanceTests.slice(0,2),acceptanceTests:item.acceptanceTests};
+}
 
 function offline(t) {
   return t.mock.method(globalThis, 'fetch', async () => { throw new Error('Esta prueba prohíbe solicitudes de red.'); });
@@ -121,7 +125,7 @@ test('the default JSON path keeps model-example provenance and its existing resp
 test('reviewCapabilities codeGeneration creates and verifies a plain-code curriculum candidate', async t => {
   const request = offline(t);
   let generated = 0, assessed = 0;
-  const result = await reviewCapabilities([], 'test-local-key', {
+  const result = await reviewCapabilities([approvedLor()], 'test-local-key', {
     allowCreation: true,
     codeGeneration: true,
     generate: async input => {
@@ -152,7 +156,7 @@ test('reviewCapabilities codeGeneration creates and verifies a plain-code curric
 test('codeGeneration alone does not authorize creation without a selected contract', async t => {
   const request = offline(t);
   let generated = 0;
-  const review = await reviewCapabilities([], '', {
+  const review = await reviewCapabilities([approvedLor()], '', {
     codeGeneration: true,
     generate: async () => { generated++; return {answer: source}; },
     assess: async () => diagnosis

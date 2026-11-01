@@ -4,6 +4,36 @@
   "scope": "Reviewed source plus original published static seeds; excludes live runtime records.",
   "files": [
     {
+      "path": ".env.example",
+      "bytes": 45,
+      "sha256": "4c4e1ddfee8749122e62fc20bc57317fa064c350241d8b915d598458c8695cc8",
+      "adapted": false
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 895,
+      "sha256": "34be60ded2f36b3a34bf75e407782d84855e2a7982619a5ba3d357fea748d013",
+      "adapted": false
+    },
+    {
+      "path": ".npmrc",
+      "bytes": 48,
+      "sha256": "7cd80af2e968119afd7b1803b6ac51b51ea010b8da57c3606ea1ef8071a86068",
+      "adapted": false
+    },
+    {
+      "path": ".openai/hosting.json",
+      "bytes": 100,
+      "sha256": "dd68d9565bfa099d29e36b27d3bfa50bbc15f38c44ca09a82511e53aa7ad00ec",
+      "adapted": false
+    },
+    {
+      "path": "README.md",
+      "bytes": 3394,
+      "sha256": "dd4838e82ea9df1158fb4ea77fa539326518426abf691458a4d681df0edd5c5f",
+      "adapted": true
+    },
+    {
       "path": "app/api/archive/route.ts",
       "bytes": 755,
       "sha256": "0823c6aeb536926930d520e3e496ea723816cd46fc3f573b2774db27b8e85099",
@@ -22,27 +52,33 @@
       "adapted": false
     },
     {
+      "path": "app/api/cloud/artifacts/[id]/route.ts",
+      "bytes": 3871,
+      "sha256": "02388b0dcc471cae86733576e87bda0f36073f19f17d6df16b36f8762da99f76",
+      "adapted": false
+    },
+    {
       "path": "app/api/cloud/bridge/route.ts",
-      "bytes": 723,
-      "sha256": "9754a9c56316f6e5b3e485328aebbb7737d5f5f3d4cde78527948c8836846fd9",
+      "bytes": 1284,
+      "sha256": "2d0714aecf1a0b184444fd018a86699efee362f4f41a048dfa54754f68b73f73",
       "adapted": false
     },
     {
       "path": "app/api/cloud/chat/route.ts",
-      "bytes": 317,
-      "sha256": "66f9d0e21302ba2a18c3f4c705f69aaea1d3a48075d302ea2edf4e495cd10104",
-      "adapted": false
-    },
-    {
-      "path": "app/api/cloud/conversations/route.ts",
-      "bytes": 271,
-      "sha256": "d2348395c208887eb320c22f58af60af5f044025df100e5d8d978c3d7a0f6f50",
+      "bytes": 759,
+      "sha256": "990b6357d77d4deab08d1883aaba818ca3fea6e9726b83003784bcd60562edc0",
       "adapted": false
     },
     {
       "path": "app/api/cloud/conversations/[id]/route.ts",
       "bytes": 353,
       "sha256": "195796a433423d856be237f16ff0e3faea6a30a752012405c6d67d9c83c59164",
+      "adapted": false
+    },
+    {
+      "path": "app/api/cloud/conversations/route.ts",
+      "bytes": 271,
+      "sha256": "d2348395c208887eb320c22f58af60af5f044025df100e5d8d978c3d7a0f6f50",
       "adapted": false
     },
     {
@@ -106,6 +142,18 @@
       "adapted": false
     },
     {
+      "path": "app/atlas-house.module.css",
+      "bytes": 14267,
+      "sha256": "3c235616fdb8dce3cd94b7922a44c0bec4e46a40a25e15ce16cf065174cf3065",
+      "adapted": false
+    },
+    {
+      "path": "app/atlas-house.tsx",
+      "bytes": 14313,
+      "sha256": "2a4da4fad90c9d15715aff0f8e5dcd51a547b9a5b736c82f6faad4b9e8734816",
+      "adapted": false
+    },
+    {
       "path": "app/atlas-lab.tsx",
       "bytes": 22789,
       "sha256": "3e38c74c68375d0354ebd6ffd4b4b5ae70bb4b0d1d6da3f0eb55b4d0d704bd8c",
@@ -125,14 +173,26 @@
     },
     {
       "path": "app/atlas-studio.tsx",
-      "bytes": 18066,
-      "sha256": "c92a1bdeeabfb45584afb8c5da5aeb9b3a9990c842c850145ed34ff9b5aa8ef8",
+      "bytes": 18369,
+      "sha256": "aae7d26028a00fe643a96ce0920d46f50c7fd0e3058aeef0078ffbebf6365fcd",
+      "adapted": false
+    },
+    {
+      "path": "app/chat/page.tsx",
+      "bytes": 476,
+      "sha256": "7cd0aa677d85569864df8aaec4b05721ac681891a91fb23385916e04e37371a0",
       "adapted": false
     },
     {
       "path": "app/chatgpt-auth.ts",
       "bytes": 2640,
       "sha256": "e19651c2d1db12696883ae3eb79d4f09dce249f7afa1144a62d544e2e18299ca",
+      "adapted": false
+    },
+    {
+      "path": "app/cinema-panel.tsx",
+      "bytes": 6944,
+      "sha256": "178267101e86b94990bf392034d3eed6eb9524ddf4f79aec9f6a4c7187fbdbd5",
       "adapted": false
     },
     {
@@ -143,8 +203,26 @@
     },
     {
       "path": "app/cloud-chat.tsx",
-      "bytes": 27835,
-      "sha256": "46e05f23d2e635baa46986fb9a2df9cd067165d8fa7e8777c8acaaada4a4d19a",
+      "bytes": 28019,
+      "sha256": "05c03afadfe9843470350212df7044c0e4cd783d42a24b2e12c4162c2b38d3cf",
+      "adapted": false
+    },
+    {
+      "path": "app/constellation-panel.tsx",
+      "bytes": 5018,
+      "sha256": "a0fdb477e01ab7666331993829da4362d7739819470960b4599d9890c25cf1b3",
+      "adapted": false
+    },
+    {
+      "path": "app/core-observatory.module.css",
+      "bytes": 5946,
+      "sha256": "deb9631a589c76124b3f1b7ae7eb52d888a8640145fcf8d9fb4f38d50d54d764",
+      "adapted": false
+    },
+    {
+      "path": "app/core-observatory.tsx",
+      "bytes": 18690,
+      "sha256": "ea0de62156c7302c39a8a1a11f316e758856de8e9d552bf5f5e2eca1942d644f",
       "adapted": false
     },
     {
@@ -154,9 +232,33 @@
       "adapted": false
     },
     {
+      "path": "app/house-scene.module.css",
+      "bytes": 235,
+      "sha256": "527765e9205726106bf50c1dec3a972969ada3e76e925b7b17ca2124d5a73b90",
+      "adapted": false
+    },
+    {
+      "path": "app/house-scene.tsx",
+      "bytes": 6139,
+      "sha256": "0a06d254e1584708827057529742e2a564bc47429c7f9e656b8258d90e61f500",
+      "adapted": false
+    },
+    {
       "path": "app/layout.tsx",
       "bytes": 584,
       "sha256": "7eda201d58fc6b869332a33152968966c98f1d580c530e6c1bb9508c55c40436",
+      "adapted": false
+    },
+    {
+      "path": "app/music-studio.module.css",
+      "bytes": 14853,
+      "sha256": "fc42ae11615cdd49923e10d228d91d7b5e3fd5678b69da0662917acb67feec1c",
+      "adapted": false
+    },
+    {
+      "path": "app/music-studio.tsx",
+      "bytes": 18173,
+      "sha256": "1c9fcd11b4662c397b446abb26b7762a8b8a528dbe80edcb909957cc3d1281d8",
       "adapted": false
     },
     {
@@ -167,8 +269,68 @@
     },
     {
       "path": "app/page.tsx",
-      "bytes": 536,
-      "sha256": "b61b9c0637d959c33a2602b90eb9d3a84389abaad6bf2926d3c109a0e19e0f9d",
+      "bytes": 538,
+      "sha256": "d9ebd8f82452f8452f55166b24a4dea12ef92ba579d9c4f682bdf4c8647edae6",
+      "adapted": false
+    },
+    {
+      "path": "app/taller/page.tsx",
+      "bytes": 1008,
+      "sha256": "849899f14fbeadc20a8101f2e481541b6ac85be88fbf9a151d5b33fe0fb3976c",
+      "adapted": false
+    },
+    {
+      "path": "app/workspace-tools.module.css",
+      "bytes": 2376,
+      "sha256": "b3744bcdf495407007177c3e9f96620d34663c3a49a5ac178a89e5a2cad1e9f8",
+      "adapted": false
+    },
+    {
+      "path": "app/world-workshop.tsx",
+      "bytes": 5011,
+      "sha256": "a6a1fc32cda98c244d7bdd7441c11732c775a60982b644f810a2a0cf56412f10",
+      "adapted": false
+    },
+    {
+      "path": "build/connector-preview-plugin.mjs",
+      "bytes": 7409,
+      "sha256": "c85dddfed97753d80de89050b5a1316b2b490cdfab2faa119a3417cb6e6c315c",
+      "adapted": false
+    },
+    {
+      "path": "build/connector-preview-worker.mjs",
+      "bytes": 609,
+      "sha256": "59ceca541d1829448fbab94957acf1d396d5425a634d322c3b9763fe4501096e",
+      "adapted": false
+    },
+    {
+      "path": "build/sites-vite-plugin.LICENSE",
+      "bytes": 1084,
+      "sha256": "3dd119f149df88296e82981a51e5131b1018ba2e2f2f6f4bbec2b83d58a43a45",
+      "adapted": false
+    },
+    {
+      "path": "build/sites-vite-plugin.ts",
+      "bytes": 7415,
+      "sha256": "5b2d671313fe4ac10a1709e112d570da1267cb916f68655996a3ac3ea1dd80a9",
+      "adapted": false
+    },
+    {
+      "path": "build/sites-worker.ts",
+      "bytes": 1307,
+      "sha256": "df3b8a9a827548175d19d45f9cf62a9bc8dd86cf6ce1d39c3ce97538c5d487f2",
+      "adapted": false
+    },
+    {
+      "path": "cloudflare-env.d.ts",
+      "bytes": 105,
+      "sha256": "2ac980b29c91b8324a0d7864ec329c41e513fe81165aaffbc1220b8e85812759",
+      "adapted": false
+    },
+    {
+      "path": "components.json",
+      "bytes": 441,
+      "sha256": "820e913f34219d16b5e7ec5865df9c444bb5b8acf230db4e589d660e4a21743e",
       "adapted": false
     },
     {
@@ -544,6 +706,174 @@
       "adapted": false
     },
     {
+      "path": "data/archive.json",
+      "bytes": 133593,
+      "sha256": "a043237c51c1118390faa3ad6468176e3436f27920692e630839e5d147a0038b",
+      "adapted": false
+    },
+    {
+      "path": "data/atlas-lm-seed.json",
+      "bytes": 59593,
+      "sha256": "f2f272c937d2d2e8cc13222beb5882bb6a6b88bce8767e71e0eedad43260fcd0",
+      "adapted": false
+    },
+    {
+      "path": "data/continuity.json",
+      "bytes": 46309,
+      "sha256": "73555d9276f577b8595c765d5e12e15c9f36262dd59cb8a9ab10441f919f43cc",
+      "adapted": true
+    },
+    {
+      "path": "data/core.json",
+      "bytes": 900457,
+      "sha256": "6f26f5a842d8088d02b4c0873e0e59c69ff5aae00490f46e6aafbd891be74609",
+      "adapted": false
+    },
+    {
+      "path": "data/native-principles.json",
+      "bytes": 5909,
+      "sha256": "b8e2eb7d67cb6a210796a434a3437182fdfaa8b3068a8a8da1b18b7cf41aed40",
+      "adapted": false
+    },
+    {
+      "path": "data/q517-counterexample.json",
+      "bytes": 184,
+      "sha256": "9a2bb89b136f9b551631c7a227b034f3e6936e022b9e40ff7c19c2bd7b069d0a",
+      "adapted": false
+    },
+    {
+      "path": "data/studio-runtime-legacy.json",
+      "bytes": 11421,
+      "sha256": "cb14c60d0c802dbb302bc31bfec906b444b60b626964f4386ac709b1fc3b6c62",
+      "adapted": false
+    },
+    {
+      "path": "data/studio-runtime.json",
+      "bytes": 19248,
+      "sha256": "7914c3667aa2ed4e458108cfa270f4b88a00c2c86f96e59d107cc74f92a7741d",
+      "adapted": false
+    },
+    {
+      "path": "db/index.ts",
+      "bytes": 436,
+      "sha256": "effa59e46bcbb42dfb7b46911e809a1de0f2c37df1fd935e3dca89023eaf97e4",
+      "adapted": false
+    },
+    {
+      "path": "db/schema.ts",
+      "bytes": 4230,
+      "sha256": "d4f0c098673dc83658bb1f1c1e4b5a5e2bee9c60886510215807a2c40bbe3ea8",
+      "adapted": false
+    },
+    {
+      "path": "docs/autonomy.md",
+      "bytes": 5785,
+      "sha256": "dc5c26a0c5cbb47855cce86268d85bfe95b1b7141f8b8a825f42e1104a650f23",
+      "adapted": false
+    },
+    {
+      "path": "drizzle.config.ts",
+      "bytes": 155,
+      "sha256": "73d0807c58e541dc3eaf175909fb5acc966faed61f74ff659d9d55027bf3e25b",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/0000_perpetual_maximus.sql",
+      "bytes": 503,
+      "sha256": "d5b99b5e37ae8e754224eced83745108872a87e08f6a0981064e0abe5369c670",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/0001_friendly_bloodscream.sql",
+      "bytes": 168,
+      "sha256": "3806288e5e09e173f8771dbfd9da7591cb9e8e597700c6eba36a153980d62368",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/0002_chilly_jamie_braddock.sql",
+      "bytes": 452,
+      "sha256": "30a8b9b2fbf6e24c879308bb3cacef064ab293b5912ef9794e01c41639409c84",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/0003_happy_trauma.sql",
+      "bytes": 808,
+      "sha256": "99a9f6cb4b124ff3111fd44b8810901cad45d0218b277ae7f9d5dace2896a56f",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/0004_dapper_supernaut.sql",
+      "bytes": 1937,
+      "sha256": "3934d946c0d1e91eed5a1cb7fa465c4272801e5a8fd6d2cf4aff3ed67766e4f0",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/0005_friendly_penance.sql",
+      "bytes": 416,
+      "sha256": "252f5fd67cb387315f352e7df60b5439cc739bc5c757da438fffe96708633e52",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/meta/0000_snapshot.json",
+      "bytes": 3096,
+      "sha256": "d4461291a654d7ea67cbf3ee606f576d6c0e23d5122e01bd3817c78e1fb8f95e",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/meta/0001_snapshot.json",
+      "bytes": 4101,
+      "sha256": "44a478183488e00b4603a4b6b02c870ce9b15fe7338e9ea2e3556b4aa1b1499a",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/meta/0002_snapshot.json",
+      "bytes": 6805,
+      "sha256": "de6a58a7add1e6d3f8814c892ca24cae324b6aef49455995962f13946437f30d",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/meta/0003_snapshot.json",
+      "bytes": 11110,
+      "sha256": "dc9675e8b619f1d2bac915a8988a21ac25b6fd0395484a8ce20f0f909702dafc",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/meta/0004_snapshot.json",
+      "bytes": 18895,
+      "sha256": "87b1c5c9e8bd69d9523a50a9832f424fea3f877a77cab9d5ce0ca9ae265e61aa",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/meta/0005_snapshot.json",
+      "bytes": 19910,
+      "sha256": "21f49accc18923862d31fd0461a2500a2a35a3d7068e1f0552d1eb5cc1679564",
+      "adapted": false
+    },
+    {
+      "path": "drizzle/meta/_journal.json",
+      "bytes": 932,
+      "sha256": "e32541465281f44b5af7c44bffece45d7bf7358998aec56d16d69f975cf7a1d6",
+      "adapted": false
+    },
+    {
+      "path": "eslint.config.mjs",
+      "bytes": 874,
+      "sha256": "8ca86af56c21d433c46bfebeb8980b64b6d4ffa0dc3cf3d2ec1ad923b983f38c",
+      "adapted": false
+    },
+    {
+      "path": "examples/d1/app/api/notes/route.ts",
+      "bytes": 1758,
+      "sha256": "b0b134b9b0b4a9f5947abbd13fd4425b88b59c64f91db1aacb0cecbc16c38f45",
+      "adapted": false
+    },
+    {
+      "path": "examples/d1/db/schema.ts",
+      "bytes": 379,
+      "sha256": "1acd70317bcaf22cb140436fb47754c2144e7c2adfc59a3f427ecb1d816fa0f3",
+      "adapted": false
+    },
+    {
       "path": "hooks/use-mobile.ts",
       "bytes": 584,
       "sha256": "d2377fbad5ad2bdf7fa896a68c36ac8bf4aa74a974b2061f77b41ae58d623001",
@@ -598,27 +928,45 @@
       "adapted": false
     },
     {
+      "path": "lib/cloud/artifact-route.test.mjs",
+      "bytes": 8700,
+      "sha256": "af8193c8ac2d4387641e343e95d13c1dae69f185b3f45abbd35f21a0f6db46aa",
+      "adapted": false
+    },
+    {
       "path": "lib/cloud/http.ts",
-      "bytes": 2970,
-      "sha256": "1473854f7836a26c0f784fbdd0a6f2a2fb0f5b7005c61f7772fcf8725e851d4b",
+      "bytes": 3060,
+      "sha256": "44df3ef87e0e29372b3d7997f16d72f514622dc20f4d47b1b6bbaca29b1d0138",
+      "adapted": false
+    },
+    {
+      "path": "lib/cloud/media-range.mjs",
+      "bytes": 699,
+      "sha256": "9f5e47f48f81032fa1736c1576e53163676b9447634eec91aa09ebea3e90d334",
+      "adapted": false
+    },
+    {
+      "path": "lib/cloud/media-range.test.mjs",
+      "bytes": 658,
+      "sha256": "08e0f8e9c9c3c4920b0fc3611fa9a4aceb8d81d922d1f82aa819d833e0a23958",
       "adapted": false
     },
     {
       "path": "lib/cloud/queue.d.mts",
-      "bytes": 920,
-      "sha256": "4072e6c2445d7b96e31e7b589f3375e3ed97de0ccbe3656f751f5a2d847197c3",
+      "bytes": 1007,
+      "sha256": "40a7c05cb0bbf74197d18f0f8bf017f4bffe644ef5d406583a114c02d47b0fad",
       "adapted": false
     },
     {
       "path": "lib/cloud/queue.mjs",
-      "bytes": 12123,
-      "sha256": "189595e9a1ee24b7ad612d6630cb8b115ad5ea4d69f3fe6dd214a1d207d9d8fb",
+      "bytes": 17023,
+      "sha256": "fe8aa5ec42cf07ab0ec701d354089678aa86dc8129062d608f9cc669ef2fa60b",
       "adapted": false
     },
     {
       "path": "lib/cloud/queue.test.mjs",
-      "bytes": 7771,
-      "sha256": "dd2fb64ab5fd96b2490a92393e371efdf66ed9d8b6b59b73849254a013b1fa85",
+      "bytes": 20438,
+      "sha256": "bd98cc984e403517098b6c29cb931f42a02ff3550a16239fcfb1b83eb32ca1e2",
       "adapted": false
     },
     {
@@ -652,9 +1000,99 @@
       "adapted": false
     },
     {
+      "path": "lib/core/lor-spec.ts",
+      "bytes": 2396,
+      "sha256": "7ca040ba522328d35b58fb5823568f94ed88c755eddf729dfc80bab9ea15267c",
+      "adapted": false
+    },
+    {
+      "path": "lib/core/process-telemetry.mjs",
+      "bytes": 3465,
+      "sha256": "77f936b8a872fe567aa9fa095a18ff1ac21f7607ca94f4572211f89efbbde59a",
+      "adapted": false
+    },
+    {
+      "path": "lib/creative/plan.mjs",
+      "bytes": 8223,
+      "sha256": "f62ba96e58e716beaeb327c50ad08c3ab649efc0bb6991d0413d21feb9741833",
+      "adapted": false
+    },
+    {
+      "path": "lib/creative/plan.test.mjs",
+      "bytes": 2986,
+      "sha256": "34931805fd6782dc27000413c9904b25a3ab3ebf946619af005d59989f816c34",
+      "adapted": false
+    },
+    {
+      "path": "lib/house/ERAS_PROVENANCE.md",
+      "bytes": 3433,
+      "sha256": "83ea698f98f2dfbb9eca03e563b024d5c9a68eef35f64a3cf4420c293034e12d",
+      "adapted": false
+    },
+    {
+      "path": "lib/house/layout.test.mjs",
+      "bytes": 2605,
+      "sha256": "a185c48c1c1dc648d9c2874495eff51de4e552c9f12f62207c5213eb5037c7fa",
+      "adapted": false
+    },
+    {
+      "path": "lib/house/process-state.test.mjs",
+      "bytes": 2926,
+      "sha256": "595c42bc361cbccf895ceeb126e46f09e0b098f80784c4eb50eff9e6aa32811e",
+      "adapted": false
+    },
+    {
+      "path": "lib/house/scene.test.mjs",
+      "bytes": 1846,
+      "sha256": "1e7bc3c2c20f953c52ece0413d9902ab4c8190de7f130edfc30a5117d1e7496c",
+      "adapted": false
+    },
+    {
       "path": "lib/lab-types.ts",
       "bytes": 1028,
       "sha256": "52738100e8e0871ae7f7882c720a54c2ce7075959456eaba8c2dbdcde2f9cfb8",
+      "adapted": false
+    },
+    {
+      "path": "lib/music/audio.ts",
+      "bytes": 5520,
+      "sha256": "1d3f4899b331387f077b865bb6e43f3cbf05f7b913891384768f605f3e171fd1",
+      "adapted": false
+    },
+    {
+      "path": "lib/music/pattern.d.mts",
+      "bytes": 721,
+      "sha256": "b9ff3d43ebc2346f416f1e0a62591ca5fe3ce04ca7ae2c5d5728574671e42bd3",
+      "adapted": false
+    },
+    {
+      "path": "lib/music/pattern.mjs",
+      "bytes": 4659,
+      "sha256": "35025a516efb1d1320722c8b2c7b4454b8d4251c641a4b0b320a9ed954568017",
+      "adapted": false
+    },
+    {
+      "path": "lib/music/pattern.test.mjs",
+      "bytes": 2307,
+      "sha256": "a0171a32c7de79b169389596ed0fc8093785f2da4d04d39954ff8b9816f87bb5",
+      "adapted": false
+    },
+    {
+      "path": "lib/music/wav.d.mts",
+      "bytes": 82,
+      "sha256": "fc598d0e40b36af6575253aad22aa20e3d745c020ed43e7167738c130f5ec29b",
+      "adapted": false
+    },
+    {
+      "path": "lib/music/wav.mjs",
+      "bytes": 1588,
+      "sha256": "cb689d75f72ac234bffe64080bdaa40452c29f96240bc0a194d42b7a611c7d45",
+      "adapted": false
+    },
+    {
+      "path": "lib/music/wav.test.mjs",
+      "bytes": 1813,
+      "sha256": "f87729676b2252dae7bd2f91a9ad8d5e2cf060da8eec6c332d74a4e603065b44",
       "adapted": false
     },
     {
@@ -713,8 +1151,8 @@
     },
     {
       "path": "lib/studio/generator.ts",
-      "bytes": 11750,
-      "sha256": "af6f3d3ebda47038d06b22565fbbe3170cbb668368bfcc0abe7eef5cf41abbcb",
+      "bytes": 12189,
+      "sha256": "38c5df19ffb259702e4066113eb88ac7b359cfd2e04d70c29313be8b0ab7bce4",
       "adapted": false
     },
     {
@@ -724,15 +1162,39 @@
       "adapted": false
     },
     {
+      "path": "lib/studio/raster-runtime.test.mjs",
+      "bytes": 8597,
+      "sha256": "1f0c433bc1dfee6946920735dc7b0baa32d425f90e423d4c49c8b672a1afecea",
+      "adapted": false
+    },
+    {
+      "path": "lib/studio/runtime-compat.d.mts",
+      "bytes": 55,
+      "sha256": "6487d873de801e97ed1c8694e1d89d85c3f632e35a3a229a202732b35f1570aa",
+      "adapted": false
+    },
+    {
+      "path": "lib/studio/runtime-compat.mjs",
+      "bytes": 685,
+      "sha256": "df8bb4ae7946681c4d0c25d745ecac046d55b6d146a4d453be749351c674c5df",
+      "adapted": false
+    },
+    {
+      "path": "lib/studio/runtime-compat.test.mjs",
+      "bytes": 999,
+      "sha256": "b089f560875eb301f3c63df7581362a71bb158c6a991f039cbf5769cbb23f6b3",
+      "adapted": false
+    },
+    {
       "path": "lib/studio/runtime-source.js",
-      "bytes": 11405,
-      "sha256": "f827317e79a694f7b345a6935595018238df01de7eac3a687e47b801463ad57b",
+      "bytes": 19147,
+      "sha256": "7e047a9e84984e83659bf457a99156ad672d019fc593303d89ef425f30fadc9e",
       "adapted": false
     },
     {
       "path": "lib/studio/scene.ts",
-      "bytes": 7269,
-      "sha256": "dd73879c2bae9ae98fd707f9110b95389a9fee0d7c407fb5f5f5bc676a86a0a4",
+      "bytes": 7376,
+      "sha256": "ec0770fc883736ebcbd889a7577cfa3aa73bd7e2022e2280ce5693ef6fa5789b",
       "adapted": false
     },
     {
@@ -757,6 +1219,36 @@
       "path": "lib/utils.ts",
       "bytes": 183,
       "sha256": "c2aa0cde88a8b5b5db7718003da1a345bdcce5f31085800b66ff0dddedfb0254",
+      "adapted": false
+    },
+    {
+      "path": "next.config.ts",
+      "bytes": 140,
+      "sha256": "a972c4f0ffa6dd714e7909b02d1ac19d2f2fe3d01f191efd2c5054bd6f142ec1",
+      "adapted": false
+    },
+    {
+      "path": "package.json",
+      "bytes": 2210,
+      "sha256": "2578a19515d0329320d09a1435827c5b95ceb37a47ceec979cd4c1b54e18d300",
+      "adapted": false
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 354309,
+      "sha256": "45518ba3d164885ac4533202689a9e01d7aa4a24dd24bcf66774069ed84d62c5",
+      "adapted": false
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 757,
+      "sha256": "4a48cdfc4e855c8d3342dafa5f4da5be97dfd7c314b91a383fdc74a94496f4ce",
+      "adapted": false
+    },
+    {
+      "path": "postcss.config.mjs",
+      "bytes": 101,
+      "sha256": "7b299d3d3b16699ddda397c0b2373b3af4f25f8fc9ccc9b3d9e64ef083bc1c21",
       "adapted": false
     },
     {
@@ -793,6 +1285,84 @@
       "path": "public/globe.svg",
       "bytes": 1037,
       "sha256": "13187c071b4d369df3a7a179f69a927165bf624e1a524ee6c93b7d3be75d6fc8",
+      "adapted": false
+    },
+    {
+      "path": "public/house/house.css",
+      "bytes": 7214,
+      "sha256": "bf1d1eacf5d0b7af7823ab1713bfe6ad3b4da7a9c11363f1927a9cef2f526185",
+      "adapted": false
+    },
+    {
+      "path": "public/house/index.html",
+      "bytes": 2234,
+      "sha256": "34acf2992067d3058bd5f9eb81d88473f95364749f7446b0fce8bfe62ecf23d2",
+      "adapted": false
+    },
+    {
+      "path": "public/house/layout.js",
+      "bytes": 4274,
+      "sha256": "6bd9a697197947608aa874c272cbb378eedc3363027e03073bee31475d66f787",
+      "adapted": false
+    },
+    {
+      "path": "public/house/mobile-input.js",
+      "bytes": 3083,
+      "sha256": "bafd7ee8a7702f6e3b31240832690054a36111e7afbe8efabe33ba440cd34657",
+      "adapted": false
+    },
+    {
+      "path": "public/house/process-creatures.js",
+      "bytes": 4622,
+      "sha256": "41bdac4aa2f237d39ade7e7d45246c0329e97219bc3be705c1566b7dcc040177",
+      "adapted": false
+    },
+    {
+      "path": "public/house/process-state.js",
+      "bytes": 3280,
+      "sha256": "88caf8e73e42c1147972574635e8c6670c850b1e020cf18e93a17b2dea0f011e",
+      "adapted": false
+    },
+    {
+      "path": "public/house/render-engine.js",
+      "bytes": 929,
+      "sha256": "5d19190d2ea99a541df7536ab474a8c488197ebbf9fecbad47bc3a6ab62395fb",
+      "adapted": false
+    },
+    {
+      "path": "public/house/runtime.js",
+      "bytes": 13174,
+      "sha256": "d659d3f949b74998c7ae3d4c892257f3c69d11cd78ca3d3e00cdb750077f5e19",
+      "adapted": false
+    },
+    {
+      "path": "public/house/scene.js",
+      "bytes": 18230,
+      "sha256": "106d11933da44bb47e653a10d72b9dc86dcbbc1ec88e904bf0fba73fc159bae1",
+      "adapted": false
+    },
+    {
+      "path": "public/house/vendor/BufferGeometryUtils.js",
+      "bytes": 36986,
+      "sha256": "f07a335d7603eb09a46536fd8492bcb7ae8ef9c99b9c06e9910b2958f0b87310",
+      "adapted": false
+    },
+    {
+      "path": "public/house/vendor/THREE-LICENSE.txt",
+      "bytes": 1102,
+      "sha256": "df2a91696186fe58c92518a25d48bc59c8ee2edc7cac9ca6d19a5a0d599a2a05",
+      "adapted": false
+    },
+    {
+      "path": "public/house/vendor/three.core.js",
+      "bytes": 1462228,
+      "sha256": "7c075bd6b2414b6c4ed4b3416b180df2984051118c2b89965de066ce99307f1c",
+      "adapted": false
+    },
+    {
+      "path": "public/house/vendor/three.module.js",
+      "bytes": 621364,
+      "sha256": "9e06b55afc5c845ad8663d0dba7dc8f4e815c218bedae8a9917fac5972e5314f",
       "adapted": false
     },
     {
@@ -892,114 +1462,6 @@
       "adapted": false
     },
     {
-      "path": "db/index.ts",
-      "bytes": 436,
-      "sha256": "effa59e46bcbb42dfb7b46911e809a1de0f2c37df1fd935e3dca89023eaf97e4",
-      "adapted": false
-    },
-    {
-      "path": "db/schema.ts",
-      "bytes": 4004,
-      "sha256": "0f504fa56851bd1ba358a5df5e5fa761885832bddca8f97c6d7e3a75f6356768",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/0000_perpetual_maximus.sql",
-      "bytes": 503,
-      "sha256": "d5b99b5e37ae8e754224eced83745108872a87e08f6a0981064e0abe5369c670",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/0001_friendly_bloodscream.sql",
-      "bytes": 168,
-      "sha256": "3806288e5e09e173f8771dbfd9da7591cb9e8e597700c6eba36a153980d62368",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/0002_chilly_jamie_braddock.sql",
-      "bytes": 452,
-      "sha256": "30a8b9b2fbf6e24c879308bb3cacef064ab293b5912ef9794e01c41639409c84",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/0003_happy_trauma.sql",
-      "bytes": 808,
-      "sha256": "99a9f6cb4b124ff3111fd44b8810901cad45d0218b277ae7f9d5dace2896a56f",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/0004_dapper_supernaut.sql",
-      "bytes": 1937,
-      "sha256": "3934d946c0d1e91eed5a1cb7fa465c4272801e5a8fd6d2cf4aff3ed67766e4f0",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/meta/0000_snapshot.json",
-      "bytes": 3096,
-      "sha256": "d4461291a654d7ea67cbf3ee606f576d6c0e23d5122e01bd3817c78e1fb8f95e",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/meta/0001_snapshot.json",
-      "bytes": 4101,
-      "sha256": "44a478183488e00b4603a4b6b02c870ce9b15fe7338e9ea2e3556b4aa1b1499a",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/meta/0002_snapshot.json",
-      "bytes": 6805,
-      "sha256": "de6a58a7add1e6d3f8814c892ca24cae324b6aef49455995962f13946437f30d",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/meta/0003_snapshot.json",
-      "bytes": 11110,
-      "sha256": "dc9675e8b619f1d2bac915a8988a21ac25b6fd0395484a8ce20f0f909702dafc",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/meta/0004_snapshot.json",
-      "bytes": 18895,
-      "sha256": "87b1c5c9e8bd69d9523a50a9832f424fea3f877a77cab9d5ce0ca9ae265e61aa",
-      "adapted": false
-    },
-    {
-      "path": "drizzle/meta/_journal.json",
-      "bytes": 788,
-      "sha256": "12fa862663e470396f9dc9b1830e8470737aab36e78241c4a6fb3c2cc3b74954",
-      "adapted": false
-    },
-    {
-      "path": "build/connector-preview-plugin.mjs",
-      "bytes": 7409,
-      "sha256": "c85dddfed97753d80de89050b5a1316b2b490cdfab2faa119a3417cb6e6c315c",
-      "adapted": false
-    },
-    {
-      "path": "build/connector-preview-worker.mjs",
-      "bytes": 609,
-      "sha256": "59ceca541d1829448fbab94957acf1d396d5425a634d322c3b9763fe4501096e",
-      "adapted": false
-    },
-    {
-      "path": "build/sites-vite-plugin.LICENSE",
-      "bytes": 1084,
-      "sha256": "3dd119f149df88296e82981a51e5131b1018ba2e2f2f6f4bbec2b83d58a43a45",
-      "adapted": false
-    },
-    {
-      "path": "build/sites-vite-plugin.ts",
-      "bytes": 7415,
-      "sha256": "5b2d671313fe4ac10a1709e112d570da1267cb916f68655996a3ac3ea1dd80a9",
-      "adapted": false
-    },
-    {
-      "path": "build/sites-worker.ts",
-      "bytes": 1307,
-      "sha256": "df3b8a9a827548175d19d45f9cf62a9bc8dd86cf6ce1d39c3ce97538c5d487f2",
-      "adapted": false
-    },
-    {
       "path": "tests/atlas-core.test.mts",
       "bytes": 6542,
       "sha256": "5261e4c8ef17d52a9d84183a2367e4efee8293940d2da61439ce5ae6e4e3eed4",
@@ -1030,117 +1492,9 @@
       "adapted": false
     },
     {
-      "path": "examples/d1/app/api/notes/route.ts",
-      "bytes": 1758,
-      "sha256": "b0b134b9b0b4a9f5947abbd13fd4425b88b59c64f91db1aacb0cecbc16c38f45",
-      "adapted": false
-    },
-    {
-      "path": "examples/d1/db/schema.ts",
-      "bytes": 379,
-      "sha256": "1acd70317bcaf22cb140436fb47754c2144e7c2adfc59a3f427ecb1d816fa0f3",
-      "adapted": false
-    },
-    {
-      "path": "docs/autonomy.md",
-      "bytes": 5785,
-      "sha256": "dc5c26a0c5cbb47855cce86268d85bfe95b1b7141f8b8a825f42e1104a650f23",
-      "adapted": false
-    },
-    {
-      "path": ".gitignore",
-      "bytes": 895,
-      "sha256": "34be60ded2f36b3a34bf75e407782d84855e2a7982619a5ba3d357fea748d013",
-      "adapted": false
-    },
-    {
-      "path": ".npmrc",
-      "bytes": 48,
-      "sha256": "7cd80af2e968119afd7b1803b6ac51b51ea010b8da57c3606ea1ef8071a86068",
-      "adapted": false
-    },
-    {
-      "path": ".env.example",
-      "bytes": 45,
-      "sha256": "4c4e1ddfee8749122e62fc20bc57317fa064c350241d8b915d598458c8695cc8",
-      "adapted": false
-    },
-    {
-      "path": "cloudflare-env.d.ts",
-      "bytes": 105,
-      "sha256": "2ac980b29c91b8324a0d7864ec329c41e513fe81165aaffbc1220b8e85812759",
-      "adapted": false
-    },
-    {
-      "path": "components.json",
-      "bytes": 441,
-      "sha256": "820e913f34219d16b5e7ec5865df9c444bb5b8acf230db4e589d660e4a21743e",
-      "adapted": false
-    },
-    {
-      "path": "drizzle.config.ts",
-      "bytes": 155,
-      "sha256": "73d0807c58e541dc3eaf175909fb5acc966faed61f74ff659d9d55027bf3e25b",
-      "adapted": false
-    },
-    {
-      "path": "eslint.config.mjs",
-      "bytes": 874,
-      "sha256": "8ca86af56c21d433c46bfebeb8980b64b6d4ffa0dc3cf3d2ec1ad923b983f38c",
-      "adapted": false
-    },
-    {
-      "path": "next.config.ts",
-      "bytes": 140,
-      "sha256": "a972c4f0ffa6dd714e7909b02d1ac19d2f2fe3d01f191efd2c5054bd6f142ec1",
-      "adapted": false
-    },
-    {
-      "path": "package.json",
-      "bytes": 2210,
-      "sha256": "2578a19515d0329320d09a1435827c5b95ceb37a47ceec979cd4c1b54e18d300",
-      "adapted": false
-    },
-    {
-      "path": "pnpm-lock.yaml",
-      "bytes": 354309,
-      "sha256": "45518ba3d164885ac4533202689a9e01d7aa4a24dd24bcf66774069ed84d62c5",
-      "adapted": false
-    },
-    {
-      "path": "pnpm-workspace.yaml",
-      "bytes": 757,
-      "sha256": "4a48cdfc4e855c8d3342dafa5f4da5be97dfd7c314b91a383fdc74a94496f4ce",
-      "adapted": false
-    },
-    {
-      "path": "postcss.config.mjs",
-      "bytes": 101,
-      "sha256": "7b299d3d3b16699ddda397c0b2373b3af4f25f8fc9ccc9b3d9e64ef083bc1c21",
-      "adapted": false
-    },
-    {
       "path": "tsconfig.json",
       "bytes": 888,
       "sha256": "d4bb4277c124b275035b21ac817d4570b04255a1793f2e8edfa8f7fd91751483",
-      "adapted": false
-    },
-    {
-      "path": "vite.config.ts",
-      "bytes": 3215,
-      "sha256": "9e4bb2e0cce6d4679bc88a30c3a448d97f2cb51ce302e2516a9b653d985c961b",
-      "adapted": false
-    },
-    {
-      "path": ".openai/hosting.json",
-      "bytes": 96,
-      "sha256": "ad4a1557a2a142dd0ee32d70334641ef456f91e140cf209cfb279b82d4cde8ed",
-      "adapted": false
-    },
-    {
-      "path": "vendor/shadcn-tailwind-4.13.0.css",
-      "bytes": 16670,
-      "sha256": "f221d959e80b4738fba93b4b4f01472b11cccaf6043ba7f6f9376f6768dad28e",
       "adapted": false
     },
     {
@@ -1150,55 +1504,19 @@
       "adapted": false
     },
     {
-      "path": "data/archive.json",
-      "bytes": 133593,
-      "sha256": "a043237c51c1118390faa3ad6468176e3436f27920692e630839e5d147a0038b",
+      "path": "vendor/shadcn-tailwind-4.13.0.css",
+      "bytes": 16670,
+      "sha256": "f221d959e80b4738fba93b4b4f01472b11cccaf6043ba7f6f9376f6768dad28e",
       "adapted": false
     },
     {
-      "path": "data/atlas-lm-seed.json",
-      "bytes": 59593,
-      "sha256": "f2f272c937d2d2e8cc13222beb5882bb6a6b88bce8767e71e0eedad43260fcd0",
+      "path": "vite.config.ts",
+      "bytes": 3215,
+      "sha256": "9e4bb2e0cce6d4679bc88a30c3a448d97f2cb51ce302e2516a9b653d985c961b",
       "adapted": false
-    },
-    {
-      "path": "data/continuity.json",
-      "bytes": 46309,
-      "sha256": "73555d9276f577b8595c765d5e12e15c9f36262dd59cb8a9ab10441f919f43cc",
-      "adapted": true
-    },
-    {
-      "path": "data/core.json",
-      "bytes": 900457,
-      "sha256": "6f26f5a842d8088d02b4c0873e0e59c69ff5aae00490f46e6aafbd891be74609",
-      "adapted": false
-    },
-    {
-      "path": "data/native-principles.json",
-      "bytes": 5909,
-      "sha256": "b8e2eb7d67cb6a210796a434a3437182fdfaa8b3068a8a8da1b18b7cf41aed40",
-      "adapted": false
-    },
-    {
-      "path": "data/q517-counterexample.json",
-      "bytes": 184,
-      "sha256": "9a2bb89b136f9b551631c7a227b034f3e6936e022b9e40ff7c19c2bd7b069d0a",
-      "adapted": false
-    },
-    {
-      "path": "data/studio-runtime.json",
-      "bytes": 11421,
-      "sha256": "cb14c60d0c802dbb302bc31bfec906b444b60b626964f4386ac709b1fc3b6c62",
-      "adapted": false
-    },
-    {
-      "path": "README.md",
-      "bytes": 2537,
-      "sha256": "f065061d8c23ee9da825c08e7fcef0286fde6cbee64549399803935e715dbaad",
-      "adapted": true
     }
   ],
-  "totalBytes": 2408143,
+  "totalBytes": 4837475,
   "scan": {
     "findings": 0,
     "privateConversationLinksRemoved": 1
@@ -1211,5 +1529,10 @@
     "native-principles.json",
     "q517-counterexample.json",
     "studio-runtime.json"
+  ],
+  "updatedAt": "2026-11-01T17:15:14.321Z",
+  "runtimeCodeSeeds": [
+    "studio-runtime.json",
+    "studio-runtime-legacy.json"
   ]
 }

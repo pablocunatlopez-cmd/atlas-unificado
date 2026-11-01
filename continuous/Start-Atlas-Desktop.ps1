@@ -2,6 +2,11 @@
 $ErrorActionPreference='Stop'
 $atlasDesktopRoot=$PSScriptRoot
 $atlasDesktopUrl='http://127.0.0.1:8788/chat/'
+try{
+ $atlasDesktopCloud=Get-Content -LiteralPath (Join-Path $atlasDesktopRoot 'data\cloud-bridge.json') -Raw | ConvertFrom-Json
+ $atlasDesktopCloudUri=[Uri]$atlasDesktopCloud.siteUrl
+ if($atlasDesktopCloud.enabled -eq $true -and $atlasDesktopCloudUri.Scheme -eq 'https' -and $atlasDesktopCloudUri.Host.EndsWith('.chatgpt.site')){$atlasDesktopUrl=$atlasDesktopCloudUri.GetLeftPart([UriPartial]::Authority)+'/' }
+}catch{}
 if($AutoStart -and (Test-Path -LiteralPath (Join-Path $atlasDesktopRoot 'data\service.stop'))){return}
 & (Join-Path $atlasDesktopRoot 'Start-Atlas.ps1')
 if(!$NoWindow){

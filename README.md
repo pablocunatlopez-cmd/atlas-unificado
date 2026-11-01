@@ -1,6 +1,6 @@
 # Atlas · código compartible
 
-Asistente general local con chat Qwen, fuentes públicas, biblioteca GitHub, refutación, funciones JavaScript aisladas y prototipos. Esta distribución conserva el código y sus pruebas; excluye claves, conversaciones, memoria privada, pesos Qwen, checkpoints y datos de entrenamiento privados del equipo de origen. `cloud/` conserva siete semillas estáticas ya publicadas en Sites, incluido el pequeño MLP original necesario para compilar su interfaz histórica.
+Asistente general local con chat Qwen, fuentes públicas, biblioteca GitHub, refutación, funciones JavaScript aisladas y prototipos. Su interfaz móvil es una casa 3D basada en ERAS, con diez salas: conversación, música, laboratorio, juegos, cine, constelación, mente, Ion, refutación y lenguaje. Esta distribución conserva el código y sus pruebas; excluye claves, conversaciones, memoria privada, pesos Qwen, checkpoints y datos de entrenamiento privados del equipo de origen. `cloud/` conserva siete semillas estáticas ya publicadas en Sites, incluido el pequeño MLP original necesario para compilar su interfaz histórica.
 
 ## Ejecutar localmente
 
@@ -19,8 +19,22 @@ GitHub almacena y comparte código; no ejecuta este servidor ni ofrece una GPU p
 
 El PC, su modelo y el puente deben permanecer encendidos para responder. Configura `ATLAS_BRIDGE_TOKEN` en el alojamiento y guarda el mismo valor únicamente en el archivo local ignorado `continuous/data/cloud-bridge.key`. Su compañero `cloud-bridge.json` declara el origen HTTPS del Site. `Start-Cloud-Bridge.ps1` y el supervisor inician el puente solo cuando existen esos archivos. No copies claves de la instalación original. Consulta `cloud/README.md` para compilación, migraciones y límites.
 
+## Casa y herramientas creativas
+
+La casa renderiza geometría 3D real con Three.js, controles táctiles, colisiones y calidad adaptable. Las habitaciones abren las funciones; el chat completo sigue en `/chat/` y la interfaz histórica en `/origen/`. La casa y el secuenciador musical funcionan en el navegador sin inferencia del PC. El estudio dispone de cuatro pistas, piano sintetizado, mezcla, proyectos JSON y exportación WAV; no utiliza un modelo generativo musical.
+
+Para crear mundos y juegos desde el chat, el puente pide un plan JSON a Qwen, ejecuta comprobaciones de geometría, solicita una revisión y guarda un proyecto procedural en el taller. Arquitecto y revisor son dos pasadas del mismo modelo, sin presentarlas como agentes externos independientes. El taller permite recorrer y exportar los prototipos; la revisión no acredita calidad AAA.
+
+El cine graba MP4 o WebM del lienzo 3D según el navegador. La vía neuronal utiliza Wan2.1 T2V 1.3B mediante ComfyUI local y requiere instalar aparte su entorno y pesos. OpenField es un proyecto distinto: sus motores nativos no se consideran disponibles solo por instalar su interfaz. La reserva GPU descarga Qwen durante el trabajo de vídeo y lo restaura al liberar ComfyUI. Consulta [el contrato del entorno multimedia](docs/MEDIA_RUNTIME.md).
+
 La inferencia usa el hardware que aloje llama.cpp. Los reflejos, la lectura de documentación y las extensiones probadas no reentrenan automáticamente Qwen. Los prototipos de ejemplo no acreditan calidad AAA ni capacidad de producción de juegos completos.
 
 ## Distribución y dependencias
 
-Las dependencias npm se fijan a las versiones usadas en el proyecto. Three.js y QuickJS conservan sus propias licencias; no se han copiado sus paquetes binarios al árbol fuente. Los pesos de terceros tienen condiciones independientes. No se asigna aquí una licencia nueva a código importado cuya titularidad deba revisar el propietario. Antes de una publicación pública, confirma las autorizaciones de los componentes importados. El manifiesto `docs/source-export-manifest.json` registra los archivos copiados, adaptaciones y exclusiones; no es una auditoría jurídica.
+Las dependencias npm se fijan a las versiones usadas en el proyecto. Three.js y QuickJS conservan sus propias licencias. Los módulos fuente de Three.js reutilizados por la casa desde ERAS incluyen su aviso MIT; la procedencia se documenta en `cloud/lib/house/ERAS_PROVENANCE.md`. Los pesos de terceros tienen condiciones independientes. No se asigna aquí una licencia nueva a código importado cuya titularidad deba revisar el propietario. El manifiesto `docs/source-export-manifest.json` registra los archivos copiados, adaptaciones y exclusiones; no es una auditoría jurídica.
+
+## Mejora autónoma
+
+El coordinador selecciona Aider 0.86.2, smolagents 1.26.0 o el generador nativo según contratos ejecutados y exploración acotada; todos usan el mismo Qwen local, sin modelos independientes ni consultas de pago. Las funciones se prueban en QuickJS antes de incorporarse. Una política DSL puede cambiar mediante propuestas pequeñas, regresiones y recuperación. LOR-ΩΣ conserva su esquema original de doce símbolos.
+
+Un laboratorio separado prepara y entrena candidatos LoRA sobre datos de herramientas verificadas, con exclusión de GPU y prioridad al chat. Solo se repite si hay datos nuevos y presupuesto temporal; los candidatos no sustituyen automáticamente el modelo activo. En los ensayos observados no se activó ningún adaptador. No hay edición arbitraria del servidor ni instalación automática de extensiones de VS Code. Los frameworks opcionales requieren preparar sus entornos por separado. Véanse continuous/LOCAL_CODING_AGENT.md, continuous/SMOL_CODING_AGENT.md y continuous/QWEN_WEIGHT_EVOLUTION.md.

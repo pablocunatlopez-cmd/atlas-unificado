@@ -36,6 +36,13 @@
       "when": 1793479030182,
       "tag": "0004_dapper_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793481826365,
+      "tag": "0005_friendly_penance",
+      "breakpoints": true
     }
   ]
 }

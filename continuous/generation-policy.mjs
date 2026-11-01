@@ -12,7 +12,7 @@ export function normalizeGenerationPolicy(value={}){
 export async function loadGenerationPolicy(){
  try{return normalizeGenerationPolicy(JSON.parse(await fs.readFile(policyFile,'utf8')));}catch{return {...DEFAULT_GENERATION_POLICY};}
 }
-export function generationPlan(messages,policy=DEFAULT_GENERATION_POLICY,{structured=false,json=false,stage='draft',forceDirect=false}={}){
+export function generationPlan(messages,policy=DEFAULT_GENERATION_POLICY,{structured=false,json=false,stage='draft',forceDirect=false,coreDirective=null}={}){
  const rules=normalizeGenerationPolicy(policy);
  const question=(messages.at(-1)?.content||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
  let category='general',budget=rules.standardThinkingTokens;
@@ -21,5 +21,6 @@ export function generationPlan(messages,policy=DEFAULT_GENERATION_POLICY,{struct
  else if(/^(?:[¡!¿?\s]*)(?:hola|buenas|buenos dias|buenas tardes|buenas noches|gracias|muchas gracias|hey|hello|hi)(?:[!.\s]*)$/.test(question)){category='greeting';budget=0;}
  else if(question.length>800||/\b(?:codigo|programa|programar|programacion|javascript|python|typescript|rust|sql|funcion|function|script|algoritmo|depura|debug|bug|demuestra|demostracion|integral|ecuacion|probabilidad|optimiza|analiza|disena|arquitectura|refuta|contrasta|videojuego)\b/.test(question)){category='complex';budget=rules.complexThinkingTokens;}
  else if(question.length<300&&messages.some(m=>m.content?.startsWith('MEMORIA HISTÓRICA'))&&/\b(?:como se llama|cual era|que acordamos|recuerdas|nombre|acordamos)\b/.test(question)){category='recall';budget=rules.recallThinkingTokens;}
+ if(!structured&&!json&&!forceDirect&&coreDirective&&Number.isInteger(coreDirective.thinkingTokens)&&coreDirective.thinkingTokens>=0&&coreDirective.thinkingTokens<=1536){category='core:'+coreDirective.strategy;budget=coreDirective.thinkingTokens;}
  return {category,thinkingBudgetTokens:budget,answerTokens:structured?400:rules.answerTokens,maxTokens:(structured?400:rules.answerTokens)+budget};
 }

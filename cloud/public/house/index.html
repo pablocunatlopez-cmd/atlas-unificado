@@ -1,0 +1,14 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><title>Casa Atlas · ERAS</title><link rel="stylesheet" href="./house.css"><script type="module" src="./runtime.js"></script></head><body>
+<canvas id="scene" aria-label="Casa 3D de Atlas. Arrastra para mirar y usa el joystick o WASD para caminar." tabindex="0"></canvas>
+<div id="boot" role="status"><span class="boot-mark">△</span><strong>Preparando tu casa…</strong><small>Motor de ERAS · WebGL 2</small></div>
+<section class="place" aria-live="polite"><span class="eyebrow">ATLAS / TU ESPACIO</span><strong id="room-title">Una casa para tus ideas</strong><small id="room-subtitle">Elige una sala o entra a explorar.</small></section>
+<nav class="roomnav" aria-label="Ir a una sala" id="roomnav"></nav>
+<div id="record-state" role="status" hidden>● Grabando el recorrido…</div>
+<div class="actions"><button id="overview" title="Ver la casa completa">⌂ <span>Vista general</span></button><button id="walk">◉ <span>Entrar en casa</span></button></div>
+<button id="interact" class="interact" hidden><span class="interact-dot"></span><span id="interact-title">Abrir Atlas</span><span class="action-arrow">↗</span></button>
+<div class="joystick" id="joystick" role="slider" aria-label="Joystick para moverse" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="En reposo"><span class="joystick-cross"></span><span class="joystick-knob"></span></div>
+<div class="look-hint" id="look-hint">Arrastra para mirar <span>·</span> WASD / flechas para caminar</div>
+<p class="process-legend" id="process-legend" role="status">Sin telemetría. Movimiento = actividad; mejorar requiere pruebas.</p>
+<div class="engine"><span class="online-dot"></span><span>ERAS · WebGL 2</span><span id="fps">Renderizando</span></div>
+<div class="failure" id="failure" role="alert" hidden><strong>No se ha podido iniciar el entorno 3D.</strong><p>Abre Atlas en Safari o Chrome con la aceleración gráfica disponible. Las herramientas siguen accesibles desde el menú de salas.</p><button id="retry">Reintentar</button></div>
+</body></html>

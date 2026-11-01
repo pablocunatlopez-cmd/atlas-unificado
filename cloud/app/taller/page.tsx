@@ -1,0 +1,5 @@
+import AtlasStudio from '../atlas-studio';
+import {chatGPTSignInPath,getChatGPTUser} from '../chatgpt-auth';
+export const dynamic='force-dynamic';
+export const metadata={title:'Atlas · Taller original'};
+export default async function WorkshopPage({searchParams}:{searchParams:Promise<{project?:string|string[]}>}){const[user,parameters]=await Promise.all([getChatGPTUser(),searchParams]);const raw=parameters.project,project=typeof raw==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)?raw:undefined;return <main style={{minHeight:'100dvh',background:'#f2f1eb',padding:'24px 16px'}}><nav style={{display:'flex',justifyContent:'space-between',maxWidth:1300,margin:'0 auto 20px',font:'13px system-ui',color:'#354f45'}}><a href="/">← Volver a la casa</a>{!user&&<a href={chatGPTSignInPath(project?'/taller/?project='+project:'/taller/')} target="_top">Iniciar sesión</a>}</nav><AtlasStudio request={null} ready={!!user} initialProjectId={project}/></main>;}

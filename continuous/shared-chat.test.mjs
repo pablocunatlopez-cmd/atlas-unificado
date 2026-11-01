@@ -8,3 +8,8 @@ test('shared visitor prompt contains public method without the owners historical
  assert.match(prompt,/conversación compartida aislada/);assert.match(prompt,/Observar → Comprender/);assert.doesNotMatch(prompt,/SEMILLA FUNDACIONAL INMUTABLE|usuario aclaró|organigrama|own-model/i);
  assert.equal(result.model,'atlas-local');assert.equal(result.trained,false);assert.equal(result.reflectionMemoryUsed,0);assert.deepEqual(result.sources,[]);
 });
+test('structured creative calls preserve the single JSON contract and leave criticism to the orchestrator',async()=>{
+ let calls=0;const expected={title:'Galería',variant:'gallery',palette:'Blanco',lighting:'sunset',objects:[]};
+ const result=await chat({json:true,messages:[{role:'user',content:'Diseña un videojuego y revisa sus errores. Devuelve solo el plan JSON.'}]},[],async(url,options)=>{calls++;assert.deepEqual(JSON.parse(options.body).response_format,{type:'json_object'});return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify(expected)}}]})};},'','',null,'',[],'',{sharedSession:true});
+ assert.equal(calls,1);assert.deepEqual(JSON.parse(result.answer),expected);assert.equal(result.reviewed,false);
+});

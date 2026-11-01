@@ -26,12 +26,43 @@ import {backupRepositoryLibrary} from './backup-library.mjs';
 import {discoverySummary,listDiscovered,discoverNextRepositories,loadRepositoryTaxonomy} from './repository-discovery.mjs';
 import {secondaryStatus,runSecondary,resolveSecondaryArtifact,searchSecondaryMemory} from './secondary-atlas.mjs';
 import {projectCommand,answerProjectCommand} from './project-actions.mjs';
+import {spawn} from 'node:child_process';
+import {createGpuLease} from './gpu-lease.mjs';
+import {videoStatus,startVideoRuntime,generateVideo,releaseVideoRuntime,resolveVideoArtifact,videoOptions} from './atlas-video-tools.mjs';
+import {createCognitiveCore} from './cognitive-core.mjs';
+import {createLorLab} from './lor-lab.mjs';
+import {sanitizeProcessTelemetry} from './process-telemetry.mjs';
+import {createQwenEvolution} from './qwen-evolution.mjs';
+import {createLocalCodingAgent} from './local-coding-agent.mjs';
+import {createSmolCodingAgent} from './smol-coding-agent.mjs';
+import {createCodingCollaborators} from './coding-collaborators.mjs';
+import {createWeightAutonomy} from './weight-autonomy.mjs';
+import {publicTools,publicToolIntent} from './public-tools.mjs';
 let chatBusy=false;
+let mediaBusy=false,mediaAbort=null,mediaProgress=null,gpuActivity=null,autonomousWeights=false,mediaDone=Promise.resolve();
 const root=path.dirname(fileURLToPath(import.meta.url));
 const data=path.join(root,'data');
+const cognitiveCore=createCognitiveCore({directory:path.join(data,'cognitive-core')});
+const lorLab=createLorLab();
+const qwenEvolution=createQwenEvolution();
+const weightAutonomy=createWeightAutonomy({directory:data,evolution:qwenEvolution,runExclusive:runAutonomousWeightCandidate});
+let coreReviewBusy=false,lorBusy=false,coreAbort=null,corePhase='retain';
+const powershell=path.join(process.env.SystemRoot||'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
+// Ignore inherited streams and await the launcher exit. A detached llama child
+// can otherwise keep execFile's pipe handles open after PowerShell has exited.
+const modelScript=name=>new Promise((resolve,reject)=>{
+ const child=spawn(powershell,['-NoProfile','-File',path.join(root,name)],{windowsHide:true,stdio:'ignore',shell:false});
+ const timer=setTimeout(()=>{child.kill();reject(Error('El cambio de motor agotó su tiempo de espera.'));},180000);
+ child.once('error',error=>{clearTimeout(timer);reject(error);});
+ child.once('exit',code=>{clearTimeout(timer);code===0?resolve():reject(Error('Falló el cambio de motor local ('+name+').'));});
+});
+const gpuLease=createGpuLease({directory:data,suspend:()=>modelScript('Suspend-Atlas-Model.ps1'),release:releaseVideoRuntime,restore:()=>modelScript('Start-Chat.ps1'),shouldRestore:async()=>{try{await fs.access(path.join(data,'service.stop'));return false;}catch{return !closing;}}});
 let chatModelName='Qwen3-4B-Instruct-2507 Q4_K_M';
 try{chatModelName=(await fs.readFile(path.join(data,'active-chat-model.txt'),'utf8')).trim()||chatModelName;}catch{}
 const chatKey=(await fs.readFile(path.join(data,'chat-local.key'),'utf8')).trim();
+const localCodingAgent=createLocalCodingAgent({key:chatKey});
+const smolCodingAgent=createSmolCodingAgent({key:chatKey});
+const codingCollaborators=createCodingCollaborators({directory:data,agent:localCodingAgent,smolAgent:smolCodingAgent});
 const providerKeyPath=path.join(data,'openrouter.key');
 let providerKey='';try{providerKey=(await fs.readFile(providerKeyPath,'utf8')).trim();}catch(e){if(e.code!=='ENOENT')throw e;}
 let extensionBusy=false;
@@ -106,6 +137,17 @@ async function libraryCycle(){
  finally{libraryBusy=false;libraryAbort=null;if(!closing){const next=Date.parse(librarySummary().nextRun||'');scheduleLibrary(Math.max(120000,Number.isFinite(next)?next-Date.now():120000));}}
 }
 let autonomy=await read('autonomous-review.json',{enabled:true,history:[],nextRun:null});
+async function generatePolicyCandidate(prompt,{signal}){
+ const response=await fetch('http://127.0.0.1:11435/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+chatKey},signal:AbortSignal.any([signal,AbortSignal.timeout(150000)]),body:JSON.stringify({model:'atlas-local',messages:[{role:'user',content:prompt}],temperature:.2,max_tokens:3500,chat_template_kwargs:{enable_thinking:false},response_format:{type:'json_object'}})});
+ if(!response.ok)throw Error('El motor local no pudo proponer una política.');const output=await response.json();return output.choices?.[0]?.message?.content;
+}
+async function runAutonomousWeightCandidate(candidate,{signal}){
+ if(mediaBusy||chatBusy||closing)throw Error('La GPU tiene una tarea prioritaria.');
+ mediaBusy=true;gpuActivity='training';autonomousWeights=true;mediaAbort=new AbortController();const combined=AbortSignal.any([signal,mediaAbort.signal]);let finish;mediaDone=new Promise(resolve=>finish=resolve);
+ try{
+  return await gpuLease.run(()=>qwenEvolution.trainCandidate(candidate.id,{signal:combined,onProgress:event=>{if(event.type==='progress')mediaProgress={stage:event.stage,progress:event.progress};}}),{signal:combined,role:'training',onStage:(stage,progress)=>mediaProgress={stage,progress}});
+ }finally{mediaBusy=false;gpuActivity=null;autonomousWeights=false;mediaAbort=null;mediaProgress=null;finish();}
+}
 async function assessLocalCapabilities(evidence,key,request,signal){
  const summary=librarySummary();
  return assessCapabilities({...evidence,repositoryResearch:{counts:summary.counts,lastRun:summary.lastRun,scope:'Consultas del proceso de biblioteca, separadas de las acciones de este diagnóstico.'}},key,request,signal);
@@ -132,7 +174,7 @@ function combinedLibraryItems(options){
 }
 async function autonomousReview(){
  if(closing)return;
- if(state.paused||busy||chatBusy||extensionBusy){
+ if(state.paused||busy||chatBusy||extensionBusy||mediaBusy){
   const delay=state.paused?60000:5000;
   autonomy.nextRun=new Date(Date.now()+delay).toISOString();autonomy.waitReason=state.paused?'Pausado por el usuario':chatBusy?'Esperando a que termine el chat':'Esperando recursos locales';
   await write('autonomous-review.json',autonomy);autonomousTimer=setTimeout(autonomousReview,delay);return;
@@ -142,10 +184,24 @@ async function autonomousReview(){
  autonomousAbort=new AbortController();let finishAutonomous;
  autonomousDone=new Promise(resolve=>{finishAutonomous=resolve;});
  try{
-  const report=await reviewCapabilities(extensions,chatKey,{signal:autonomousAbort.signal,assess:assessLocalCapabilities,allowCreation:config.autonomousProgramming!==false,history:autonomy.history||[],codeGeneration:true});
+  const report=await reviewCapabilities(extensions,chatKey,{signal:autonomousAbort.signal,assess:assessLocalCapabilities,allowCreation:config.autonomousProgramming!==false,history:autonomy.history||[],codeGeneration:true,build:codingCollaborators.build});
   for(const check of report.checks)if(!check.passed){const item=extensions.find(x=>x.id===check.id);if(item)item.passed=false;}
   if(report.candidate)extensions.push(report.candidate);
   await write('extensions.json',extensions);
+  const coreBefore=await cognitiveCore.status();
+  if(!coreBefore.lastCycle||Date.now()-Date.parse(coreBefore.lastCycle.at||'1970-01-01')>30*60000){
+   coreReviewBusy=true;
+   try{
+    report.coreCycles=[];
+    for(let attempt=0;attempt<3;attempt++){
+     report.coreCycle=await cognitiveCore.propose(generatePolicyCandidate,{signal:autonomousAbort.signal,onStage:phase=>corePhase=phase});report.coreCycles.push(report.coreCycle);
+     if(report.coreCycle.accepted)break;
+    }
+    event('cognitive_core',report.coreCycle.accepted?'Política Atlas mejorada tras ejecutar contratos reservados.':'Política candidata conservada como resultado negativo; versión activa intacta.');
+   }finally{coreReviewBusy=false;}
+  }
+  if(!(await lorLab.status()).last){lorBusy=true;try{report.lor=await lorLab.experiment({signal:autonomousAbort.signal});}finally{lorBusy=false;}}
+  report.weightTrial=await weightAutonomy.tick(extensions,{signal:autonomousAbort.signal,isIdle:!chatBusy&&!mediaBusy});
   const reference=documents.find(document=>document.role==='reference'&&/^https:\/\/github\.com\//.test(document.url)&&!repositoryNotes.some(note=>note.id===repositoryReflectionId(document)));
   if(reference){
    try{const note=await reflectRepository(reference,chatKey,{signal:autonomousAbort.signal});repositoryNotes.push(note);repositoryNotes=repositoryNotes.slice(-500);await write('repository-reflections.json',repositoryNotes);report.research={url:note.url,id:note.id,status:note.status};}
@@ -255,7 +311,7 @@ async function download(source){
 }
 async function cycle(){
  if(busy||closing||state.paused)return;
- if(autonomousBusy){timer=setTimeout(cycle,60000);return;}
+ if(autonomousBusy||mediaBusy){timer=setTimeout(cycle,60000);return;}
  busy=true;nextRun=null;
  try{
   // Bootstrap a reserve first. Each document keeps its role across all cycles.
@@ -289,7 +345,7 @@ async function cycle(){
   }
   const experimentDocuments=trainingDocuments(documents);
   const signature=hash((config.trainingBackend==='cuda'?'cuda-spiral-v2-best-checkpoint\n':'parallel-spiral-v1\n')+experimentDocuments.map(d=>d.url+':'+d.hash+':'+d.role).sort().join('\n'));
-  if(documents.some(d=>d.role==='train')&&documents.some(d=>d.role==='validation')&&!state.attempted.includes(signature)&&!state.paused&&!closing){
+  if(documents.some(d=>d.role==='train')&&documents.some(d=>d.role==='validation')&&!state.attempted.includes(signature)&&!state.paused&&!closing&&!mediaBusy){
    phase=config.trainingBackend==='cuda'?'Entrenando tres candidatos en GPU CUDA':`Comparando ${workerBudget(config.parallelCandidates||1)} candidatos en CPU`;
    const result=config.trainingBackend==='cuda'?await compareGpu(snapshot,experimentDocuments,config,()=>state.paused||closing):await compareCandidates(snapshot,experimentDocuments,config.stepsPerDocument,config.parallelCandidates||1,()=>state.paused||closing);
    state.attempted.push(signature);state.attempted=state.attempted.slice(-200);
@@ -338,7 +394,110 @@ server=http.createServer(async(req,res)=>{
   res.writeHead(308,{Location:`http://${expected}${pathname}${url.search}`});return res.end();
  }
  if(req.method==='GET'&&url.pathname==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end((await fs.readFile(path.join(root,'index.html'),'utf8')).replace('__TOKEN__',token).replace('</head>','<link rel="stylesheet" href="/atlas-theme.css"></head>'));}
- if(req.method==='GET'&&url.pathname==='/status'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(status()));}
+ if(req.method==='GET'&&url.pathname==='/status'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({...status(),media:{busy:mediaBusy,progress:mediaProgress}}));}
+ if(req.method==='GET'&&url.pathname==='/process/status'){
+  res.setHeader('Content-Type','application/json');try{
+   const core=await cognitiveCore.status(),lor=await lorLab.status(),evolution={...await qwenEvolution.status(),autonomy:await weightAutonomy.status()},agents=await codingCollaborators.status(),coding=await localCodingAgent.status();
+   return res.end(JSON.stringify(sanitizeProcessTelemetry({at:new Date().toISOString(),core:{...core,version:core.activeId},lor:lor.last,evolution,agents,processes:[
+    {id:'chat',state:chatBusy?'running':mediaBusy?'waiting':'idle',phase:'understand'},
+    {id:'research',state:libraryBusy?'running':state.paused?'waiting':'idle',phase:'observe',counters:{observations:documents.filter(document=>document.role==='reference').length}},
+    {id:'tools',state:extensionBusy&&!coreReviewBusy?'running':'idle',phase:'apply',counters:{trials:extensions.length,accepted:extensions.filter(item=>item.passed).length,rejected:extensions.filter(item=>!item.passed).length}},
+    {id:'review',state:coreReviewBusy&&corePhase==='refute'?'running':core.lastCycle?(core.lastCycle.accepted?'passed':'failed'):'idle',phase:'refute',counters:{trials:core.attempts,accepted:core.accepted,rejected:core.rejected}},
+    {id:'core',state:coreReviewBusy?'running':state.paused?'waiting':'idle',phase:coreReviewBusy?corePhase:'retain',counters:{trials:core.attempts,accepted:core.accepted,rejected:core.rejected}},
+    {id:'lor',state:lorBusy?'running':lor.last?(lor.last.verdict==='REFUTED'?'failed':'passed'):'idle',phase:lorBusy?'refute':'retain',counters:{trials:lor.last?1:0}},
+    {id:'video',state:gpuActivity==='video'?'running':'idle',phase:'apply'},
+    {id:'weights',state:gpuActivity==='training'?'running':evolution.download?.status==='downloading'?'running':'waiting',phase:gpuActivity==='training'?'apply':'observe',counters:{trials:evolution.candidatesPrepared,accepted:0}},
+    {id:'external',state:providerKey?'idle':'waiting',phase:'connect'},
+    {id:'agents',state:coding.busy?'running':coding.ready?'idle':'waiting',phase:'apply',counters:{trials:agents.aider.attempts,accepted:agents.aider.passed,rejected:agents.aider.failed}},
+   ]})));
+  }catch{res.writeHead(503);return res.end(JSON.stringify({error:'Telemetría no disponible.'}));}
+ }
+ if(req.method==='POST'&&url.pathname==='/lor/experiment'){
+  res.setHeader('Content-Type','application/json');if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end(JSON.stringify({error:'Origen no autorizado'}));}
+  if(lorBusy){res.writeHead(429);return res.end(JSON.stringify({error:'El experimento LOR ya está en ejecución.'}));}
+  lorBusy=true;const abort=new AbortController(),close=()=>{if(!res.writableEnded)abort.abort(Error('Experimento cancelado'));};res.on('close',close);
+  try{return res.end(JSON.stringify(await lorLab.experiment({signal:abort.signal})));}catch(error){res.writeHead(400);return res.end(JSON.stringify({error:error.message}));}finally{lorBusy=false;res.off('close',close);}
+ }
+ if(req.method==='POST'&&url.pathname==='/core/propose'){
+  res.setHeader('Content-Type','application/json');if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end(JSON.stringify({error:'Origen no autorizado'}));}
+  if(coreReviewBusy||mediaBusy||chatBusy||busy||(extensionBusy&&!autonomousBusy)||closing){res.writeHead(429);return res.end(JSON.stringify({error:'Atlas está terminando otra tarea.'}));}
+  if(autonomousBusy){autonomousAbort?.abort(Error('Revisión solicitada del núcleo'));await autonomousDone;}
+  coreReviewBusy=true;extensionBusy=true;coreAbort=new AbortController();const signal=coreAbort.signal;
+  const close=()=>{if(!res.writableEnded)coreAbort?.abort(Error('Propuesta cancelada'));};res.on('close',close);
+  try{return res.end(JSON.stringify(await cognitiveCore.propose(generatePolicyCandidate,{signal,onStage:phase=>corePhase=phase})));}catch(error){res.writeHead(400);return res.end(JSON.stringify({error:error.message}));}finally{coreReviewBusy=false;extensionBusy=false;coreAbort=null;res.off('close',close);}
+ }
+ if(req.method==='GET'&&url.pathname==='/agents/status'){
+  res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(await codingCollaborators.status()));
+ }
+ if(req.method==='POST'&&url.pathname==='/agents/benchmark'){
+  res.setHeader('Content-Type','application/json');if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end(JSON.stringify({error:'Origen no autorizado'}));}
+  if(coreReviewBusy||mediaBusy||chatBusy||busy||(extensionBusy&&!autonomousBusy)||closing){res.writeHead(429);return res.end(JSON.stringify({error:'Atlas está terminando otra tarea.'}));}
+  if(autonomousBusy){autonomousAbort?.abort(Error('Prueba solicitada del colaborador'));await autonomousDone;}
+  extensionBusy=true;coreAbort=new AbortController();const signal=coreAbort.signal,close=()=>{if(!res.writableEnded)coreAbort?.abort(Error('Prueba cancelada'));};res.on('close',close);
+  try{
+   const cases=[{input:{values:[1,2,1]},expected:[1,2]},{input:{values:['a','b','a']},expected:['a','b']},{input:{values:[]},expected:[]},{input:{values:[null,false,null,false]},expected:[null,false]},{input:{values:[1,'1',1,false,0,false]},expected:[1,'1',false,0]},{input:{},expected:[]},{input:null,expected:[]},{input:{values:'abc'},expected:[]}];
+   const task='Recibe input={values:[primitivos JSON]} y devuelve el array sin valores repetidos, conservando el orden de la primera aparición. No confundas número 1 con texto "1", false con 0, ni null con otros valores. Si input o values no tienen el formato esperado devuelve []. No modifica la entrada.';
+   const provider=url.searchParams.get('provider')==='smolagents'?'smolagents':'aider';
+   const result=await codingCollaborators.build(task,chatKey,cases,(input)=>chat(input,[],fetch,chatKey,'',null,'',[],'',{signal,sharedSession:true,cognitiveCore}),{provider,format:'code',name:'Deduplicación estable · benchmark de agentes',signal});
+   await write('agent-benchmark.json',result);return res.end(JSON.stringify({passed:result.passed,collaborator:result.collaborator,cases:result.acceptanceResults?.length,attempts:result.attempt}));
+  }catch(error){res.writeHead(400);return res.end(JSON.stringify({error:error.message}));}finally{extensionBusy=false;coreAbort=null;res.off('close',close);}
+ }
+ if(req.method==='GET'&&url.pathname==='/media/status'){
+  res.setHeader('Content-Type','application/json');try{return res.end(JSON.stringify({...await videoStatus(),busy:mediaBusy,gpuMode:gpuActivity||'chat',progress:mediaProgress}));}catch{res.writeHead(503);return res.end(JSON.stringify({ready:false,error:'No se pudo comprobar el motor de vídeo.'}));}
+ }
+ if(req.method==='GET'&&url.pathname==='/evolution/status'){
+  res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({...await qwenEvolution.status(),autonomy:await weightAutonomy.status()}));
+ }
+ if(req.method==='POST'&&url.pathname==='/evolution/yield'){
+  res.setHeader('Content-Type','application/json');if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end(JSON.stringify({error:'Origen no autorizado'}));}
+  const yielded=autonomousWeights;if(yielded){autonomousAbort?.abort(Error('Prioridad al chat pendiente'));mediaAbort?.abort(Error('Prioridad al chat pendiente'));}
+  return res.end(JSON.stringify({yielded}));
+ }
+ if(req.method==='POST'&&url.pathname==='/evolution/train'){
+  res.setHeader('Content-Type','application/json');if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end(JSON.stringify({error:'Origen no autorizado'}));}
+  if(mediaBusy||chatBusy||busy||(extensionBusy&&!autonomousBusy)||closing){res.writeHead(429);return res.end(JSON.stringify({error:'La GPU está ocupada.'}));}
+  mediaBusy=true;gpuActivity='training';mediaAbort=new AbortController();const signal=mediaAbort.signal;
+  const close=()=>{if(!res.writableEnded)mediaAbort?.abort(Error('Experimento cancelado'));};res.on('close',close);
+  let heartbeat;const send=value=>{if(!res.destroyed&&!res.writableEnded)res.write(JSON.stringify(value)+'\n');};
+  const progress=(stage,value)=>{mediaProgress={stage,progress:Math.max(mediaProgress?.progress||0,Math.min(99,value))};send({type:'progress',...mediaProgress});};
+  try{
+   let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>1000)throw Error('Petición demasiado grande.');chunks.push(chunk);}
+   const input=JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}'),preflight=await qwenEvolution.preflight();
+   if(!preflight.experimentalProbePrepared)throw Error('El snapshot verificado o las dependencias de Qwen siguen pendientes.');
+   if(autonomousBusy){autonomousAbort?.abort(Error('Prioridad al experimento de Qwen'));await autonomousDone;}signal.throwIfAborted();
+   const candidate=input.id?{id:input.id}:await qwenEvolution.prepareCandidate();
+   res.setHeader('Content-Type','application/x-ndjson; charset=utf-8');res.flushHeaders();heartbeat=setInterval(()=>send({type:'heartbeat'}),12000);
+   const result=await gpuLease.run(()=>qwenEvolution.trainCandidate(candidate.id,{signal,onProgress:event=>{if(event.type==='progress')progress(event.stage,event.progress);}}),{signal,role:'training',onStage:progress});
+   await write('evolution-last-run.json',result);send({type:'result',...result});res.end();
+  }catch(error){if(res.headersSent){send({type:'error',error:error.message});res.end();}else{res.writeHead(400);res.end(JSON.stringify({error:error.message}));}}
+  finally{clearInterval(heartbeat);res.off('close',close);mediaBusy=false;gpuActivity=null;mediaAbort=null;mediaProgress=null;}
+  return;
+ }
+ if(req.method==='GET'&&url.pathname==='/media/artifact'){
+  const artifact=await resolveVideoArtifact(url.searchParams.get('id'));if(!artifact){res.writeHead(404);return res.end('Vídeo no disponible.');}
+  res.writeHead(200,{'Content-Type':artifact.mime,'Content-Length':artifact.bytes.length});return res.end(artifact.bytes);
+ }
+ if(req.method==='POST'&&url.pathname==='/media/generate'){
+  res.setHeader('Content-Type','application/json');
+  if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end(JSON.stringify({error:'Origen no autorizado'}));}
+  if(mediaBusy||chatBusy||busy||(extensionBusy&&!autonomousBusy)||closing){res.writeHead(429);return res.end(JSON.stringify({error:'La GPU está ocupada. El vídeo esperará a que termine la tarea actual.'}));}
+  mediaBusy=true;gpuActivity='video';mediaAbort=new AbortController();const signal=mediaAbort.signal;
+  const close=()=>{if(!res.writableEnded)mediaAbort?.abort(Error('Vídeo cancelado por el usuario'));};res.on('close',close);
+  let heartbeat;const send=value=>{if(!res.destroyed&&!res.writableEnded)res.write(JSON.stringify(value)+'\n');};
+  const progress=(stage,percent)=>{mediaProgress={stage,progress:Math.max(mediaProgress?.progress||0,Math.min(99,percent))};send({type:'progress',...mediaProgress});};
+  try{
+   let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>6000)throw Error('Descripción demasiado grande.');chunks.push(chunk);}
+   const input=JSON.parse(Buffer.concat(chunks).toString('utf8')),options=videoOptions(input.parameters||input.options||{});
+   if(typeof input.prompt!=='string'||!input.prompt.trim()||input.prompt.length>2000)throw Error('Describe el vídeo con entre 1 y 2000 caracteres.');
+   if(!(await videoStatus()).ready)throw Error('Modelos o dependencias de vídeo pendientes.');
+   if(autonomousBusy){autonomousAbort?.abort(Error('Prioridad al vídeo solicitado'));await autonomousDone;}signal.throwIfAborted();
+   res.setHeader('Content-Type','application/x-ndjson; charset=utf-8');res.flushHeaders();heartbeat=setInterval(()=>send({type:'heartbeat'}),12000);
+   const result=await gpuLease.run(async()=>{await startVideoRuntime();signal.throwIfAborted();return generateVideo(input.prompt,{...options,signal,onProgress:event=>progress(event.stage==='loading'?'video':event.stage,event.stage==='sampling'?5+85*(event.value/(event.max||options.steps)):event.stage==='encoding'?94:event.stage==='completed'?97:3)});},{signal,onStage:progress});
+   send({type:'result',...result});res.end();
+  }catch(error){if(res.headersSent){send({type:'error',error:error.message});res.end();}else{res.writeHead(400);res.end(JSON.stringify({error:error.message}));}}
+  finally{clearInterval(heartbeat);res.off('close',close);mediaAbort=null;mediaBusy=false;gpuActivity=null;mediaProgress=null;}
+  return;
+ }
  if(req.method==='GET'&&url.pathname==='/atlas-theme.css'){res.setHeader('Content-Type','text/css; charset=utf-8');return res.end(await fs.readFile(path.join(root,'atlas-theme.css'),'utf8'));}
  if(req.method==='GET'&&url.pathname==='/project/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(sitePage((await fs.readFile(path.join(root,'unified-project.html'),'utf8')).replace('__TOKEN__',token)));}
  if(req.method==='GET'&&url.pathname==='/project/status'){
@@ -359,7 +518,7 @@ server=http.createServer(async(req,res)=>{
    let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>12000)throw Error('Petición demasiado grande.');chunks.push(chunk);}
    const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
    if(!['decision','game','train','stop'].includes(input.action))throw Error('Acción desconocida.');
-   if(input.action==='train'&&(state.paused||chatBusy||extensionBusy))throw Error('Espera a que Atlas termine su tarea o reanuda el coordinador.');
+   if(input.action==='train'&&(state.paused||chatBusy||extensionBusy||mediaBusy))throw Error('Espera a que Atlas termine su tarea o reanuda el coordinador.');
    const payload=input.input&&typeof input.input==='object'&&!Array.isArray(input.input)?input.input:{};
    if(input.action==='decision')payload.question=payload.question??payload.text;
    const result=await runSecondary(input.action,payload,{signal:abort.signal});return res.end(JSON.stringify(result));
@@ -374,7 +533,7 @@ server=http.createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname==='/library/items'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(combinedLibraryItems({query:url.searchParams.get('q')||'',limit:url.searchParams.get('limit')||30,offset:url.searchParams.get('offset')||0})));}
  if(req.method==='POST'&&url.pathname==='/autonomy/run'){
   if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end();}
-  if(state.paused||autonomousBusy||chatBusy){res.writeHead(409);return res.end(JSON.stringify({error:'Atlas está pausado u ocupado.'}));}
+  if(state.paused||autonomousBusy||chatBusy||mediaBusy){res.writeHead(409);return res.end(JSON.stringify({error:'Atlas está pausado u ocupado.'}));}
   clearTimeout(autonomousTimer);autonomy.nextRun=null;await write('autonomous-review.json',autonomy);void autonomousReview();res.writeHead(202,{'Content-Type':'application/json'});return res.end(JSON.stringify({queued:true}));
  }
  if(req.method==='GET'&&url.pathname==='/games/'){
@@ -425,7 +584,7 @@ server=http.createServer(async(req,res)=>{
     await fs.writeFile(providerKeyPath,input.key,{mode:0o600});providerKey=input.key;return res.end(JSON.stringify({configured:true,route:'openrouter/free'}));
    }
    if(url.pathname==='/capabilities/build'){
-    if(extensionBusy||chatBusy)throw Error('Atlas está ocupado. Espera a que termine.');extensionBusy=true;ownsBuild=true;
+    if(extensionBusy||chatBusy||mediaBusy)throw Error('Atlas está ocupado. Espera a que termine.');extensionBusy=true;ownsBuild=true;
     const previous=input.parentId?extensions.find(x=>x.id===input.parentId):null;
     if(input.parentId&&!previous)throw Error('No existe la versión de partida.');
     const record=previous?await improveExtension(previous,input.task,chatKey,input.acceptanceTests??[]):await buildExtension(input.task,chatKey,input.acceptanceTests??[]);
@@ -479,7 +638,8 @@ server=http.createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/chat/message'){
   res.setHeader('Content-Type','application/json');
   if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end(JSON.stringify({error:'Origen no autorizado'}));}
-  if(chatBusy||(extensionBusy&&!autonomousBusy)){res.writeHead(429);return res.end(JSON.stringify({error:'Atlas ya está respondiendo o creando una herramienta. Espera a que termine.'}));}
+  if(mediaBusy&&autonomousWeights){autonomousAbort?.abort(Error('Prioridad al chat'));mediaAbort?.abort(Error('Prioridad al chat'));await mediaDone;}
+  if(chatBusy||mediaBusy||(extensionBusy&&!autonomousBusy)){res.writeHead(429);return res.end(JSON.stringify({error:mediaBusy?'La GPU está generando vídeo. Qwen volverá al terminar.':'Atlas ya está respondiendo o creando una herramienta. Espera a que termine.'}));}
   chatBusy=true;
   const requestAbort=new AbortController();
   const closeRequest=()=>{if(!res.writableEnded)requestAbort.abort(Error('Petición cancelada por el usuario'));};
@@ -503,7 +663,9 @@ server=http.createServer(async(req,res)=>{
    if(autonomousBusy){autonomousAbort?.abort(Error('Prioridad al mensaje del usuario'));await autonomousDone;}
    if(input.sharedSession===true){
     if(projectCommand(messages.at(-1).content))throw Error('Los controles del PC solo están disponibles en la interfaz local.');
-    const result=await chat({...input,tools:false,external:false,attachments:[]},[],fetch,chatKey,'',null,'',[],'',{sharedSession:true,signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined,capabilities:{localModel:chatModelName,sharedSession:true,internet:{available:true,requested:input.internet===true},tools:{available:0,requested:false},externalModels:{configured:false},selfModification:{serverCode:false,qwenWeights:false},privateMemory:false}});
+    const available=publicTools(extensions),requested=publicToolIntent(messages.at(-1).content);let publicToolRun=null;
+    if(requested&&available.length)publicToolRun=await useExtension(messages,available,chatKey,spec=>chat(spec,[],fetch,chatKey,'',null,'',[],'',{signal:requestAbort.signal,sharedSession:true,cognitiveCore}));
+    const result=await chat({...input,tools:false,external:false,attachments:[]},[],fetch,chatKey,'',publicToolRun,'',[],'',{cognitiveCore,sharedSession:true,signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined,capabilities:{localModel:chatModelName,sharedSession:true,internet:{available:true,requested:input.internet===true},tools:{available:available.length,requested,scope:'Solo funciones públicas de currículo canónico, contratos ejecutados y QuickJS aislado.'},externalModels:{configured:false},selfModification:{strategyPolicy:true,weightCandidates:true,serverCode:false,qwenWeights:false,scope:"Herramientas y políticas evolucionan con contratos; LoRA permanece candidata hasta validación."},privateMemory:false}});
     if(streaming){sendEvent({type:'result',result});return res.end();}return res.end(JSON.stringify(result));
    }
    const command=projectCommand(messages.at(-1).content);
@@ -519,11 +681,11 @@ server=http.createServer(async(req,res)=>{
    requestAbort.signal.throwIfAborted();
    if(toolRun){const runs=await read('tool-runs.json',[]);runs.push(toolRun);await write('tool-runs.json',runs.slice(-50));}
    const gameContext=gameLibraryContext(gameReferences,messages.at(-1).content);
-   const capabilities={localModel:chatModelName,internet:{available:true,requested:input.internet===true,connectivity:'Solo comprobada mediante las fuentes o errores de este turno'},tools:{available:extensions.filter(e=>e.passed).length,requested:input.tools===true,scope:'Funciones aisladas QuickJS'},localCouncil:{available:true,automatic:true,independentModels:false},autonomousReview:{enabled:autonomy.enabled!==false,paused:state.paused,completed:autonomy.history?.length||0,nextRun:autonomy.nextRun},externalModels:{configured:!!providerKey,requested:input.external===true},selfModification:{toolCandidates:true,serverCode:false,qwenWeights:false}};
+   const capabilities={localModel:chatModelName,internet:{available:true,requested:input.internet===true,connectivity:'Solo comprobada mediante las fuentes o errores de este turno'},tools:{available:extensions.filter(e=>e.passed).length,requested:input.tools===true,scope:'Funciones aisladas QuickJS'},localCouncil:{available:true,automatic:true,independentModels:false},autonomousReview:{enabled:autonomy.enabled!==false,paused:state.paused,completed:autonomy.history?.length||0,nextRun:autonomy.nextRun},externalModels:{configured:!!providerKey,requested:input.external===true},selfModification:{toolCandidates:true,strategyPolicy:true,weightCandidates:true,serverCode:false,qwenWeights:false,scope:"Los candidatos LoRA se entrenan aparte; Qwen activo conserva sus pesos base."}};
    capabilities.repositoryLibrary={...librarySummary().counts,reflections:repositoryNotes.length};
    capabilities.integratedLab={available:(await secondaryStatus()).available,route:'/project/',commands:['/atlas estado','/prototipo <idea>','/laboratorio <pregunta>','/atlas aprender','/atlas parar'],scope:'Laboratorio CPU del modelo pequeño de decisiones y prototipos Canvas 2D por reglas; no cambia Qwen'};
    let importedMemory=[];try{importedMemory=await searchSecondaryMemory(memoryQuery(messages.at(-1).content));}catch(error){event('imported_memory_error',error.message);}
-   const result=await chat(input,documents,fetch,chatKey,providerKey,toolRun,mandate,collaborations,gameContext,{capabilities,importedMemory,repositoryNotes:matchingRepositoryNotes(messages.at(-1).content),signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined});
+   const result=await chat(input,documents,fetch,chatKey,providerKey,toolRun,mandate,collaborations,gameContext,{cognitiveCore,capabilities,importedMemory,repositoryNotes:matchingRepositoryNotes(messages.at(-1).content),signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined});
    if(result.collaborators?.length){collaborations.push(...result.collaborators.map(peer=>({at:new Date().toISOString(),model:peer.model,question:messages.at(-1).content,critique:peer.text,answer:result.answer,status:'spiral-reviewed-unverified',reviewedBy:'Qwen local second pass',trained:false,weightUpdate:false})));collaborations=collaborations.slice(-100);await write('collaborations.json',collaborations);}
    if(streaming){sendEvent({type:'result',result});return res.end();}
    return res.end(JSON.stringify(result));
@@ -568,6 +730,9 @@ server=http.createServer(async(req,res)=>{
  if(req.method==='POST'&&['/pause','/resume','/stop'].includes(url.pathname)){
   if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end();}
   state.paused=url.pathname!=='/resume';phase=state.paused?'Pausado':'Preparado';clearTimeout(timer);
+  if(state.paused)mediaAbort?.abort(Error('Proceso detenido por el usuario'));
+  if(state.paused)coreAbort?.abort(Error('Proceso detenido por el usuario'));
+  if(state.paused)autonomousAbort?.abort(Error('Proceso detenido por el usuario'));
   if(state.paused)await runSecondary('stop').catch(error=>event('lab_stop_error',error.message));
   if(url.pathname==='/stop')await fs.writeFile(path.join(data,'service.stop'),new Date().toISOString());
   else if(url.pathname==='/resume')await fs.rm(path.join(data,'service.stop'),{force:true});
@@ -588,8 +753,10 @@ async function shutdown(){
  closing=true;clearTimeout(timer);clearTimeout(autonomousTimer);clearTimeout(libraryTimer);server.close();
  libraryAbort?.abort(Error('Reinicio del coordinador'));
  autonomousAbort?.abort(Error('Reinicio del coordinador'));
+ mediaAbort?.abort(Error('Reinicio del coordinador'));
+ coreAbort?.abort(Error('Reinicio del coordinador'));
  await runSecondary('stop').catch(()=>{});
- while(busy||autonomousBusy||chatBusy||extensionBusy||libraryBusy)await new Promise(r=>setTimeout(r,100));
+ while(busy||autonomousBusy||chatBusy||extensionBusy||libraryBusy||mediaBusy)await new Promise(r=>setTimeout(r,100));
  await persist();await fs.rm(path.join(data,'service.pid'),{force:true});process.exit(0);
 }
 process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);

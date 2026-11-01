@@ -5,7 +5,7 @@ import styles from './cloud-chat.module.css';
 
 type Message={id?:string;role:'user'|'assistant';content:string;createdAt?:string};
 type Conversation={id:string;title:string;updatedAt?:string};
-type MotorStatus={online:boolean;modelName?:string;lastSeen?:string|null;sessionRequired?:boolean};
+type MotorStatus={online:boolean;modelName?:string;lastSeen?:string|null;sessionRequired?:boolean;capabilities?:{gpuMode?:string}};
 type JobStatus='queued'|'pending'|'running'|'completed'|'failed'|'cancelled'|'reconnecting';
 type Job={id:string;status:JobStatus};
 type JobResult={status:JobStatus;conversationId?:string;result?:{answer?:string;modelName?:string;model?:string};error?:string};
@@ -191,17 +191,17 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
  function keyDown(event:KeyboardEvent<HTMLTextAreaElement>){if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void submit();}}
  function usePrompt(text:string){setDraft(text);inputRef.current?.focus();}
  async function share(){try{await navigator.clipboard.writeText(location.origin+'/');setCopied(true);setTimeout(()=>setCopied(false),2200);}catch{setNotice('Puedes compartir la dirección de esta página. Cada persona tendrá su propio historial.');}}
- const motorLabel=!motorRead?'Comprobando conexión':motor.online?'Tu PC está conectado':'Esperando a tu PC';
+ const motorLabel=!motorRead?'Comprobando conexión':!motor.online?'Esperando a tu PC':motor.capabilities?.gpuMode==='training'?'GPU · candidato Qwen':motor.capabilities?.gpuMode==='video'?'GPU · generando vídeo':'Tu PC está conectado';
  const statusText=submitting?'Guardando tu mensaje en la nube…':loadingThread?'Abriendo conversación…':job?.status==='reconnecting'?'Conexión interrumpida':job?.status==='running'?'Qwen está preparando tu respuesta…':job?'Mensaje en cola · esperando al motor local':notice;
  const firstName=displayName.split(/\s|@/)[0]||'Tu espacio';
 
  return <div className={styles.shell}>
   <button type="button" className={`${styles.backdrop} ${sidebarOpen?styles.backdropOpen:''}`} onClick={()=>setSidebarOpen(false)} aria-label="Cerrar navegación" tabIndex={sidebarOpen?0:-1}/>
   <aside className={`${styles.sidebar} ${sidebarOpen?styles.sidebarOpen:''}`} aria-label="Tu espacio de Atlas">
-   <a href="/" className={styles.brand}><Eye/><span>atlas<small>Una perspectiva, con memoria.</small></span></a>
+   <a href="/" target="_top" className={styles.brand}><Eye/><span>atlas<small>Una perspectiva, con memoria.</small></span></a>
    <button className={styles.newChat} type="button" onClick={newConversation} disabled={submitting}><Icon name="plus" size={17}/><span>Nueva conversación</span><span className={styles.newArrow}>↗</span></button>
    <div className={styles.sideLabel}>TU ESPACIO</div>
-   <nav className={styles.navigation} aria-label="Navegación principal"><a className={styles.activeNav} href="/"><Icon name="chat" size={17}/>Conversar<span>AHORA</span></a><a href="/origen"><Icon name="branch" size={17}/>Origen y herramientas<Icon name="external" size={13}/></a></nav>
+   <nav className={styles.navigation} aria-label="Navegación principal"><a className={styles.activeNav} href="/chat/"><Icon name="chat" size={17}/>Conversar<span>AHORA</span></a><a href="/" target="_top"><Icon name="branch" size={17}/>Volver a la casa<Icon name="external" size={13}/></a></nav>
    <section className={styles.archive} aria-label="Conversaciones en la nube"><div className={styles.archiveHeading}><span>CONVERSACIONES</span><span>EN LA NUBE</span></div>
     {!signedIn?<p className={styles.archiveEmpty}>Inicia sesión para guardar tus conversaciones y abrirlas desde otros dispositivos.</p>:<>
      {archiveLoading&&!conversations.length?<p className={styles.archiveEmpty}>Cargando tus conversaciones…</p>:null}

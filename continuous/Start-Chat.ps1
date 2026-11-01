@@ -1,4 +1,9 @@
 ﻿$ErrorActionPreference = 'Stop'
+$atlasModelMutex=New-Object System.Threading.Mutex($false,'Local\AtlasQwenModelStart')
+$atlasModelOwnsMutex=$false
+try {
+try{$atlasModelOwnsMutex=$atlasModelMutex.WaitOne(180000)}catch [Threading.AbandonedMutexException]{$atlasModelOwnsMutex=$true}
+if(!$atlasModelOwnsMutex){throw 'Otra operación está iniciando el modelo local.'}
 $atlasChatRoot = Split-Path $PSScriptRoot -Parent
 $atlasServer = Join-Path $atlasChatRoot 'llama\llama-server.exe'
 $atlasData = Join-Path $PSScriptRoot 'data'
@@ -36,3 +41,7 @@ foreach ($candidate in $atlasCandidates) {
     if ($candidate.Path -eq $atlasNine) { continue }
 }
 throw 'No se pudo iniciar ningún modelo local de Atlas. Revisa chat-stderr.log.'
+} finally {
+ if($atlasModelOwnsMutex){try{$atlasModelMutex.ReleaseMutex()}catch{}}
+ $atlasModelMutex.Dispose()
+}

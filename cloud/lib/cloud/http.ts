@@ -2,9 +2,10 @@ import {env} from 'cloudflare:workers';
 import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {allowedOrigin} from '@/lib/server-state';
 import {CloudQueueError,createCloudQueue} from './queue.mjs';
+import {generateProject} from '@/lib/studio/generator';
 const headers={'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'};
 export function cloudJson(value:unknown,status=200){return Response.json(value,{status,headers});}
-export function queue(){const bindings=env as unknown as {DB?:D1Database};if(!bindings.DB)throw new CloudQueueError('El almacenamiento de Atlas no está disponible.',503);return createCloudQueue(bindings.DB);}
+export function queue(){const bindings=env as unknown as {DB?:D1Database};if(!bindings.DB)throw new CloudQueueError('El almacenamiento de Atlas no está disponible.',503);return createCloudQueue(bindings.DB,{compileCreative:generateProject});}
 export function cloudError(error:unknown){if(error instanceof CloudQueueError)return cloudJson({error:error.message},error.status);return cloudJson({error:'Atlas no pudo completar esta operación. Inténtalo de nuevo.'},503);}
 export async function cloudUser(request?:Request){const user=await getChatGPTUser();if(!user)throw new CloudQueueError('Inicia sesión para conversar con Atlas.',401);if(request&&!allowedOrigin(request))throw new CloudQueueError('Origen no autorizado.',403);return user;}
 export async function body(request:Request,maxBytes=48000):Promise<Record<string,unknown>>{

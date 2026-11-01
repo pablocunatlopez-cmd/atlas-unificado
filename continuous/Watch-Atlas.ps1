@@ -32,6 +32,16 @@ function Start-ServiceProcess {
     Start-Process -FilePath $node -ArgumentList ('"' + $service + '"') -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput (Join-Path $root 'stdout.log') -RedirectStandardError (Join-Path $root 'stderr.log') | Out-Null
     Write-WatchLog 'Coordinador local iniciado por el supervisor.'
 }
+function Test-VideoGpuLease {
+    try {
+        $lease=Get-Content -LiteralPath (Join-Path $data 'gpu-lease.json') -Raw | ConvertFrom-Json
+        $recorded=[int](Get-Content -LiteralPath $servicePidFile -Raw)
+        $utcMilliseconds=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+        if($lease.role -notin @('video','training') -or $lease.ownerPid -ne $recorded -or $lease.expiresAt -le $utcMilliseconds){return $false}
+        $owner=Get-CimInstance Win32_Process -Filter ("ProcessId = {0}" -f $recorded)
+        return $owner -and $owner.ExecutablePath -eq $node -and $owner.CommandLine.Contains($service)
+    } catch {return $false}
+}
 
 $serviceFailures = 0
 $modelFailures = 0
@@ -58,6 +68,7 @@ try {
             }
         }
 
+        if(Test-VideoGpuLease){$modelFailures=0;Start-Sleep -Seconds 5;continue}
         $modelReady = $false
         try { $null = Invoke-RestMethod -Uri 'http://127.0.0.1:11435/health' -TimeoutSec 3; $modelReady = $true } catch {}
         if ($modelReady) { $modelFailures = 0 }

@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {createGpuLease} from './gpu-lease.mjs';
+async function setup(t,overrides={}){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'atlas-gpu-'));t.after(()=>fs.rm(directory,{recursive:true,force:true}));const calls=[];const lease=createGpuLease({directory,suspend:async()=>calls.push('suspend'),release:async()=>calls.push('release'),restore:async()=>calls.push('restore'),...overrides});return {lease,calls,directory};}
+test('publishes live ownership before unloading and restores after release on failure',async t=>{const {lease,calls,directory}=await setup(t);await assert.rejects(lease.run(async()=>{const record=JSON.parse(await fs.readFile(path.join(directory,'gpu-lease.json')));assert.equal(record.ownerPid,process.pid);assert.ok(record.expiresAt>Date.now());throw Error('render failed');}),/render failed/);assert.deepEqual(calls,['suspend','release','restore']);await assert.rejects(fs.access(path.join(directory,'gpu-lease.json')));assert.equal(lease.busy,false);});
+test('concurrent reservation fails and cancellation still releases',async t=>{const {lease,calls}=await setup(t);let finish;const controller=new AbortController();const running=lease.run(async()=>new Promise(resolve=>finish=resolve),{signal:controller.signal});while(!finish)await new Promise(r=>setImmediate(r));await assert.rejects(lease.run(async()=>{}),/reservada/);controller.abort();finish();await running;assert.deepEqual(calls,['suspend','release','restore']);});
+test('stop intent skips restore; failed release never reloads Qwen',async t=>{const first=await setup(t,{shouldRestore:()=>false});await first.lease.run(async()=>{});assert.deepEqual(first.calls,['suspend','release']);const second=await setup(t,{release:async()=>{throw Error('context still alive');}});await assert.rejects(second.lease.run(async()=>{}),/context still alive/);assert.deepEqual(second.calls,['suspend']);assert.ok(JSON.parse(await fs.readFile(path.join(second.directory,'gpu-lease.json'))).expiresAt>Date.now());});
