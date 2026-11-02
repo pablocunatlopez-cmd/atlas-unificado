@@ -4,6 +4,8 @@ import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {executePure} from './extensions.mjs';
 import {getAutonomousTask} from './autonomy-curriculum.mjs';
+import {jsonPatchOracle,generateJsonPatchInputs,jsonPatchCoverage} from './capability-json-patch.mjs';
+import {csvOracle,generateCsvCases} from './capability-csv.mjs';
 
 const FIELDS=['O','A','X','R','T','I','C','E','M','P','F','Σ'];
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -108,7 +110,9 @@ const GENERATORS={
   return [{S:full},{S:missing},{S:{...copy(full),['extra_'+seed.toString(36)]:n,unknown:n+1}},{S:n},{S:[n]},{S:'symbols_'+seed.toString(36)},{S:{[FIELDS[integer(r,0,FIELDS.length-1)]]:n}},{S:{...copy(full),constructor:'data_'+n,toString:null}}];
  },
 };
-const ORACLES={'dag-dependency-plan':dagOracle,'json-pointer-resolve':pointerOracle,'numeric-statistics':statisticsOracle,'stable-dedupe':dedupeOracle,'merge-intervals':intervalsOracle,'lor-omega-schema':lorOracle};
+GENERATORS['json-patch-apply']=(_random,seed)=>generateJsonPatchInputs(seed);
+GENERATORS['csv-parse']=(_random,seed)=>generateCsvCases(seed);
+const ORACLES={'dag-dependency-plan':dagOracle,'json-pointer-resolve':pointerOracle,'numeric-statistics':statisticsOracle,'stable-dedupe':dedupeOracle,'merge-intervals':intervalsOracle,'lor-omega-schema':lorOracle,'json-patch-apply':jsonPatchOracle,'csv-parse':csvOracle};
 // A seed changes values inside these patterns, never their coverage version.
 // Change this manifest only when the fixed oracle/pattern coverage changes.
 export const EXPERIENCE_COVERAGE_VERSION='bounded-json-patterns-v1';
@@ -118,7 +122,9 @@ const COVERAGE={
  'numeric-statistics':['odd','even','numeric-order','duplicates','negative','fractions','invalid-type','sum-overflow'],
  'stable-dedupe':['order','distinct-types','falsy','special-keys','unicode','fractions','invalid-member','invalid-container'],
  'merge-intervals':['overlap','contained','touching','reversed','points','fractions','invalid-number','invalid-pair'],
- 'lor-omega-schema':['complete','missing','unknown','number','array','string','partial','own-special-keys']
+ 'lor-omega-schema':['complete','missing','unknown','number','array','string','partial','own-special-keys'],
+ 'json-patch-apply':jsonPatchCoverage,
+ 'csv-parse':['quoted-separator','escaped-multiline','empty-fields-and-bom','unquoted-quote','unclosed-quote','trailing-quoted-data','invalid-type-or-delimiter','row-or-column-limit']
 };
 function baseCoverage(taskId){
  if(!Object.hasOwn(COVERAGE,taskId))throw Error('Familia de experiencia no admitida.');

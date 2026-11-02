@@ -1,6 +1,6 @@
-# Publicación vigente verificada · 1 de noviembre de 2026
+# Publicación vigente verificada · 2 de noviembre de 2026
 
-Sites público V17, fuente `f89a17425b72ac792be2149b9f6d9ecc6cae419a`, publicado el 1 de noviembre a las 21:05:41 UTC. Dirección principal: https://atlas-personal.pablo-cunatlopez.chatgpt.site/ ; conversación: /chat/ ; actividad: /actividad/ . La inferencia sigue en el PC mediante el puente saliente; cambiar la IP del teléfono no exige acceder a 127.0.0.1.
+Sites público V18, fuente `5d179fa2ceda4370e76af8797c90d504783d75a4`, publicado el 2 de noviembre a las 07:40:42 UTC. Dirección principal: https://atlas-personal.pablo-cunatlopez.chatgpt.site/ ; conversación: /chat/ ; actividad: /actividad/ . La inferencia sigue en el PC mediante el puente saliente; cambiar la IP del teléfono no exige acceder a 127.0.0.1.
 
 La casa muestra diez habitantes de cuatro tipos con gestos ligados a procesos recientes y marcas tomadas del contador real de cambios aceptados. Las etiquetas se limitan a 220 px al acercarse; se comprobaron a 390×844. La vista móvil se probó en un navegador del PC; no es una medición de rendimiento de un iPhone.
 
@@ -9,6 +9,10 @@ El chat recibe la identidad y el inventario del programa completo. La petición 
 La guía `DIRECCIONES_ATLAS_2026-11-01.md` se incorpora al planificador y a conversaciones relevantes. El coordinador excluye nuevos lotes con la misma fuente/cobertura tras tres lotes completos sin contradicciones; las funciones del chat siguen disponibles. Esta saturación delimita presupuesto y no demuestra corrección universal. La ampliación a nuevas clases necesita evidencia y ejecutores verificables.
 
 La exportación privada de código quedó sincronizada en GitHub, revisión `ac08d7b0d879aaa5f9ea05a1426129bcbe1cd7f3`: 545 archivos, hashes de los 545 blobs contrastados y escaneo sin hallazgos. Pasaron 395 pruebas Node del núcleo y 71 de la web. El reinicio final cargó la guía revisada y el ledger persistente; se comprobó Qwen saludable y la espiral habilitada, sin pausa. Capturas de producción: `verification/atlas-casa-v17.png` y `verification/atlas-casa-v17-movil.png`. Esta revisión Git incluye cambios posteriores del coordinador; el commit de Sites anterior identifica la interfaz publicada.
+
+El 2 de noviembre quedó activo el rescate de búsquedas mediante referencias curadas y la memoria local de fuentes entre experiencias. Se verificó la lectura real de documentación de Three.js, su conservación y recuperación, así como la memoria cargada por el planificador tras reiniciar. Las consultas guardan causa y retryAt y omiten otra reflexión de Qwen cuando no hubo lectura nueva. Ver RECUPERACION_EVIDENCIA_2026-11-02.md. La nueva revisión privada de GitHub es `26bf8cfb8bee2faf6a5a876f2fff15e30037f031`, con 550 blobs comprobados y cero hallazgos de saneado; pasan 417/417 pruebas del núcleo. La interfaz Sites sigue siendo V17, sin cambios de frontend en esta entrega. El chat publicado se comprobó conectado al PC.
+
+La entrega V18 amplía el catálogo cerrado a ocho familias de contratos y añade ejemplos de JSON Patch y CSV en Actividad. Solo se muestran como utilizables las candidatas que el PC haya aprobado; disponer del contrato no implica tener la función aprobada. El selector del chat admite hasta tres ejecuciones encadenadas, conserva la petición admitida completa y valida todo el plan antes de QuickJS. Las respuestas de herramientas canónicas conservan el JSON medido sin otra redacción del modelo. La comprobación cloud pasó 71/71, TypeScript y build de producción.
 
 Las publicaciones y verificaciones siguientes se conservan como historia; no sustituyen este estado de entrega.
 

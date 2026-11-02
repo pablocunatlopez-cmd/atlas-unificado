@@ -142,3 +142,11 @@ test('unbacked stored counters cannot fabricate saturation and invalid legacy ba
  const legacy={...stored,coverageLedger:undefined};legacy.jobs[0].evidenceHash='0'.repeat(64);await fs.writeFile(file,JSON.stringify(legacy));
  const repaired=createExperienceLab({directory,execute:async()=>assert.fail('Metadata only')});const verified=await repaired.eligibility({taskId,tools});assert.equal(verified.reason,'ready');assert.equal(verified.successfulBatches,0);
 });
+
+test('new data capabilities add independently evaluated, bounded coverage without changing the old families',()=>{
+ for(const taskId of ['json-patch-apply','csv-parse'])for(const seed of [0,1,0xc0de,4294967295]){
+  const cases=generateExperienceCases(taskId,seed);assert.equal(cases.length,8);assert.equal(new Set(cases.map(item=>item.id)).size,8);assert.deepEqual(cases,generateExperienceCases(taskId,seed));
+  assert.notEqual(experienceEvidenceHash(taskId,cases),experienceEvidenceHash(taskId,generateExperienceCases(taskId,(seed+1)>>>0)));
+  const fixed=getAutonomousTask(taskId).acceptanceTests;assert.ok(cases.every(item=>!fixed.some(prior=>JSON.stringify([prior.input,prior.expected])===JSON.stringify([item.input,item.expected]))));
+ }
+});

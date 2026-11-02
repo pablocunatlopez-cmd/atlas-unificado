@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {formatVerifiedToolAnswer} from './verified-tool-answer.mjs';
+import {formatVerifiedToolAnswer,formatExecutedToolAnswer} from './verified-tool-answer.mjs';
+import {LEARNING_CATALOG} from './learning-status.mjs';
 
 const run=(tasks,order,blocked=[],extra={})=>({used:true,curriculumTaskId:'dag-dependency-plan',input:{tasks},result:{order,blocked},...extra});
 function payload(answer){const lines=answer.split('\n');assert.match(lines[2],/^`{3,}json$/);assert.equal(lines.at(-1),lines[2].slice(0,-4));return JSON.parse(lines.slice(3,-1).join('\n'));}
@@ -66,4 +67,39 @@ test('formatting has bounded input and output and never mutates the measured run
  const oversized=run([{id:'task',dependsOn:[]}],['task']);oversized.input.extra='x'.repeat(30000);assert.equal(formatVerifiedToolAnswer(oversized),null);
  const cyclic=run([{id:'task',dependsOn:[]}],['task']);cyclic.input.self=cyclic.input;assert.equal(formatVerifiedToolAnswer(cyclic),null);
  const names=Array.from({length:80},(_,i)=>('task-'+i+'-').padEnd(205,'x'));const large=run(names.map(id=>({id,dependsOn:[]})),names);assert.equal(formatVerifiedToolAnswer(large),null);
+});
+
+const statistics={used:true,toolId:'PRIVATE_STATS_ID',name:'PRIVATE_STATS_NAME',curriculumTaskId:'numeric-statistics',input:{values:[1,2,4],privateNote:'PRIVATE_INPUT_NOTE'},result:{count:3,sum:7,min:1,max:4,mean:7/3,median:2},at:'2026-11-02T09:00:00.000Z'};
+function executedPayload(answer){const lines=answer.split('\n'),start=lines.findIndex(line=>/^`{3,}json$/.test(line));assert.ok(start>=0);assert.equal(lines.at(-1),lines[start].slice(0,-4));return JSON.parse(lines.slice(start+1,-1).join('\n'));}
+function pipeline(){
+ const first={step:1,toolId:'PRIVATE_DEDUPE_ID',name:'PRIVATE_DEDUPE_NAME',curriculumTaskId:'stable-dedupe',inputSource:'literal',input:{values:[1,1,2,4]},result:{values:[1,2,4]},status:'completed',at:'PRIVATE_TIME'};
+ const last={step:2,...statistics,inputSource:'previous',input:{values:[1,2,4]},status:'completed'};
+ return {...statistics,input:last.input,steps:[first,last]};
+}
+
+test('canonical statistics render their exact measured JSON with a public name and no private metadata',()=>{
+ const answer=formatExecutedToolAnswer(statistics);assert.deepEqual(executedPayload(answer),statistics.result);assert.match(answer,/Resultado de ejecución/);assert.ok(answer.includes(LEARNING_CATALOG['numeric-statistics'].name));assert.doesNotMatch(answer,/PRIVATE_|2026-11|valores|probado para todo|mejora/i);assert.deepEqual(statistics.input,{values:[1,2,4],privateNote:'PRIVATE_INPUT_NOTE'});
+});
+
+test('a valid pipeline shows the canonical step names and exact final result without reprinting inputs',()=>{
+ const value=pipeline(),before=structuredClone(value),answer=formatExecutedToolAnswer(value);assert.deepEqual(executedPayload(answer),statistics.result);assert.match(answer,/Pasos ejecutados/);assert.ok(answer.includes('1. '+LEARNING_CATALOG['stable-dedupe'].name));assert.ok(answer.includes('2. '+LEARNING_CATALOG['numeric-statistics'].name));assert.doesNotMatch(answer,/PRIVATE_|2026-11|"values"/);assert.deepEqual(value,before);
+});
+
+test('partial, unknown, inconsistent or fabricated pipeline records never become an execution answer',()=>{
+ for(const changes of [{used:false},{used:'true'},{partial:true},{failedStep:2},{error:'failed'},{curriculumTaskId:'custom-tool'},{toolId:null},{steps:[]},{steps:null},{result:undefined}])assert.equal(formatExecutedToolAnswer({...statistics,...changes}),null);
+ for(const alter of [
+  value=>value.steps[0].status='failed',value=>value.steps[0].curriculumTaskId='custom-tool',value=>value.steps[0].step=2,value=>value.steps[1].toolId='DIFFERENT_FINAL_ID',value=>value.steps[1].result={count:99},value=>value.steps[1].input={values:[999]},value=>value.steps[0].inputSource='previous',value=>value.steps[1].inputSource='previous.values',value=>value.steps.push(...value.steps)
+ ]){const value=pipeline();alter(value);assert.equal(formatExecutedToolAnswer(value),null);}
+});
+
+test('single DAG answers retain their existing correctness checks while multi-step DAG results retain provenance',()=>{
+ const dag=run(graph,['build','docs','test','release'],[],{toolId:'PRIVATE_DAG_ID'});assert.equal(formatExecutedToolAnswer(dag),formatVerifiedToolAnswer(dag));assert.equal(formatExecutedToolAnswer({...dag,result:{order:['test'],blocked:[]}}),null);
+ const input={tasks:[{id:'one',dependsOn:[]}]},value={used:true,toolId:'PRIVATE_DAG_ID',curriculumTaskId:'dag-dependency-plan',input,result:{order:['one'],blocked:[]},steps:[{step:1,toolId:'PRIVATE_PREP_ID',curriculumTaskId:'json-pointer-resolve',inputSource:'literal',input:{value:'PRIVATE_INPUT'},result:input,status:'completed'},{step:2,toolId:'PRIVATE_DAG_ID',curriculumTaskId:'dag-dependency-plan',inputSource:'previous',input,result:{order:['one'],blocked:[]},status:'completed'}]};
+ const answer=formatExecutedToolAnswer(value);assert.deepEqual(executedPayload(answer),value.result);assert.match(answer,/Pasos ejecutados/);assert.ok(answer.includes(LEARNING_CATALOG['dag-dependency-plan'].name));assert.doesNotMatch(answer,/PRIVATE_|"tasks"/);
+});
+
+test('executed JSON remains safely fenced and bounded without coercing non-JSON values',()=>{
+ const result={found:true,value:'line\n```````\n[link](https://example.org) "quoted"'},value={used:true,toolId:'PRIVATE_POINTER',curriculumTaskId:'json-pointer-resolve',result},answer=formatExecutedToolAnswer(value);assert.deepEqual(executedPayload(answer),result);assert.ok(answer.includes('````````json'));
+ for(const result of [Infinity,undefined,{number:NaN},{extra:undefined},{value:BigInt(3)},{large:'x'.repeat(16000)}])assert.equal(formatExecutedToolAnswer({...statistics,result}),null);
+ const cyclic={};cyclic.self=cyclic;assert.equal(formatExecutedToolAnswer({...statistics,result:cyclic}),null);
 });

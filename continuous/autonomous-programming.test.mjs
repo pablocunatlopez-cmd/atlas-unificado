@@ -30,7 +30,7 @@ function approvedLor(){
 // These regressions exercise the older interval curriculum. New priorities
 // have recent failure fixtures here, preserving each original history intact.
 function reviewCapabilities(extensions,key,options={}){
- const newerHistory=['json-pointer-resolve','dag-dependency-plan'].map(taskId=>({taskId,passed:false,at:new Date().toISOString()}));
+ const newerHistory=['json-pointer-resolve','dag-dependency-plan','json-patch-apply','csv-parse'].map(taskId=>({taskId,passed:false,at:new Date().toISOString()}));
  return reviewAllCapabilities(extensions,key,{...options,history:[...newerHistory,...(options.history||[])]});
 }
 

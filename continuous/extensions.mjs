@@ -19,16 +19,20 @@ export function validateAcceptance(tests){
  if(!Array.isArray(tests)||tests.length>8||JSON.stringify(tests).length>12000||tests.some(t=>!t||!Object.hasOwn(t,'input')||!Object.hasOwn(t,'expected')))throw Error('Los casos de aceptación deben ser hasta 8 objetos con input y expected.');
  return structuredClone(tests);
 }
-export async function buildExtension(task,key,acceptance=[],generate=chat,{format='json',name='Herramienta local'}={}){
+export async function buildExtension(task,key,acceptance=[],generate=chat,{format='json',name='Herramienta local',initialSource,initialFeedback}={}){
  if(typeof task!=='string'||!task.trim()||task.length>4000)throw Error('Describe la herramienta en hasta 4000 caracteres');
  const acceptanceTests=validateAcceptance(acceptance),attempts=[];
  if(format==='code'&&!acceptanceTests.length)throw Error('La programación directa requiere casos de aceptación externos.');
+ if(initialSource!==undefined&&(format!=='code'||typeof initialSource!=='string'||!initialSource.trim()||initialSource.length>16000))throw Error('initialSource requiere modo code y una cadena no vacía de hasta 16.000 caracteres.');
+ if(initialFeedback!==undefined&&(format!=='code'||typeof initialFeedback!=='string'||initialFeedback.length>3000))throw Error('initialFeedback requiere modo code y una cadena de hasta 3.000 caracteres.');
  const prompt='Crea una extensión de Atlas como función JavaScript pura transform(input). Escribe source en UNA SOLA LÍNEA, sin saltos de línea ni secuencias de escape para saltos. No imports, no exports, no fetch, no procesos, no archivos, no temporizadores. Solo cálculo, texto o JSON. Devuelve SOLO JSON válido con {"name":"nombre", "source":"function transform(input) { ... }", "tests":[{"input":...,"expected":...}]}. Añade 2 a 4 ejemplos concretos. No prometas acceso web ni modificar el servidor. Petición: '+task;
  const codePrompt='Crea function transform(input) en JavaScript como función pura de JSON. Devuelve SOLO el código JavaScript completo, legible, sin explicaciones, imports, exports, red, archivos ni procesos. No lo envuelvas en JSON. Revisa entradas vacías, validación de tipos y casos límite. Petición: '+task;
- let feedback='',record,lastSource='';
+ // A measured candidate from an earlier build can seed the first repair. The
+ // seed is context, never an approval; only newly executed contracts can pass.
+ let feedback=initialFeedback||'',record,lastSource=initialSource||'';
  for(let attempt=1;attempt<=3;attempt++){
   const messages=format==='code'&&lastSource?[{role:'user',content:codePrompt.slice(0,5000)},{role:'assistant',content:lastSource},{role:'user',content:'Corrige la implementación anterior. Mantén la interfaz y todos los requisitos originales. Estos son fallos de ejecución reales, no opiniones: '+feedback.slice(-3000)+'\nDevuelve solo el código completo.'}]:[{role:'user',content:(format==='code'?codePrompt:prompt).slice(0,5000)+feedback.slice(-1000)}];
-  const answer=await generate({messages,json:format!=='code',...(format==='code'?{refute:true,toolRepair:true}:{})},[],fetch,key);
+  const answer=await generate({messages,json:format!=='code',...(format==='code'?{refute:false,toolRepair:true,contractRefutation:true}:{})},[],fetch,key);
   try{
    const raw=answer.answer.trim().replace(format==='code'?/^```(?:javascript|js)?\s*/i:/^```(?:json)?\s*/,'').replace(/\s*```$/,'');
    const spec=format==='code'?{name,source:raw,tests:acceptanceTests.slice(0,2)}:JSON.parse(raw);

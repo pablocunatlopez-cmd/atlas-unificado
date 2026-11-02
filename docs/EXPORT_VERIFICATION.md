@@ -4,17 +4,25 @@ Verificación del 2 de noviembre de 2026. Este árbol contiene código, configur
 
 ## Publicación web comprobada
 
-La web corresponde a Sites V17, fuente `f89a17425b72ac792be2149b9f6d9ecc6cae419a`, publicada el 2026-11-01 a las 21:05:41 UTC. La casa tiene diez salas y residentes humanos, robots, animales y aves. Sus gestos dependen de actividad reciente comunicada por el PC; las marcas de aprendizaje dependen del contador de cambios aceptados. Se comprobó el sitio publicado en escritorio y a 390×844, incluida la legibilidad de las etiquetas y el animal del laboratorio.
+La web corresponde a Sites V18, fuente `5d179fa2ceda4370e76af8797c90d504783d75a4`, publicada el 2026-11-02 a las 07:40:42 UTC. La casa tiene diez salas y residentes humanos, robots, animales y aves. Sus gestos dependen de actividad reciente comunicada por el PC; las marcas de aprendizaje dependen del contador de cambios aceptados. Se comprobó el sitio publicado en escritorio y a 390×844, incluida la legibilidad de las etiquetas y el animal del laboratorio.
 
 El chat comparte identidad e inventario de capacidades con el coordinador: reconoce la casa virtual y la adaptación de ERAS, las funciones de música y 3D, y los límites de modificación del programa. Una petición explícita de mejorarse puede encolar una revisión real. Encolarla no acredita una mejora terminada.
 
 ## Pruebas desde este árbol
 
-- 417/417 pruebas Node del núcleo aprobadas mediante `node scripts/test-source.mjs`. Incluyen aislamiento QuickJS, contratos, cancelación, espiral, persistencia de contraejemplos, saturación de cobertura, identidad, inventario, guía curada, MCP documental, lectura directa de referencias y memoria de fuentes entre experiencias.
-- La comprobación cloud de Sites V17 permanece en 71/71 pruebas aprobadas; esos módulos no cambiaron en esta entrega. Incluye rutas, cola, privacidad, saneado de telemetría, planes, navegación, geometría, habitantes y música. Sus dependencias de framework permanecen excluidas del repositorio.
+- 488/488 pruebas Node del núcleo aprobadas mediante `node scripts/test-source.mjs`. Incluyen aislamiento QuickJS, contratos, cancelación, espiral, persistencia de contraejemplos, saturación de cobertura, identidad, inventario, guía curada, MCP documental, lectura directa de referencias y memoria de fuentes entre experiencias.
+- La comprobación cloud de Sites V17 permanece en 71/71 pruebas aprobadas; se reejecutó tras ampliar las etiquetas y los ejemplos de las dos familias nuevas, junto con TypeScript y el build de producción. Incluye rutas, cola, privacidad, saneado de telemetría, planes, navegación, geometría, habitantes y música. Sus dependencias de framework permanecen excluidas del repositorio.
 - La espera de la prueba de parada asíncrona del laboratorio secundario se corrigió para comprobar el estado terminal durante un plazo explícito. No cambió el comportamiento de producción.
 
 Las pruebas de distribución no iniciaron otro coordinador, modelo ni entrenamiento GPU. Las dependencias del framework web se instalan por separado según su lockfile.
+
+## Composición y reparación
+
+La composición admite hasta tres funciones aisladas. Las peticiones explícitas con un solo JSON se dirigen sin inferencia cuando el contrato es inequívoco; el resto conserva el planificador Qwen. Tres comprobaciones reales del chat compartido local pasaron con resultados exactos y cero llamadas al modelo.
+
+La reparación conserva la implementación con mejores resultados medidos y sus contraejemplos. Un fallo de confirmación puede alimentar automáticamente hasta tres rondas, sin pedir otro turno al usuario. Se evita otra reescritura verbal antes de la ejecución física del código. Nuevos contratos CSV y JSON Patch no se presentan como herramientas aprobadas hasta superar sus comprobaciones. Sus ensayos negativos se conservan sin activar.
+
+Ver `continuous/CAPACIDADES_Y_COMPOSICION_2026-11-02.md`.
 
 ## Operación comprobada y límites
 

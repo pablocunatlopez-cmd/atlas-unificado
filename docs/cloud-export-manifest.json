@@ -275,8 +275,8 @@
     },
     {
       "path": "app/learning-dashboard.tsx",
-      "bytes": 29064,
-      "sha256": "84719bc7689159b6e06184a458b2be910b7ab37531d742a7eb06df1cf0a35b4c",
+      "bytes": 29415,
+      "sha256": "c80d41a2b857935991aca0008b3a45a317fa091c280ad374bc503af84564b351",
       "adapted": false
     },
     {
@@ -1067,14 +1067,14 @@
     },
     {
       "path": "lib/core/learning-status.mjs",
-      "bytes": 2822,
-      "sha256": "c8ab8f5c0e734d615e5fc4d595dede8d5243c49d0a1f00c0ec6593eae584de0b",
+      "bytes": 3015,
+      "sha256": "35f7cd1327e7ef0ec157677ac9cc7bcdd3febeb7b76a687b3ea6709d6abac367",
       "adapted": false
     },
     {
       "path": "lib/core/learning-status.test.mjs",
-      "bytes": 3129,
-      "sha256": "4bf0752776f4b21424c8a6f1a559647759ad395fd392a8a0afcb2dc57a9a3c6a",
+      "bytes": 3164,
+      "sha256": "dd1a0da8d70794a6348b9a15753d5281823c6122d64b3ed0d684eac878f2a42e",
       "adapted": false
     },
     {
@@ -1606,7 +1606,7 @@
       "adapted": true
     }
   ],
-  "totalBytes": 4843964,
+  "totalBytes": 4844543,
   "scan": {
     "findings": 0,
     "privateConversationLinksRemoved": 1
@@ -1620,12 +1620,12 @@
     "q517-counterexample.json",
     "studio-runtime.json"
   ],
-  "updatedAt": "2026-11-02T06:13:57.060Z",
+  "updatedAt": "2026-11-02T11:54:11.969Z",
   "runtimeCodeSeeds": [
     "studio-runtime.json",
     "studio-runtime-legacy.json"
   ],
-  "sourcePublishedVersion": "V17",
-  "sourceCommit": "f89a17425b72ac792be2149b9f6d9ecc6cae419a",
-  "publishedAt": "2026-11-01T21:05:41Z"
+  "sourcePublishedVersion": "V18",
+  "sourceCommit": "5d179fa2ceda4370e76af8797c90d504783d75a4",
+  "publishedAt": "2026-11-02T07:40:42Z"
 }

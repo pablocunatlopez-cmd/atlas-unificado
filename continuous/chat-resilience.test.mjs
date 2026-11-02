@@ -39,3 +39,9 @@ test('already aborted chat does not start any generation',async()=>{
  const controller=new AbortController();controller.abort(Error('Cancelado'));
  await assert.rejects(chat({messages:[{role:'user',content:'Hola'}]},[],()=>{throw Error('No debe ejecutarse');},'','',null,'',[],'',{signal:controller.signal}),/Cancelado/);
 });
+
+test('contract-backed code generation defers judgement to actual execution instead of another model rewrite',async()=>{
+ let calls=0;
+ const result=await chat({messages:[{role:'user',content:'Devuelve function transform(input){return input;}'}],toolRepair:true,contractRefutation:true,refute:false},[],async()=>{calls++;return Response.json({choices:[{message:{content:'function transform(input){return input;}'},finish_reason:'stop'}],usage:{completion_tokens:12}});},'','',null,'',[],'',{cognitiveCore:{decide:async()=>({review:true})},sharedSession:true});
+ assert.equal(calls,1);assert.equal(result.reviewed,false);assert.equal(result.trained,false);assert.match(result.reviewScope,/este turno no acredita/);assert.match(result.answer,/function transform/);
+});

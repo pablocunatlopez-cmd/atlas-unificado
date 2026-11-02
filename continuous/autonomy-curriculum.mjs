@@ -1,3 +1,6 @@
+import {jsonPatchTask} from './capability-json-patch.mjs';
+import {csvTask} from './capability-csv.mjs';
+
 const MAX_ATTEMPTS = 3;
 const FAILURE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -130,7 +133,10 @@ const TASKS = [
       {input: {values: [1e308, 1e308]}, expected: {error: 'invalid_numbers'}}
     ]
   }
+ ,jsonPatchTask,csvTask
 ];
+
+export const AUTONOMOUS_TASK_IDS=Object.freeze(TASKS.map(task=>task.id));
 
 /** Returns an isolated copy, so a generated candidate cannot edit the contract. */
 export function getAutonomousTask(id) {

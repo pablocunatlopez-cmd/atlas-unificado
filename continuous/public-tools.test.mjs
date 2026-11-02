@@ -43,3 +43,11 @@ test('new planning and JSON Pointer tools require actual JSON and cannot unlock 
  for(const question of ['Resuelve JSON Pointer: {"document":{"a":1},"pointer":"/a"}','Consulta el puntero JSON: {"document":[4],"pointer":"/0"}','Planifica las dependencias: {"nodes":["a"],"edges":[]}'])assert.equal(publicToolIntent(question),true,question);
  for(const question of ['¿Qué es JSON Pointer?','Planifica las dependencias del proyecto','¿Qué herramientas tienes para planificar dependencias {"nodes":[]}?','Ejecuta un script que resuelva JSON Pointer {"document":{},"pointer":""}','Instala herramientas de dependencias {"nodes":[]}'])assert.equal(publicToolIntent(question),false,question);
 });
+
+test('canonical data tasks can be requested with actual JSON but do not unlock PC commands',()=>{
+ assert.equal(publicToolIntent('Aplica este JSON Patch: {"document":{},"patch":[]}'),true);
+ assert.equal(publicToolIntent('Lee este CSV: {"text":"a,b"}'),true);
+ assert.equal(publicToolIntent('Parsea CSV: {"text":"x;y","delimiter":";"}'),true);
+ assert.equal(publicToolIntent('¿Qué es JSON Patch?'),false);
+ assert.equal(publicToolIntent('Instala un lector CSV: {"text":"a,b"}'),false);
+});

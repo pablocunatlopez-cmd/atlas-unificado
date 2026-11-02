@@ -1,7 +1,7 @@
 import {isDeepStrictEqual} from 'node:util';
 import {getAutonomousTask} from './autonomy-curriculum.mjs';
 
-const ORIGINS=new Set(['autonomous-local-programming','autonomous-local-review']);
+const ORIGINS=new Set(['autonomous-local-programming','autonomous-local-review','coordinator-curriculum-build']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** The public catalogue is rebuilt from fixed curriculum descriptions, never
@@ -49,14 +49,16 @@ export function publicToolIntent(question){
  const text=question.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
  if(/\b(?:que|cuales)\s+(?:herramientas|capacidades|funciones)\b|\b(?:tienes|cuentas\s+con)\s+(?:la\s+)?(?:capacidad|herramientas)\b/.test(text))return false;
  if(text.startsWith('/')||/\b(?:instala|desinstala|reinicia|shutdown|powershell|cmd\.exe|borra\s+(?:los\s+)?archivos|elimina\s+(?:los\s+)?archivos|ejecuta\s+(?:(?:el|un|este)\s+)?(?:comando|script|python)|abre\s+(?:(?:el|un|mi)\s+)?archivo)\b/.test(text))return false;
- if(/^(?:[¿?\s]*(?:puedes\s+)?)(?:busca|buscar|investiga|investigar|resume|resumir|lee|leer)\b/.test(text))return false;
+ if(/^(?:[¿?\s]*(?:puedes\s+)?)(?:busca|buscar|investiga|investigar|resume|resumir|lee|leer)\b/.test(text)&&!/\bcsv\b/.test(text))return false;
  const compute=/\b(?:calcula|calcular|calcule|compute|estadisticas|media|mediana|promedio|suma|sumar|minimo|maximo)\b/.test(text);
  const dedupe=/\b(?:deduplica|deduplicar|deduplicate|quita\s+duplicados|elimina\s+duplicados|sin\s+duplicados|valores\s+unicos)\b/.test(text);
  const merge=/\b(?:fusiona|fusionar|une|unir|merge)\b/.test(text)&&/\bintervalos?\b/.test(text);
  const validate=/\b(?:valida|validar|validate|comprueba|comprobar|verifica|verificar)\b/.test(text)&&/\b(?:lor|omega|esquema|estructura|json)\b|s\*/.test(text);
  const pointer=/\b(?:resuelve|resolver|resolve|consulta|consultar)\b/.test(text)&&/\b(?:json\s*pointer|puntero\s+json)\b/.test(text);
  const dependencies=/\b(?:planifica|planificar|ordena|ordenar|plan|sort)\b/.test(text)&&/\b(?:dependencias|dependencies|dag|grafo)\b/.test(text);
- if(!compute&&!dedupe&&!merge&&!validate&&!pointer&&!dependencies)return false;
+ const patch=/\b(?:aplica|aplicar|apply|comprueba|verifica|valida)\b/.test(text)&&/\b(?:json\s*patch|parche\s+json)\b/.test(text);
+ const csv=/\b(?:analiza|analizar|parsea|parsear|parse|convierte|convertir|lee|leer)\b/.test(text)&&/\bcsv\b/.test(text);
+ if(!compute&&!dedupe&&!merge&&!validate&&!pointer&&!dependencies&&!patch&&!csv)return false;
  if(hasStructuredInput(question))return true;
  // Plain numeric lists support small requests such as “mediana de 10, 2, 3”.
  // A lone number, a date or a capabilities question is not an executable input.

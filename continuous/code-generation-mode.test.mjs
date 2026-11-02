@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildExtension} from './extensions.mjs';
+import {buildExtension,executePure} from './extensions.mjs';
 import {reviewCapabilities as reviewAllCapabilities} from './autonomous-review.mjs';
 import {getAutonomousTask} from './autonomy-curriculum.mjs';
 
@@ -40,7 +40,8 @@ for (const [label, wrap] of [
     const candidate = await buildExtension(task, 'test-local-key', contract, async (input, documents, _request, key) => {
       calls++;
       assert.equal(input.json, false);
-      assert.equal(input.refute, true);
+      assert.equal(input.refute, false);
+      assert.equal(input.contractRefutation,true);
       assert.match(input.messages[0].content, /No lo envuelvas en JSON/);
       assert.deepEqual(documents, []);
       assert.equal(key, 'test-local-key');
@@ -85,6 +86,54 @@ test('repair receives the complete previous code and real failed input, expected
   assert.match(prompts[1].messages[2].content, /"expected":\{"doubled":4\}/);
   assert.match(prompts[1].messages[2].content, /"actual":\{"doubled":3\}/);
   assert.equal(request.mock.callCount(), 0);
+});
+
+test('the first seeded repair receives the full measured source and feedback, then executes independent checks',async t=>{
+  const request=offline(t);
+  const initialSource='function transform(input) { /*'+' earlier measured code '.repeat(360)+'*/ return {doubled: input.value + 1}; }';
+  assert.ok(initialSource.length>6500&&initialSource.length<16000);
+  assert.deepEqual(await executePure(initialSource,contract[0].input),{doubled:3});
+  const acceptance=[...contract,{input:{value:11},expected:{doubled:22}},{input:{value:17},expected:{doubled:34}},{input:{value:-7},expected:{doubled:-14}},{input:{value:.5},expected:{doubled:1}},{input:{value:1000},expected:{doubled:2000}}];
+  const initialFeedback=JSON.stringify({input:contract[0].input,expected:contract[0].expected,actual:{doubled:3}});
+  let calls=0;
+  const candidate=await buildExtension(task,'test-local-key',acceptance,async input=>{
+    calls++;assert.equal(input.refute,false);assert.equal(input.contractRefutation,true);assert.equal(input.toolRepair,true);
+    assert.equal(input.messages.length,3);assert.equal(input.messages[1].role,'assistant');assert.equal(input.messages[1].content,initialSource);
+    assert.equal(input.messages[2].role,'user');assert.ok(input.messages[2].content.includes(initialFeedback));
+    return {answer:source};
+  },{format:'code',initialSource,initialFeedback});
+  assert.equal(calls,1);assert.equal(candidate.attempt,1);assert.equal(candidate.attempts.length,1);assert.equal(candidate.passed,true);
+  assert.equal(candidate.source,source);assert.equal(candidate.acceptanceResults.length,8);assert.ok(candidate.acceptanceResults.every(result=>result.passed&&JSON.stringify(result.actual)===JSON.stringify(result.expected)));
+  assert.equal(request.mock.callCount(),0);
+});
+
+test('seed and feedback budget boundaries are preserved without silently trimming the source',async t=>{
+  const request=offline(t),prefix='function transform(input){return {doubled:input.value+1};}';
+  const initialSource=prefix+'/*'+'x'.repeat(16000-prefix.length-4)+'*/',initialFeedback='F'.repeat(3000);let calls=0;
+  const candidate=await buildExtension(task,'',contract,async input=>{
+    calls++;assert.equal(input.messages[1].content,initialSource);assert.equal(input.messages[1].content.length,16000);
+    assert.ok(input.messages[2].content.includes(initialFeedback));return {answer:source};
+  },{format:'code',initialSource,initialFeedback});
+  assert.equal(candidate.passed,true);assert.equal(calls,1);assert.equal(request.mock.callCount(),0);
+});
+
+test('invalid seeds and feedback are rejected before generation instead of switching to a fresh build',async t=>{
+  const request=offline(t);let calls=0;const generate=async()=>{calls++;return {answer:source};};
+  for(const initialSource of [null,7,{},'', '  ','x'.repeat(16001)])await assert.rejects(buildExtension(task,'',contract,generate,{format:'code',initialSource}),/initialSource/);
+  for(const initialFeedback of [null,7,[],{},'x'.repeat(3001)])await assert.rejects(buildExtension(task,'',contract,generate,{format:'code',initialSource:source,initialFeedback}),/initialFeedback/);
+  await assert.rejects(buildExtension(task,'',contract,generate,{initialSource:source}),/initialSource/);
+  await assert.rejects(buildExtension(task,'',contract,generate,{initialFeedback:'measured failure'}),/initialFeedback/);
+  assert.equal(calls,0);assert.equal(request.mock.callCount(),0);
+});
+
+test('a passing initial seed cannot promote failed generations or extend the three-attempt budget',async t=>{
+  const request=offline(t),wrong='function transform(){return {doubled:999};}';let calls=0;
+  const candidate=await buildExtension(task,'',contract,async input=>{
+    calls++;assert.equal(input.messages[1].content,calls===1?source:wrong);return {answer:wrong};
+  },{format:'code',initialSource:source,initialFeedback:'A separate confirmation requires a repair; the initial seed is not a promotion.'});
+  assert.equal(calls,3);assert.equal(candidate.attempts.length,3);assert.equal(candidate.passed,false);
+  assert.equal(candidate.source,wrong);assert.ok(candidate.acceptanceResults.every(result=>!result.passed&&result.actual.doubled===999));
+  assert.equal(request.mock.callCount(),0);
 });
 
 test('syntax errors are measured in the sandbox and supplied to the next repair', async t => {
@@ -138,7 +187,8 @@ test('reviewCapabilities codeGeneration creates and verifies a plain-code curric
     generate: async input => {
       generated++;
       assert.equal(input.json, false);
-      assert.equal(input.refute, true);
+      assert.equal(input.refute, false);
+      assert.equal(input.contractRefutation,true);
       return {answer: mergeSource};
     },
     assess: async evidence => {

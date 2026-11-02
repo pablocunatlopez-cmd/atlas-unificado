@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {getAutonomousTask} from './autonomy-curriculum.mjs';
+import {getAutonomousTask,AUTONOMOUS_TASK_IDS} from './autonomy-curriculum.mjs';
 import {sanitizeLearningTelemetry} from './learning-telemetry.mjs';
 import {sanitizeLearningStatus,LEARNING_CATALOG} from './learning-status.mjs';
 
@@ -38,7 +38,7 @@ test('duplicate versions count as one approval per task and preserve the chosen 
 });
 
 test('portable labels remain aligned with each canonical curriculum without copying its prompts',()=>{
- assert.equal(Object.keys(LEARNING_CATALOG).length,6);
+ assert.equal(Object.keys(LEARNING_CATALOG).length,AUTONOMOUS_TASK_IDS.length);
  for(const [id,entry] of Object.entries(LEARNING_CATALOG)){
   const task=getAutonomousTask(id);assert.equal(entry.name,task.name);assert.equal(entry.cases,task.acceptanceTests.length);
  }

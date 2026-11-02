@@ -22,7 +22,7 @@ test('only complete known eight-case approvals with ISO dates enter counts',()=>
  const result=sanitizeLearningStatus({tools});
  assert.equal(result.approvedTools,1);
  assert.equal(result.tools[0].createdAt,'2026-11-01T12:05:00.000Z');
- assert.equal(sanitizeLearningStatus({tools:Object.keys(LEARNING_CATALOG).flatMap(taskId=>Array.from({length:12},()=>approved(taskId)))}).approvedTools,6);
+ assert.equal(sanitizeLearningStatus({tools:Object.keys(LEARNING_CATALOG).flatMap(taskId=>Array.from({length:12},()=>approved(taskId)))}).approvedTools,Object.keys(LEARNING_CATALOG).length);
 });
 
 test('pause and disable override running without inventing connectivity or a schedule',()=>{

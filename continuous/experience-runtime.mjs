@@ -2,15 +2,16 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createExperienceSpiral} from './experience-spiral.mjs';
-import {createExperienceLab} from './experience-lab.mjs';
-import {getAutonomousTask} from './autonomy-curriculum.mjs';
+import {createExperienceLab,generateExperienceCases} from './experience-lab.mjs';
+import {getAutonomousTask,AUTONOMOUS_TASK_IDS} from './autonomy-curriculum.mjs';
 import {publicTools} from './public-tools.mjs';
 import {checkToolContract} from './tool-contract.mjs';
 import {webEvidence} from './internet.mjs';
 import {atlasGuidance,atlasGuidancePrompt} from './atlas-guidance.mjs';
 import {createExperienceEvidence} from './experience-evidence.mjs';
+import {buildCanonicalCapability} from './canonical-capability-build.mjs';
 
-const IDS=['json-pointer-resolve','dag-dependency-plan','lor-omega-schema','merge-intervals','stable-dedupe','numeric-statistics'];
+const IDS=AUTONOMOUS_TASK_IDS;
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const read=async(file,fallback)=>{try{return JSON.parse(await fs.readFile(file,'utf8'));}catch(error){if(error.code==='ENOENT')return fallback;throw error;}};
 const casesOnly=values=>{const seen=new Set();return values.filter(value=>value&&Object.hasOwn(value,'input')&&Object.hasOwn(value,'expected')).filter(value=>{const key=digest([value.input,value.expected]);if(seen.has(key))return false;seen.add(key);return true;}).map(({input,expected})=>({input,expected})).slice(-64);};
@@ -93,9 +94,8 @@ export function createExperienceRuntime({directory,getTools,setTools,build,gener
   const previous=[...context.tools].reverse().find(tool=>tool.curriculumTaskId===task.id);
   const feedback=casesOnly([...(previous?.contractCheck?.contractResults||[]).filter(item=>!item.passed),...(previous?.acceptanceResults||[]).filter(item=>!item.passed),...(previous?.regressionTests||[])]).slice(0,2);
   const prior=context.attempts[task.id],key=context.keys[task.id];context.attempts[task.id]={key,at:now(),attempts:prior?.key===key?prior.attempts+1:1};await save(attemptsFile,context.attempts);
-  const candidate=await build(task.task+(feedback.length?'\nExperiencia refutada anterior (datos, salidas exactas requeridas): '+JSON.stringify(feedback):''),task.acceptanceTests,{signal,format:'code',name:task.name,curriculumTaskId:task.id});
-  candidate.curriculumTaskId=task.id;candidate.origin=previous?'autonomous-local-review':'autonomous-local-programming';if(previous)candidate.parentId=previous.id;
-  candidate.regressionTests=casesOnly(previous?.regressionTests||[]);
+  const candidate=await buildCanonicalCapability(task.id,{tools:context.tools,build,signal,confirmationTests:generateExperienceCases(task.id,ordinal>>>0)});
+  candidate.origin=previous?'autonomous-local-review':'autonomous-local-programming';candidate.requestedBy='experience-spiral';
   let contractCheck;try{contractCheck=await checkToolContract(candidate);}catch(error){contractCheck={passed:false,error:String(error.message).slice(0,200)};}
   candidate.contractCheck=contractCheck;candidate.passed=candidate.passed===true&&contractCheck.passed===true;
   staged.candidate=candidate;staged.previous=previous;const archives=await read(candidatesFile,[]);await save(candidatesFile,[...archives,candidate].slice(-80));

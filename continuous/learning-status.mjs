@@ -5,7 +5,9 @@ export const LEARNING_CATALOG=Object.freeze({
  'dag-dependency-plan':Object.freeze({name:'Planificar dependencias de proyectos',cases:8}),
  'merge-intervals':Object.freeze({name:'Fusionar intervalos',cases:8}),
  'stable-dedupe':Object.freeze({name:'Deduplicar valores conservando orden y tipos',cases:8}),
- 'numeric-statistics':Object.freeze({name:'Calcular estadísticas numéricas',cases:8})
+ 'numeric-statistics':Object.freeze({name:'Calcular estadísticas numéricas',cases:8}),
+ 'json-patch-apply':Object.freeze({name:"Aplicar cambios JSON Patch de forma atómica",cases:8}),
+ 'csv-parse':Object.freeze({name:"Analizar texto CSV con comillas y campos vacíos",cases:8})
 });
 
 function catalog(taskId){return typeof taskId==='string'&&Object.hasOwn(LEARNING_CATALOG,taskId)?LEARNING_CATALOG[taskId]:null;}

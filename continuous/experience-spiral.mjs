@@ -1,10 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {getAutonomousTask} from './autonomy-curriculum.mjs';
+import {getAutonomousTask,AUTONOMOUS_TASK_IDS} from './autonomy-curriculum.mjs';
 import {LOR_FIELDS,LOR_SOURCE,validateLorRecord,situatedFrame} from './lor-omega.mjs';
 
-const IDS=['lor-omega-schema','json-pointer-resolve','dag-dependency-plan','merge-intervals','stable-dedupe','numeric-statistics'];
+const IDS=AUTONOMOUS_TASK_IDS;
 const KINDS=new Set(['curriculum-repair','tool-experiment','open-inquiry','creative-experiment']);
 const FOCI=new Set(['programming','language','3d','games','video','music','conversation','research','reasoning','suceso','unknown']);
 const EPISTEMIC=new Set(['within-model','unexpected','unexplained','unassessed']);

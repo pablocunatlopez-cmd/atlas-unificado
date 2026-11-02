@@ -8,6 +8,8 @@ const RFC='https://www.rfc-editor.org/rfc/rfc6901.html';
 const OWN=MDN+'Object/hasOwn',SORT=MDN+'Array/sort';
 const SOURCES=Object.freeze({
  'json-pointer-resolve':[RFC,OWN],
+ 'json-patch-apply':['https://www.rfc-editor.org/rfc/rfc6902.html',RFC],
+ 'csv-parse':['https://www.rfc-editor.org/rfc/rfc4180.html'],
  'dag-dependency-plan':[SORT,MDN+'Map'],
  'lor-omega-schema':[OWN,MDN+'Object/keys'],
  'merge-intervals':[SORT],

@@ -1,20 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {getAutonomousTask, selectAutonomousTask as selectAllTasks} from './autonomy-curriculum.mjs';
+import {getAutonomousTask, AUTONOMOUS_TASK_IDS, selectAutonomousTask as selectAllTasks} from './autonomy-curriculum.mjs';
 import {checkToolContract} from './tool-contract.mjs';
 import {validateAcceptance} from './extensions.mjs';
 
 const ids = ['merge-intervals', 'stable-dedupe', 'numeric-statistics'];
 const lorId = 'lor-omega-schema';
 const newIds = ['json-pointer-resolve', 'dag-dependency-plan'];
-const allIds = [lorId, ...newIds, ...ids];
+const extraIds=['json-patch-apply','csv-parse'];
+const allIds = [...AUTONOMOUS_TASK_IDS];
 const now = Date.parse('2026-10-31T12:00:00.000Z');
 const hour = 60 * 60 * 1000;
 const accepted = id => ({curriculumTaskId: id, passed: true});
 const failed = (id, hoursAgo = 25, extra = {}) => ({taskId: id, passed: false, at: new Date(now - hoursAgo * hour).toISOString(), ...extra});
 // Preserve older selector regressions with newer priorities already complete.
 // Their original histories and failure budgets remain unchanged.
-const selectAutonomousTask = (extensions=[],history=[],options={}) => selectAllTasks(Array.isArray(extensions)?[accepted(lorId),...newIds.map(accepted),...extensions]:extensions,history,options);
+const selectAutonomousTask = (extensions=[],history=[],options={}) => selectAllTasks(Array.isArray(extensions)?[accepted(lorId),...newIds.map(accepted),...extraIds.map(accepted),...extensions]:extensions,history,options);
 
 // Independent reference functions verify the manually specified JSON results
 // in the real sandbox. These implementations are not given to the generator.
@@ -35,7 +36,7 @@ test('all tasks have bounded independent contracts and refutable learning plans'
     assert.deepEqual(validateAcceptance(item.acceptanceTests), item.acceptanceTests);
     assert.ok(item.learningPlan.hypothesis);
     assert.ok(item.learningPlan.refutations.length >= 3);
-    assert.match(item.learningPlan.scope, /no modifica/);
+    assert.match(item.learningPlan.scope, /no (?:modifica|escribe|lee)/);
     assert.equal(Object.hasOwn(item, 'source'), false);
   }
   assert.equal(getAutonomousTask('unknown'), null);
@@ -89,7 +90,7 @@ test('new documentary and planning tasks resume exhausted curricula without rese
  assert.equal(selectAllTasks([...previous,accepted(newIds[0])],history,{now}).id,newIds[1]);
  assert.equal(selectAllTasks([accepted(lorId)],[],{now}).id,newIds[0]);
  assert.equal(selectAllTasks(previous,[...history,failed(newIds[0],1)],{now}).id,newIds[1]);
- assert.equal(selectAllTasks(previous,[...history,...newIds.map(id=>failed(id,1))],{now}),null);
+ assert.equal(selectAllTasks([...previous,...extraIds.map(accepted)],[...history,...newIds.map(id=>failed(id,1))],{now}),null);
  assert.deepEqual({previous,history},before);
 });
 

@@ -33,7 +33,7 @@ export function createCodingCollaborators({directory,agent,smolAgent,buildNative
     return {answer:candidate.code,model:'atlas-local'};
    }:async(input,...args)=>{
     let next=input;const first=input.messages?.findIndex(message=>message.role==='user')??-1;
-    if(referenceContext&&first>=0&&input.messages[first].content.length+referenceContext.length+2<=6000){next={...input,messages:input.messages.map((message,index)=>index===first?{...message,content:message.content+'\n\n'+referenceContext}:message)};referenceContextProvided=true;}
+    if(referenceContext&&first>=0&&input.messages[first].content.length+referenceContext.length+2<=6000&&input.messages.reduce((sum,message)=>sum+message.content.length,0)+referenceContext.length+2<=24000){next={...input,messages:input.messages.map((message,index)=>index===first?{...message,content:message.content+'\n\n'+referenceContext}:message)};referenceContextProvided=true;}
     return (generate||chat)(next,...args);
    };
    record=await buildNative(task,key,cases,generator,{...options,format:provider!=='native'?'code':options.format});

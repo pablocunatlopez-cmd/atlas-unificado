@@ -12,6 +12,8 @@ import {testGame} from './devtools.mjs';
 import {makeClaim} from './refutation.mjs';
 import {chat,validateMessages,validateAttachments,memoryQuery} from './chat.mjs';
 import {useExtension} from './agent-tools.mjs';
+import {buildCanonicalCapability} from './canonical-capability-build.mjs';
+import {createQueuedJsonWriter} from './queued-json-writer.mjs';
 import {starCatalog} from './constellation.mjs';
 import {buildExtension,improveExtension,executePure} from './extensions.mjs';
 import {reviewCapabilities} from './autonomous-review.mjs';
@@ -42,6 +44,7 @@ import {publicTools,publicToolIntent} from './public-tools.mjs';
 import {sanitizeLearningTelemetry} from './learning-telemetry.mjs';
 import {selectAutonomousTask} from './autonomy-curriculum.mjs';
 import {createExperienceRuntime} from './experience-runtime.mjs';
+import {generateExperienceCases} from './experience-lab.mjs';
 import {createCreativeExperience} from './experience-creative.mjs';
 import {atlasApplicationCapabilities} from './atlas-capabilities.mjs';
 import {atlasIdentityPrompt} from './atlas-identity.mjs';
@@ -86,12 +89,8 @@ const config=JSON.parse(await fs.readFile(path.join(root,'config.json'),'utf8'))
 const mandate=await fs.readFile(path.join(root,'ATLAS_MANDATO_UNIFICADO.md'),'utf8');
 const mandateHash=hash(mandate);
 const read=async(name,fallback)=>{try{return JSON.parse(await fs.readFile(path.join(data,name),'utf8'));}catch(e){if(e.code==='ENOENT')return fallback;throw e;}};
-let writes=Promise.resolve();
-function write(name,value){
- const serialized=JSON.stringify(value,null,2);
- const operation=writes.then(async()=>{const file=path.join(data,name);await fs.writeFile(file+'.tmp',serialized);await fs.rename(file+'.tmp',file);});
- writes=operation.catch(()=>{});return operation;
-}
+const stateWriter=createQueuedJsonWriter({directory:data});
+const write=stateWriter.write;
 let state=await read('state.json',{paused:false,cycles:0,accepted:0,rejected:0,attempted:[],checked:{},events:[]});
 let documents=await read('documents.json',[]);
 try{importRepositoryCatalog(await fs.readFile(path.join(data,'biblioteca-github-instrucciones-originales.txt'),'utf8'),{sourcePath:'data/biblioteca-github-instrucciones-originales.txt'});}catch(error){if(error.code!=='ENOENT')console.error('Biblioteca: '+error.message);}
@@ -611,7 +610,7 @@ server=http.createServer(async(req,res)=>{
  if(req.method==='POST'&&['/capabilities/connect','/capabilities/build','/capabilities/run'].includes(url.pathname)){
   res.setHeader('Content-Type','application/json');
   if(req.headers['x-atlas-token']!==token||req.headers.origin!==`http://${expected}`){res.writeHead(403);return res.end(JSON.stringify({error:'Origen no autorizado'}));}
-  let ownsBuild=false;
+  let ownsBuild=false,canonicalAbort=null,canonicalClose=null;
   try{let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>60000)throw Error('Petición demasiado grande');chunks.push(c);}const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
    if(url.pathname==='/capabilities/connect'){
     if(typeof input.key!=='string'||!/^sk-or-[A-Za-z0-9_-]{20,500}$/.test(input.key))throw Error('Formato de clave OpenRouter inválido.');
@@ -620,6 +619,18 @@ server=http.createServer(async(req,res)=>{
     await fs.writeFile(providerKeyPath,input.key,{mode:0o600});providerKey=input.key;return res.end(JSON.stringify({configured:true,route:'openrouter/free'}));
    }
    if(url.pathname==='/capabilities/build'){
+    if(input.curriculumTaskId!==undefined){
+     canonicalAbort=new AbortController();const signal=canonicalAbort.signal;
+     canonicalClose=()=>{if(!res.writableEnded)canonicalAbort.abort(Error('Construcción cancelada'));};res.on('close',canonicalClose);
+     if(req.aborted||res.destroyed)canonicalAbort.abort(Error('La petición ya se cerró'));signal.throwIfAborted();
+     if(coreReviewBusy||chatBusy||mediaBusy||closing)throw Error('Atlas está terminando otra tarea.');
+     if(autonomousBusy){autonomousAbort?.abort(Error('Construcción canónica solicitada'));await autonomousDone;}
+     signal.throwIfAborted();
+     if(coreReviewBusy||chatBusy||mediaBusy||closing||extensionBusy)throw Error('Atlas está terminando otra tarea.');
+     extensionBusy=true;ownsBuild=true;coreAbort=canonicalAbort;
+     const record=await buildCanonicalCapability(input.curriculumTaskId,{tools:extensions,signal,confirmationTests:generateExperienceCases(input.curriculumTaskId,Date.now()>>>0),build:(task,cases,options)=>codingCollaborators.build(task,chatKey,cases,spec=>chat(spec,[],fetch,chatKey,'',null,'',[],'',{signal,sharedSession:true,cognitiveCore}),options)});
+     signal.throwIfAborted();const next=[...extensions,record];await write('extensions.json',next,{signal});extensions=next;return res.end(JSON.stringify(record));
+    }
     if(extensionBusy||chatBusy||mediaBusy)throw Error('Atlas está ocupado. Espera a que termine.');extensionBusy=true;ownsBuild=true;
     const previous=input.parentId?extensions.find(x=>x.id===input.parentId):null;
     if(input.parentId&&!previous)throw Error('No existe la versión de partida.');
@@ -629,7 +640,7 @@ server=http.createServer(async(req,res)=>{
    }
    const record=extensions.find(x=>x.id===input.id);if(!record?.passed)throw Error('La extensión no existe o no superó sus pruebas');
    const result=await executePure(record.source,input.input);return res.end(JSON.stringify({result,scope:'Ejecutado en QuickJS sin archivos ni red'}));
-  }catch(e){res.writeHead(400);return res.end(JSON.stringify({error:e.message}));}finally{if(ownsBuild)extensionBusy=false;}
+  }catch(e){res.writeHead(400);return res.end(JSON.stringify({error:e.message}));}finally{if(canonicalClose)res.off('close',canonicalClose);if(coreAbort===canonicalAbort)coreAbort=null;if(ownsBuild)extensionBusy=false;}
  }
  if(req.method==='GET'&&url.pathname==='/chat/ui.css'){
   res.setHeader('Content-Type','text/css; charset=utf-8');return res.end(await fs.readFile(path.join(root,'chat-ui.css'),'utf8'));
@@ -700,7 +711,7 @@ server=http.createServer(async(req,res)=>{
    if(input.sharedSession===true){
     if(projectCommand(messages.at(-1).content))throw Error('Los controles del PC solo están disponibles en la interfaz local.');
     const available=publicTools(extensions),requested=publicToolIntent(messages.at(-1).content);let publicToolRun=null;
-    if(requested&&available.length)publicToolRun=await useExtension(messages,available,chatKey,spec=>chat(spec,[],fetch,chatKey,'',null,'',[],'',{signal:requestAbort.signal,sharedSession:true,cognitiveCore}));
+    if(requested&&available.length)publicToolRun=await useExtension(messages,available,chatKey,spec=>chat(spec,[],fetch,chatKey,'',null,'',[],'',{signal:requestAbort.signal,sharedSession:true,cognitiveCore}),{signal:requestAbort.signal});
     const result=await chat({...input,tools:false,external:false,attachments:[]},[],fetch,chatKey,'',publicToolRun,'',[],'',{cognitiveCore,lookupEvidence:atlasEvidence,sharedSession:true,signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined,capabilities:{...atlasApplicationCapabilities({sharedSession:true,experience:{...await experienceRuntime.status(),enabled:experienceEnabled,paused:state.paused},agents:await codingCollaborators.status(),video:await videoStatus().catch(()=>({ready:false})),publicDocs:publicDocs.status()}),localModel:chatModelName,sharedSession:true,internet:{available:true,requested:input.internet===true},tools:{available:available.length,requested,scope:'Solo funciones públicas de currículo canónico, contratos ejecutados y QuickJS aislado.'},externalModels:{configured:false},selfModification:{strategyPolicy:true,weightCandidates:true,serverCode:false,qwenWeights:false,scope:"Herramientas y políticas evolucionan con contratos; LoRA permanece candidata hasta validación."},privateMemory:false}});
     if(streaming){sendEvent({type:'result',result});return res.end();}return res.end(JSON.stringify(result));
    }
@@ -713,7 +724,7 @@ server=http.createServer(async(req,res)=>{
    }
    if(input.external===true&&providerKey){const day=new Date().toISOString().slice(0,10);if(state.providerUsage?.day!==day)state.providerUsage={day,count:0};if(state.providerUsage.count>=20)throw Error('Límite local de 20 colaboraciones gratuitas al día alcanzado. Desactiva el colaborador para seguir en local.');state.providerUsage.count++;await persist();}
    if(input.tools===true)sendEvent({type:'stage',stage:'tools'});
-   const toolRun=input.tools===true?await useExtension(messages,extensions,chatKey,(request,docs,fetcher,key)=>chat(request,docs,fetcher,key,'',null,'',[],'',{signal:requestAbort.signal})):null;
+   const toolRun=input.tools===true?await useExtension(messages,extensions,chatKey,(request,docs,fetcher,key)=>chat(request,docs,fetcher,key,'',null,'',[],'',{signal:requestAbort.signal}),{signal:requestAbort.signal}):null;
    requestAbort.signal.throwIfAborted();
    if(toolRun){const runs=await read('tool-runs.json',[]);runs.push(toolRun);await write('tool-runs.json',runs.slice(-50));}
    const gameContext=gameLibraryContext(gameReferences,messages.at(-1).content);
@@ -793,6 +804,6 @@ async function shutdown(){
  coreAbort?.abort(Error('Reinicio del coordinador'));
  await runSecondary('stop').catch(()=>{});
  while(busy||autonomousBusy||chatBusy||extensionBusy||libraryBusy||mediaBusy)await new Promise(r=>setTimeout(r,100));
- await persist();await fs.rm(path.join(data,'service.pid'),{force:true});process.exit(0);
+ await persist();await stateWriter.drain();await fs.rm(path.join(data,'service.pid'),{force:true});process.exit(0);
 }
 process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);
