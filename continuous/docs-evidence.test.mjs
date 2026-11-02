@@ -9,3 +9,11 @@ test('an unavailable or irrelevant MCP falls back to public web and cancellation
  const read=createAtlasEvidence({publicDocs:{search:async()=>{throw Error('offline');}},web:async()=>{calls++;return{sources:[],errors:[]};}});
  await read('Codex plugins');assert.equal(calls,1);await read('Godot 3D');assert.equal(calls,2);controller.abort(Error('stop'));await assert.rejects(read('Codex MCP',{signal:controller.signal}),/stop/);assert.equal(calls,2);
 });
+
+test('failed discovery can read curated documentation without replacing a successful search or ignoring cancellation',async()=>{
+ let guidedCalls=0;const controller=new AbortController();
+ const adapters={publicDocs:{search:async()=>({results:[]})},web:async()=>{throw Error('Google requires JavaScript');},guided:async(question)=>{guidedCalls++;assert.match(question,/InstancedMesh/);return{sources:[{url:'https://threejs.org/docs/',excerpt:'Direct public reference',method:'lectura directa'}],errors:[]};}};
+ const lookup=createAtlasEvidence(adapters),result=await lookup('InstancedMesh geometry');assert.equal(guidedCalls,1);assert.equal(result.sources.length,1);assert.match(result.errors[0],/JavaScript/);
+ const successful=createAtlasEvidence({...adapters,web:async()=>({sources:[{url:'https://example.org/',excerpt:'Search result'}],errors:[]})});await successful('InstancedMesh');assert.equal(guidedCalls,1);
+ controller.abort(Error('stop'));await assert.rejects(lookup('InstancedMesh',{signal:controller.signal}),/stop/);assert.equal(guidedCalls,1);
+});

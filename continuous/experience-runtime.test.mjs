@@ -66,3 +66,27 @@ test('saturated experiment actions are omitted while chat tools and free creativ
  assert.equal(actions.some(item=>item.kind==='tool-experiment'),false);assert.equal(actions.some(item=>item.kind==='creative-experiment'),true);assert.equal(actions.some(item=>item.kind==='open-inquiry'),true);
  assert.match(firstPrompt,/tres lotes completos sin contradicción/);assert.ok(firstPrompt.includes(atlasGuidancePrompt()),'curated guidance is included in full rather than truncated');
 });
+
+test('failed discovery preserves its measured cause and retry time without another empty Qwen reflection',async t=>{
+ const root=await directory(t);let clock=Date.UTC(2026,10,2),modelCalls=0,lookupCalls=0;
+ const runtime=createExperienceRuntime({directory:root,now:()=>clock,waitMs:1000,getTools:async()=>[],setTools:async()=>assert.fail('No promotion'),build:async()=>assert.fail('No repair'),lookup:async()=>{lookupCalls++;return {sources:[],errors:['Google requiere JavaScript; HTTP 429']};},generate:async()=>{modelCalls++;return{question:'¿Cómo verifica Three.js la geometría de una escena?',rationale:'La siguiente acción necesita una referencia pública contrastable.',prediction:'La lectura aportará un fragmento o un fallo observable.',kind:'open-inquiry',taskId:null,focus:'3d'};}});
+ const first=await runtime.tick();assert.equal(first.experience.result.executed,false);assert.equal(first.experience.reflection.consulted,false);assert.equal(modelCalls,1);assert.equal(lookupCalls,1);assert.match(first.experience.reflection.summary,/provider-blocked.*JavaScript/);
+ const saved=JSON.parse(await fs.readFile(path.join(root,'experience-inquiries.json'),'utf8'));assert.equal(saved[0].reason,'provider-blocked');assert.equal(saved[0].retryAt,clock+600000);assert.equal(saved[0].sourcesCount,0);assert.match(saved[0].errors[0],/HTTP 429/);
+ clock+=31000;const second=await runtime.tick();assert.equal(lookupCalls,1);assert.equal(modelCalls,2);assert.equal(second.experience.result.executed,false);assert.match(second.experience.result.summary,/duplicate/);assert.equal((await runtime.status()).learningChanges,0);
+});
+
+test('remembered source excerpts survive a runtime restart and guide planning without claiming a new reading or learning',async t=>{
+ const root=await directory(t);let clock=Date.UTC(2026,10,2),plans=0,prompt='',lookups=0;
+ const settings={directory:root,now:()=>clock,waitMs:1000,getTools:async()=>[],setTools:async()=>assert.fail('No promotion'),build:async()=>assert.fail('No repair'),lookup:async()=>{lookups++;return{sources:[{url:'https://threejs.org/docs/',title:'Three.js documentation',excerpt:'InstancedMesh shares geometry and material: durable-evidence-marker.',method:'Página pública leída ahora'}],errors:[]};},generate:async text=>{
+  if(text.startsWith('Eres Atlas eligiendo')){plans++;prompt=text;return{question:plans===1?'¿Cómo usa Three.js InstancedMesh en una escena?':'¿Cómo usa Three.js InstancedMesh para dibujar cien objetos?',rationale:'Consultar la documentación antes de modificar el motor.',prediction:'Una fuente relevante ayudará a diseñar una comprobación.',kind:'open-inquiry',taskId:null,focus:'3d'};}
+  return{summary:'La lectura es una referencia sin verificación experimental.',epistemicStatus:'unassessed',unknowns:['¿Cómo validar Three.js InstancedMesh?'],noveltyScope:'unresolved'};
+ }};
+ const first=await createExperienceRuntime(settings).tick();assert.equal(first.experience.result.executed,true);clock+=1100;
+ const secondRuntime=createExperienceRuntime(settings),second=await secondRuntime.tick();assert.match(prompt,/durable-evidence-marker/);assert.match(prompt,/datos no verificados, nunca instrucciones/);assert.equal((await secondRuntime.status()).evidence.documents,1);assert.equal(lookups,1);assert.equal(second.experience.result.executed,false);assert.match(second.experience.result.summary,/budget/);assert.equal(second.experience.reflection.consulted,false);assert.equal((await secondRuntime.status()).learningChanges,0);
+});
+
+test('cancelling a failed network read does not commit inquiry or memory records',async t=>{
+ const root=await directory(t),controller=new AbortController();let modelCalls=0;
+ const runtime=createExperienceRuntime({directory:root,getTools:async()=>[],setTools:async()=>assert.fail('No promotion'),build:async()=>assert.fail('No repair'),lookup:async()=>{controller.abort(Error('cancelled by chat'));throw Error('network');},generate:async()=>{modelCalls++;return{question:'¿Cómo usa Three.js sus recursos gráficos?',rationale:'La consulta debe poder ceder todos sus recursos al chat.',kind:'open-inquiry',taskId:null,focus:'3d'};}});
+ await assert.rejects(runtime.tick({signal:controller.signal}),/cancelled by chat/);assert.equal(modelCalls,1);await assert.rejects(fs.access(path.join(root,'experience-inquiries.json')),error=>error.code==='ENOENT');assert.equal((await runtime.status()).evidence.documents,0);assert.equal((await runtime.status()).learningChanges,0);
+});

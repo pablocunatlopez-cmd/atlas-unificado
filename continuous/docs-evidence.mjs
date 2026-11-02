@@ -5,11 +5,18 @@ export function publicDocsQuery(text){
  const terms=[['codex','Codex'],['chatgpt','ChatGPT'],['mcp','MCP'],['plugin|extension','plugins'],['autentic|oauth|auth','authentication'],['herramient|tool','tools'],['agents sdk|agente','Agents SDK'],['responses','Responses API'],['stream|tiempo real','streaming'],['model|modelo','models'],['precio|cost|credit','pricing']].filter(([pattern])=>new RegExp(pattern).test(topic)).map(([,term])=>term);
  return 'OpenAI '+(terms.length?terms.join(' '):'documentation');
 }
-export function createAtlasEvidence({publicDocs,web}){
+export function createAtlasEvidence({publicDocs,web,guided}){
  if(typeof publicDocs?.search!=='function'||typeof web!=='function')throw new TypeError('Missing evidence adapters.');
  return async function lookup(question,{signal}={}){
   const query=publicDocsQuery(question);
   if(query){try{const result=await publicDocs.search(query,{signal,limit:3});if(result.results.length)return {sources:result.results.map(item=>({url:item.url,title:item.title,excerpt:item.snippet,method:'Índice MCP oficial OpenAI Docs; fragmento, no lectura íntegra'})),errors:[]};}catch(error){signal?.throwIfAborted();}}
-  return web(question,{signal});
+  signal?.throwIfAborted();
+  let result;
+  try{result=await web(question,{signal});}
+  catch(error){signal?.throwIfAborted();if(typeof guided!=='function')throw error;result={sources:[],errors:[String(error.message||error).slice(0,300)]};}
+  signal?.throwIfAborted();
+  if(result?.sources?.length||typeof guided!=='function')return result;
+  const direct=await guided(question,{signal});signal?.throwIfAborted();
+  return {sources:direct?.sources||[],errors:[...(result?.errors||[]),...(direct?.errors||[])].slice(0,5)};
  };
 }

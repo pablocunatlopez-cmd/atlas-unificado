@@ -1,6 +1,6 @@
 # Verificación de la distribución de código
 
-Verificación del 1 de noviembre de 2026. Este árbol contiene código, configuración de ejemplo y pruebas. Excluye claves, configuración privada, historiales, bases locales, pesos, corpora, adaptadores, trabajos de agentes, capturas y paquetes instalados.
+Verificación del 2 de noviembre de 2026. Este árbol contiene código, configuración de ejemplo y pruebas. Excluye claves, configuración privada, historiales, bases locales, pesos, corpora, adaptadores, trabajos de agentes, capturas y paquetes instalados.
 
 ## Publicación web comprobada
 
@@ -10,15 +10,17 @@ El chat comparte identidad e inventario de capacidades con el coordinador: recon
 
 ## Pruebas desde este árbol
 
-- 395/395 pruebas Node del núcleo aprobadas mediante `node scripts/test-source.mjs`. Incluyen aislamiento QuickJS, contratos, cancelación, espiral, persistencia de contraejemplos, saturación de cobertura, identidad, inventario, guía curada y MCP documental.
-- 71/71 pruebas cloud aprobadas mediante Node con eliminación de tipos. Incluyen rutas, cola, privacidad, saneado de telemetría, planes, navegación, geometría, habitantes y música. Para esta comprobación se reutilizaron las dependencias de framework ya instaladas; siguen excluidas del repositorio.
+- 417/417 pruebas Node del núcleo aprobadas mediante `node scripts/test-source.mjs`. Incluyen aislamiento QuickJS, contratos, cancelación, espiral, persistencia de contraejemplos, saturación de cobertura, identidad, inventario, guía curada, MCP documental, lectura directa de referencias y memoria de fuentes entre experiencias.
+- La comprobación cloud de Sites V17 permanece en 71/71 pruebas aprobadas; esos módulos no cambiaron en esta entrega. Incluye rutas, cola, privacidad, saneado de telemetría, planes, navegación, geometría, habitantes y música. Sus dependencias de framework permanecen excluidas del repositorio.
 - La espera de la prueba de parada asíncrona del laboratorio secundario se corrigió para comprobar el estado terminal durante un plazo explícito. No cambió el comportamiento de producción.
 
 Las pruebas de distribución no iniciaron otro coordinador, modelo ni entrenamiento GPU. Las dependencias del framework web se instalan por separado según su lockfile.
 
 ## Operación comprobada y límites
 
-La instalación de origen se reinició con el mecanismo habitual y respondió con Qwen saludable, experiencia habilitada y sin pausa. Se comprobó que la nueva guía aparece por identificador, fecha y SHA-256 en una experiencia real. La revisión no depende de mantener abierto Codex, pero sí de que el PC y sus servicios sigan disponibles.
+La instalación de origen se reinició con el mecanismo habitual y respondió con Qwen saludable, experiencia habilitada y sin pausa. Se comprobó que la guía aparece por identificador, fecha y SHA-256 en una experiencia real. El 2 de noviembre se verificó también la memoria cargada y su presencia en las observaciones del planificador. La revisión no depende de mantener abierto Codex, pero sí de que el PC y sus servicios sigan disponibles.
+
+La recuperación puede leer direcciones de la guía curada cuando fallan los buscadores. Una prueba real recuperó documentación de Three.js, la guardó y la volvió a encontrar sin llamar al modelo. Las consultas conservan causa medida y fecha de reintento; cuando no hubo lectura nueva no solicitan otra reflexión de Qwen. La memoria de fuentes permanece local, acotada y fuera de GitHub. Los fragmentos recordados siguen siendo datos no verificados y no incrementan los cambios aceptados. Ver `continuous/RECUPERACION_EVIDENCIA_2026-11-02.md`.
 
 La guía enlaza referencias públicas de Aider, smolagents, llama.cpp, lm-evaluation-harness, EvalPlus, Three.js, Khronos y MIT. Distingue adaptadores existentes de referencias pendientes de integrar. Atlas conserva la elección de objetivos. El límite de cobertura deja de ofrecer la misma fuente tras tres lotes completos sin contradicción; variar semillas o UUID no lo evita. Una fuente cambiada o un contraejemplo ejecutado y verificado puede abrir nueva cobertura. El historial rotatorio no elimina esos testigos. Saturación no significa corrección universal.
 

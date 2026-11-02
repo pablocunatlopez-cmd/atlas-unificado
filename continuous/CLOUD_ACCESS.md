@@ -8,6 +8,8 @@ El chat recibe la identidad y el inventario del programa completo. La petición 
 
 La guía `DIRECCIONES_ATLAS_2026-11-01.md` se incorpora al planificador y a conversaciones relevantes. El coordinador excluye nuevos lotes con la misma fuente/cobertura tras tres lotes completos sin contradicciones; las funciones del chat siguen disponibles. Esta saturación delimita presupuesto y no demuestra corrección universal. La ampliación a nuevas clases necesita evidencia y ejecutores verificables.
 
+La exportación privada de código quedó sincronizada en GitHub, revisión `ac08d7b0d879aaa5f9ea05a1426129bcbe1cd7f3`: 545 archivos, hashes de los 545 blobs contrastados y escaneo sin hallazgos. Pasaron 395 pruebas Node del núcleo y 71 de la web. El reinicio final cargó la guía revisada y el ledger persistente; se comprobó Qwen saludable y la espiral habilitada, sin pausa. Capturas de producción: `verification/atlas-casa-v17.png` y `verification/atlas-casa-v17-movil.png`. Esta revisión Git incluye cambios posteriores del coordinador; el commit de Sites anterior identifica la interfaz publicada.
+
 Las publicaciones y verificaciones siguientes se conservan como historia; no sustituyen este estado de entrega.
 
 ---

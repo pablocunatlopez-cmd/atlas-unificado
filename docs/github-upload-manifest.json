@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "createdAt": "2026-11-01T22:28:46.313Z",
+  "createdAt": "2026-11-02T06:13:57.693Z",
   "files": [
     {
       "path": ".env.example",
@@ -1364,8 +1364,8 @@
     },
     {
       "path": "continuous/AGENTS.md",
-      "bytes": 9876,
-      "sha256": "2028ea5764521717510ada596cb09b6ab180b45ee437d811f412b72f676ecc61"
+      "bytes": 10492,
+      "sha256": "8b9f33df610bfad84ecf6989139449e93665a451fbbe94eb54962e561f56707b"
     },
     {
       "path": "continuous/ATLAS_MANDATO_UNIFICADO.md",
@@ -1374,8 +1374,8 @@
     },
     {
       "path": "continuous/CLOUD_ACCESS.md",
-      "bytes": 7752,
-      "sha256": "16fb35c7a08eb7e5b3e0529c2ee817eecda47061590a5001429c8bb72c35d2ac"
+      "bytes": 8362,
+      "sha256": "021b53a976beb93435efb0108854b017a83e77e9846a2c91e0a31a9d63dec768"
     },
     {
       "path": "continuous/COGNITIVE_CORE.md",
@@ -1411,6 +1411,11 @@
       "path": "continuous/QWEN_WEIGHT_EVOLUTION.md",
       "bytes": 13358,
       "sha256": "6f3cd0c9a313a48ff9a7f3931e5d0c10c55046ed7d0b513d63bd121c7eb06a8e"
+    },
+    {
+      "path": "continuous/RECUPERACION_EVIDENCIA_2026-11-02.md",
+      "bytes": 2716,
+      "sha256": "958c85c835555bea7343bce4b1d99943e8e5ce055e45a162e5f3f1107299e580"
     },
     {
       "path": "continuous/Restart-Atlas.ps1",
@@ -2089,13 +2094,13 @@
     },
     {
       "path": "continuous/docs-evidence.mjs",
-      "bytes": 1407,
-      "sha256": "a8f68b6ec0cd8545b34efe5f39230357be63121ff028a65518a7fee3b9277e90"
+      "bytes": 1903,
+      "sha256": "5ea84232392a94ee8e8a41026492608b0fb8b647c7df9da379b09828648d13df"
     },
     {
       "path": "continuous/docs-evidence.test.mjs",
-      "bytes": 1402,
-      "sha256": "cd0c2fc0978d7ea9b77d3de601042284020402841116068df3ff1d3b1401ad70"
+      "bytes": 2466,
+      "sha256": "25dae5f3dc9c0b1891a0ea4f3e0683e073765c096e7593a7b24d17ef16c9e1e0"
     },
     {
       "path": "continuous/engine.mjs",
@@ -2118,6 +2123,16 @@
       "sha256": "3ca7a72739536531603ba4f259761fa02e6eb113d9fa39feabe64c0a1c470003"
     },
     {
+      "path": "continuous/experience-evidence.mjs",
+      "bytes": 9203,
+      "sha256": "fb50d76018bc1569e721f6f3f78bbc4f08d0c3c1abb341c0a06043f89bdc57f5"
+    },
+    {
+      "path": "continuous/experience-evidence.test.mjs",
+      "bytes": 9064,
+      "sha256": "ff6c7b6055a9f8d382d3477e4c1eeb2cd6b23ede43be69abb2375f0a62eb8f21"
+    },
+    {
       "path": "continuous/experience-lab.mjs",
       "bytes": 22928,
       "sha256": "76e3e15bc74514d0a64799c4812a6b6cbaa3190e1ada2ddee09fe2eaa478aaab"
@@ -2129,13 +2144,13 @@
     },
     {
       "path": "continuous/experience-runtime.mjs",
-      "bytes": 20834,
-      "sha256": "219530a75e2286ce219b5045c031f81b3a1475b3b822bc8b48fa3878c629aea9"
+      "bytes": 23854,
+      "sha256": "deb4b5ea7e783e82c76ea96e0d1ab94db5a3d5ef1acbdbfaacf7c6b7eab085b0"
     },
     {
       "path": "continuous/experience-runtime.test.mjs",
-      "bytes": 14744,
-      "sha256": "aaf5f6d3f879d7b1a065d6ba3945cc91bf4cd1487e1f2161023d410adeefe8e9"
+      "bytes": 19248,
+      "sha256": "517d97fff39b0a2369920151ae00316cb3dfadc9747c3093901ce2405375509e"
     },
     {
       "path": "continuous/experience-spiral.mjs",
@@ -2226,6 +2241,16 @@
       "path": "continuous/gpu_train.py",
       "bytes": 7807,
       "sha256": "25a0f0120a3850fff8761e64b696d61734235f0ec253e16d141c72beaf4d0aff"
+    },
+    {
+      "path": "continuous/guided-evidence.mjs",
+      "bytes": 4335,
+      "sha256": "48b75b5c1c48cf91dec7a562a9c94dfca027c069f704e71da03fffedd46d8e92"
+    },
+    {
+      "path": "continuous/guided-evidence.test.mjs",
+      "bytes": 5768,
+      "sha256": "92fe9273d8e2e025b120f298f7806ddff27e67112438dba955cb438e2642b093"
     },
     {
       "path": "continuous/import-repo-library.mjs",
@@ -2509,8 +2534,8 @@
     },
     {
       "path": "continuous/service.mjs",
-      "bytes": 79959,
-      "sha256": "12bc6a509b00888bba31ea58903eddc376d825ea3b66dbd42e9ef7c9d59cf4fe"
+      "bytes": 80067,
+      "sha256": "3c80773452d6099ec96972e539f1b246a1f9db8d7b1f4c0bd0c0e0c93ef35d3c"
     },
     {
       "path": "continuous/shared-chat.test.mjs",
@@ -2649,8 +2674,8 @@
     },
     {
       "path": "docs/EXPORT_VERIFICATION.md",
-      "bytes": 4695,
-      "sha256": "0c0a3c54fe06bb118fe7a0bf5f80603dc4095575a5d05b5d9b0b4da4ded00bfb"
+      "bytes": 5418,
+      "sha256": "afec9a4442ca8bcbb02215af1a24e15c8cdc4fc25d0e23c79f017237f06d3345"
     },
     {
       "path": "docs/MEDIA_RUNTIME.md",
@@ -2660,12 +2685,12 @@
     {
       "path": "docs/cloud-export-manifest.json",
       "bytes": 49600,
-      "sha256": "b64ea3ec3b0c3c82f6a209918cf1c17fb949abc1219ac38cd8c053f88b26c47e"
+      "sha256": "b60417b71f09c342dbe5dd736dba082847d975e59fdf3c193cc1a65f9cee67b3"
     },
     {
       "path": "docs/source-export-manifest.json",
-      "bytes": 52429,
-      "sha256": "474f8f940bacbd6c28d43f491ff88bb6fbede494a518c618d014f17143226f9d"
+      "bytes": 53407,
+      "sha256": "c87fdfa5b4739ed7bfa1436566252253103496d3c754fbe2629986e0c48d5186"
     },
     {
       "path": "package-lock.json",

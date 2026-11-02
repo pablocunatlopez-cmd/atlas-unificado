@@ -37,3 +37,5 @@ Referencia inicial de la espiral abierta: entrega V13. El estado de publicación
 
 
 La entrega vigente se consulta primero en CLOUD_ACCESS.md: V17 y prueba de chat/casa, seguidas del historial. Leer también DIRECCIONES_ATLAS_2026-11-01.md: guía curada en el planificador y chat; no instalar ni repetir pruebas saturadas por una variación de seed. experience-lab conserva un ledger por fuente/cobertura y testigos verificados fuera de los últimos 100 trabajos. No confundir actividad con cambios aceptados.
+
+La recuperación de evidencia del 2 de noviembre se documenta en RECUPERACION_EVIDENCIA_2026-11-02.md. La memoria experience-evidence.json conserva fuentes públicas no verificadas solo en el directorio privado de experiencias; no copiarla al export. El planificador y el contraste reutilizan sus fragmentos con procedencia. Los fallos de búsqueda pueden recurrir a direcciones específicas de la guía; no atribuir ese rescate a otra IA ni a búsqueda global. Las consultas sin lectura nueva conservan causa y retryAt sin otra reflexión de Qwen. Preservar formatos históricos de inquiries al añadir metadatos.
