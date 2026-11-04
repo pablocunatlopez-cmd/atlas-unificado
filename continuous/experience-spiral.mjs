@@ -16,10 +16,24 @@ const count=(value,max=1000000000)=>Number.isSafeInteger(value)&&value>=0?Math.m
 const taskId=value=>typeof value==='string'&&IDS.includes(value)?value:null;
 const goalFocus=value=>FOCI.has(value?.focus)?value.focus:value?.taskId==='lor-omega-schema'?'language':'programming';
 const cleanFailure=value=>object(value)&&taskId(value.taskId)?{taskId:value.taskId,summary:text(value.summary,400),caseHash:hash(value.caseHash)}:null;
+const epoch=value=>Number.isSafeInteger(value)&&value>=0?value:null;
+
+// Shared with the inquiry executor: cosmetic spelling and private data cannot
+// manufacture another public-search allowance for the same question.
+export function canonicalInquiryQuery(value){
+ const query=typeof value==='string'?value.replace(/https?:\/\/\S+|\bsk-[\w-]+\b|\S+@\S+|[A-Z]:[\\/][^\s]+/gi,'').trim().slice(0,180):'';
+ return query.normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+}
+export const canonicalInquiryKey=value=>digest(canonicalInquiryQuery(value));
+function eligibleAction(value){
+ if(!object(value)||!KINDS.has(value.kind)||(['open-inquiry','creative-experiment'].includes(value.kind)?value.taskId!==null:!taskId(value.taskId))||(value.focus!==undefined&&!FOCI.has(value.focus))||(value.kind==='creative-experiment'&&!['3d','games'].includes(value.focus))||(value.key!==undefined&&!hash(value.key)))return null;
+ return {kind:value.kind,taskId:value.taskId,...(value.focus===undefined?{}:{focus:value.focus}),...(value.key===undefined?{}:{key:hash(value.key)})};
+}
+const actionMatches=(action,goal)=>action.kind===goal.kind&&action.taskId===goal.taskId&&(action.focus===undefined||action.focus===goalFocus(goal));
 
 function observations(value){
  const raw=object(value)?value:{};
- return {facts:Array.isArray(raw.facts)?raw.facts.slice(0,12).map(value=>text(value,300)).filter(Boolean):[],gaps:Array.isArray(raw.gaps)?raw.gaps.slice(0,12).filter(value=>object(value)&&taskId(value.taskId)).map(value=>({taskId:value.taskId,reason:text(value.reason,300)})):[],failures:Array.isArray(raw.failures)?raw.failures.slice(0,12).map(cleanFailure).filter(Boolean):[],unknowns:Array.isArray(raw.unknowns)?raw.unknowns.slice(0,4).map(value=>text(value,250)).filter(Boolean):[],caseHash:hash(raw.caseHash)};
+ return {facts:Array.isArray(raw.facts)?raw.facts.slice(0,12).map(value=>text(value,300)).filter(Boolean):[],gaps:Array.isArray(raw.gaps)?raw.gaps.slice(0,12).filter(value=>object(value)&&taskId(value.taskId)).map(value=>({taskId:value.taskId,reason:text(value.reason,300),...(hash(value.caseHash)?{caseHash:hash(value.caseHash)}:{})})):[],failures:Array.isArray(raw.failures)?raw.failures.slice(0,12).map(cleanFailure).filter(Boolean):[],unknowns:Array.isArray(raw.unknowns)?raw.unknowns.slice(0,4).map(value=>text(value,250)).filter(Boolean):[],caseHash:hash(raw.caseHash),...(Object.hasOwn(raw,'eligibleActions')?{eligibleActions:Array.isArray(raw.eligibleActions)?raw.eligibleActions.slice(0,32).map(eligibleAction).filter(Boolean):[]}:{}),...(Array.isArray(raw.pendingInquiries)?{pendingInquiries:raw.pendingInquiries.slice(-80).filter(value=>object(value)&&epoch(value.retryAt)!==null&&(hash(value.key)||typeof value.query==='string')).map(value=>({key:typeof value.query==='string'?canonicalInquiryKey(value.query):hash(value.key),retryAt:epoch(value.retryAt)}))}:{}),...(epoch(raw.inquiryBudgetRetryAt)!==null?{inquiryBudgetRetryAt:epoch(raw.inquiryBudgetRetryAt)}:{})};
 }
 
 function goalValue(value){
@@ -30,7 +44,7 @@ function goalValue(value){
 
 function physicalResult(value){
  const raw=object(value)?value:{},cases=count(raw.cases,128);
- return {executed:raw.executed===true,cases,passed:Math.min(cases,count(raw.passed,128)),acceptedChange:raw.acceptedChange===true,invariantsPreserved:raw.invariantsPreserved===true,evidenceHash:hash(raw.evidenceHash),caseHash:hash(raw.caseHash),summary:text(raw.summary,800)};
+ return {executed:raw.executed===true,cases,passed:Math.min(cases,count(raw.passed,128)),acceptedChange:raw.acceptedChange===true,invariantsPreserved:raw.invariantsPreserved===true,evidenceHash:hash(raw.evidenceHash),caseHash:hash(raw.caseHash),retryAt:epoch(raw.retryAt),summary:text(raw.summary,800)};
 }
 
 function reflectionValue(value){
@@ -73,7 +87,15 @@ export function createExperienceSpiral({directory,observe,proposeGoal,execute,re
   if(!initialized)initialized=(async()=>{
    await fs.mkdir(directory,{recursive:true});
    try{const loaded=JSON.parse(await fs.readFile(file,'utf8'));if(loaded.version!==1||!Array.isArray(loaded.history)||!Array.isArray(loaded.attemptKeys)||!Array.isArray(loaded.evidenceHashes))throw Error('Estado de espiral no válido.');state=loaded;}
-   catch(error){if(error.code!=='ENOENT')throw error;state={version:1,enabled:true,phase:'waiting',nextRun:null,attempts:0,experiences:0,learningChanges:0,objectiveRevision:0,lastObjectiveHash:null,lastGoal:null,history:[],attemptKeys:[],evidenceHashes:[],current:null,waitReason:'ready'};await save();}
+   catch(error){if(error.code!=='ENOENT')throw error;state={version:1,enabled:true,phase:'waiting',nextRun:null,attempts:0,experiences:0,learningChanges:0,objectiveRevision:0,lastObjectiveHash:null,lastGoal:null,history:[],attemptKeys:[],actionAttempts:[],evidenceHashes:[],current:null,waitReason:'ready'};await save();}
+   // Older attemptKeys mixed observation prose into the hash. Recover leases
+   // from retained physical episodes; never turn an old string into a permanent
+   // prohibition, nor erase the existing history/evidence/counters.
+   if(!Array.isArray(state.actionAttempts)){
+    state.actionAttempts=[];
+    for(const episode of state.history){const goal=goalValue(episode.goal),at=Date.parse(episode.at);if(goal&&Number.isFinite(at))rememberAttempt(goal,observations(episode.observations),physicalResult(episode.result),at);}
+    await save();
+   }else state.actionAttempts=state.actionAttempts.filter(item=>object(item)&&hash(item.key)&&epoch(item.retryAt)!==null&&item.retryAt>now()).slice(-1024);
    // A crash never turns an unfinished action into learning or an approval.
    if(state.current){const record={...state.current,at:stamp(),reason:'interrupted',L:{newEvidence:false,acceptedChange:false,invariantsPreserved:false,countsAsLearning:false}};delete record.language;retain(record);state.current=null;state.phase='waiting';state.waitReason='interrupted';state.nextRun=new Date(now()+failurePause).toISOString();await save();}
   })();
@@ -85,18 +107,45 @@ export function createExperienceSpiral({directory,observe,proposeGoal,execute,re
  }
  function summary(record){return record?{at:record.at,taskId:record.goal?.taskId||null,focus:goalFocus(record.goal),executed:record.result?.executed===true,cases:record.result?.cases||0,passed:record.result?.passed||0,acceptedChange:record.L?.acceptedChange===true,newEvidence:record.L?.newEvidence===true,countsAsLearning:record.L?.countsAsLearning===true,epistemicStatus:EPISTEMIC.has(record.reflection?.epistemicStatus)?record.reflection.epistemicStatus:'unassessed',unknownsCount:record.reflection?.unknowns?.length||0,noveltyScope:record.reflection?.noveltyScope==='new-to-atlas'?'new-to-atlas':'unresolved',reason:record.reason}:null;}
  async function status(){await init();const objective=state.current?.goal||state.lastGoal;return {enabled:state.enabled!==false,paused:false,running:busy&&state.phase!=='waiting',phase:state.phase,objective:objective?{...structuredClone(objective),focus:goalFocus(objective)}:null,last:summary(state.history.at(-1)),experiences:state.experiences,learningChanges:state.learningChanges,attempts:state.attempts,sequence:state.attempts,nextOrdinal:state.attempts+1,nextRun:state.nextRun,waitReason:state.waitReason,qwenWeightsChanged:false,activeAdapter:false};}
- function key(goal,snapshot){return digest({taskId:goal.taskId,...(goal.taskId?{}:{focus:goalFocus(goal),kind:goal.kind}),evidenceHash:digest(snapshot),caseHash:snapshot.caseHash});}
+ function key(goal,snapshot){
+  const action=snapshot.eligibleActions?.find(item=>actionMatches(item,goal));
+  if(!goal.taskId)return digest({version:2,kind:goal.kind,focus:goalFocus(goal),question:canonicalInquiryQuery(goal.question),actionKey:action?.key||null});
+  const failures=[...new Set(snapshot.failures.filter(item=>item.taskId===goal.taskId).map(item=>item.caseHash).filter(Boolean))].sort();
+  const gaps=[...new Set(snapshot.gaps.filter(item=>item.taskId===goal.taskId).map(item=>item.caseHash).filter(Boolean))].sort();
+  return digest({version:2,kind:goal.kind,taskId:goal.taskId,evidence:action?.key?{actionKey:action.key,gaps,failures}:{caseHash:snapshot.caseHash,gaps,failures}});
+ }
+ function rememberAttempt(goal,snapshot,result,at=now(),replace=false){
+  const duration=goal.kind==='open-inquiry'?(result?.executed?6*3600000:10*60000):24*3600000;
+  const reported=epoch(result?.retryAt),retryAt=reported!==null&&reported>at?Math.max(at+60000,Math.min(at+24*3600000,reported)):at+duration,attemptKey=key(goal,snapshot);
+  const previous=state.actionAttempts.find(item=>item.key===attemptKey);
+  if(previous)previous.retryAt=replace?retryAt:Math.max(previous.retryAt,retryAt);else state.actionAttempts.push({key:attemptKey,retryAt});
+  state.actionAttempts=state.actionAttempts.filter(item=>item.retryAt>now()).slice(-1024);
+ }
+ function available(goal,snapshot){
+  if(Object.hasOwn(snapshot,'eligibleActions')&&!snapshot.eligibleActions.some(action=>actionMatches(action,goal)))return false;
+  if(goal.kind==='open-inquiry'){
+   if(!canonicalInquiryQuery(goal.question)||snapshot.inquiryBudgetRetryAt>now())return false;
+   const queryKey=canonicalInquiryKey(goal.question);
+   if(snapshot.pendingInquiries?.some(item=>item.key===queryKey&&item.retryAt>now()))return false;
+  }
+  return !state.actionAttempts.some(item=>item.key===key(goal,snapshot)&&item.retryAt>now());
+ }
  function fallback(snapshot,failures,unknowns){
-  if(!snapshot.facts.length&&!snapshot.gaps.length&&!failures.length&&!unknowns.length)return null;
-  const goals=IDS.filter(id=>snapshot.gaps.some(item=>item.taskId===id)||failures.some(item=>item.taskId===id)).map(id=>{
+  if(!Object.hasOwn(snapshot,'eligibleActions')&&!snapshot.facts.length&&!snapshot.gaps.length&&!failures.length&&!unknowns.length)return null;
+  const explicit=Object.hasOwn(snapshot,'eligibleActions');
+  const choices=explicit?snapshot.eligibleActions.filter(item=>item.taskId):IDS.filter(id=>snapshot.gaps.some(item=>item.taskId===id)||failures.some(item=>item.taskId===id)).map(id=>({taskId:id,kind:failures.some(item=>item.taskId===id)?'curriculum-repair':'tool-experiment'}));
+  const goals=choices.map(action=>{
+   const id=action.taskId;
    const gap=snapshot.gaps.find(item=>item.taskId===id),failure=failures.find(item=>item.taskId===id),prior=[...state.history].reverse().find(item=>item.goal?.taskId===id),reason=failure?.summary||gap?.reason||snapshot.facts[0];
-   const task=getAutonomousTask(id),goal={question:('¿Qué experimento ejecutable permite refutar o corregir '+task.name+' ante este hecho: '+reason+'?').slice(0,600),rationale:('Partir del dato observado y comprobar un cambio pequeño: '+reason).slice(0,1000),prediction:'Un caso ejecutado permitirá conservar o refutar la corrección sin presuponer su éxito.',kind:failure?'curriculum-repair':'tool-experiment',taskId:id,focus:id==='lor-omega-schema'?'language':'programming'};
+   const task=getAutonomousTask(id),goal={question:('¿Qué experimento ejecutable permite refutar o corregir '+task.name+' ante este hecho: '+reason+'?').slice(0,600),rationale:('Partir del dato observado y comprobar un cambio pequeño: '+reason).slice(0,1000),prediction:'Un caso ejecutado permitirá conservar o refutar la corrección sin presuponer su éxito.',kind:action.kind,taskId:id,focus:action.focus||(id==='lor-omega-schema'?'language':'programming')};
    return {goal,priority:failure?0:1,last:prior?.ordinal||0};
   });
   const suggested=[...state.history].reverse().find(item=>item.reflection?.suggestedNextQuestion)?.reflection.suggestedNextQuestion;
   const unresolved=unknowns[0]||snapshot.facts[0]||'Queda una observación sin explicar.';
-  goals.push({goal:{question:suggested||('¿Qué evidencia pública permitiría investigar lo aún no explicado: '+unresolved+'?').slice(0,600),rationale:('Acoger un posible acontecimiento sin forzarlo al catálogo de herramientas: '+unresolved).slice(0,1000),prediction:'La búsqueda puede aportar evidencia situada o dejar la pregunta sin resolver; no se predice novedad universal.',kind:'open-inquiry',taskId:null,focus:'unknown'},priority:2,last:0});
-  const eligible=goals.filter(item=>!state.attemptKeys.includes(key(item.goal,snapshot))).sort((a,b)=>a.priority-b.priority||a.last-b.last||IDS.indexOf(a.goal.taskId)-IDS.indexOf(b.goal.taskId));
+  // With an explicit executor contract, a rejected inquiry must not escape its
+  // cooldown by acquiring a synthetic prefix or a different invented question.
+  if(!explicit)goals.push({goal:{question:suggested||('¿Qué evidencia pública permitiría investigar lo aún no explicado: '+unresolved+'?').slice(0,600),rationale:('Acoger un posible acontecimiento sin forzarlo al catálogo de herramientas: '+unresolved).slice(0,1000),prediction:'La búsqueda puede aportar evidencia situada o dejar la pregunta sin resolver; no se predice novedad universal.',kind:'open-inquiry',taskId:null,focus:'unknown'},priority:2,last:0});
+  const eligible=goals.filter(item=>available(item.goal,snapshot)).sort((a,b)=>a.priority-b.priority||a.last-b.last||IDS.indexOf(a.goal.taskId)-IDS.indexOf(b.goal.taskId));
   return eligible[0]?.goal||null;
  }
  async function tick({signal}={}){
@@ -110,18 +159,19 @@ export function createExperienceSpiral({directory,observe,proposeGoal,execute,re
    const observed=await observe({signal,ordinal,sequence:ordinal,lastExperiences});signal?.throwIfAborted();
    const snapshot=observations(observed),failures=[...snapshot.failures,...lastExperiences.filter(item=>item.goal?.taskId&&item.result&&(!item.result.executed||item.result.passed!==item.result.cases)).map(item=>({taskId:item.goal.taskId,summary:item.result.summary||'El último experimento no superó sus casos.',caseHash:item.result.caseHash}))].slice(0,15),unknowns=[...new Set([...snapshot.unknowns,...lastExperiences.flatMap(item=>item.reflection?.unknowns||[])])].slice(0,12);
    let proposed=null;
-   if(proposeGoal){try{proposed=goalValue(await proposeGoal({signal,ordinal,sequence:ordinal,observations:structuredClone(snapshot),lastExperiences,failures,unknowns}));}catch(error){signal?.throwIfAborted();}}
+   if(proposeGoal&&(!Object.hasOwn(snapshot,'eligibleActions')||snapshot.eligibleActions.length)){try{proposed=goalValue(await proposeGoal({signal,ordinal,sequence:ordinal,observations:structuredClone(snapshot),lastExperiences,failures,unknowns}));}catch(error){signal?.throwIfAborted();}}
    signal?.throwIfAborted();
-   const chosen=proposed&&!state.attemptKeys.includes(key(proposed,snapshot))?proposed:fallback(snapshot,failures,unknowns);
-   if(!chosen){reason=snapshot.facts.length||snapshot.gaps.length||snapshot.failures.length||unknowns.length?'no_new_evidence':'no_eligible_goal';state.waitReason=reason;return {status:'waiting',reason};}
+   const chosen=proposed&&available(proposed,snapshot)?proposed:fallback(snapshot,failures,unknowns);
+   if(!chosen){reason=snapshot.eligibleActions?.length===0?'no_eligible_goal':snapshot.facts.length||snapshot.gaps.length||snapshot.failures.length||unknowns.length?'no_new_evidence':'no_eligible_goal';state.waitReason=reason;return {status:'waiting',reason};}
    const objectiveHash=digest(chosen),parent=state.history.at(-1),changedQuestion=state.lastGoal?.question!==chosen.question;
    if(state.lastObjectiveHash!==objectiveHash)state.objectiveRevision++;
    const goal={...chosen,goalId:'goal-'+digest({objectiveHash,ordinal}).slice(0,24),parentExperienceId:parent?.id||null,objectiveRevision:state.objectiveRevision,revision:state.objectiveRevision,changedQuestion,objectiveHash};
    record={id:'experience-'+ordinal+'-'+objectiveHash.slice(0,12),ordinal,at:stamp(),goal,observations:snapshot,observationHash:digest(snapshot),result:physicalResult(null),reflection:reflectionValue(null),logic:logicValue(null),phases:[{phase:'mind',at:stamp()}]};
    state.lastGoal=goal;state.lastObjectiveHash=objectiveHash;state.current=record;
    async function phase(value){signal?.throwIfAborted();state.phase=value;record.phases.push({phase:value,at:stamp()});await save();}
-   await phase('ion');state.attemptKeys.push(key(goal,snapshot));await save();
+   await phase('ion');state.attemptKeys.push(key(goal,snapshot));rememberAttempt(goal,snapshot,null);await save();
    record.result=physicalResult(await execute({signal,ordinal,sequence:ordinal,goal:structuredClone(goal),observations:structuredClone(snapshot)}));
+   rememberAttempt(goal,snapshot,record.result,now(),true);
    record.physicalEvidenceNew=record.result.executed&&!!record.result.evidenceHash&&!state.evidenceHashes.includes(record.result.evidenceHash);
    if(record.physicalEvidenceNew)state.evidenceHashes.push(record.result.evidenceHash);
    await save();signal?.throwIfAborted();

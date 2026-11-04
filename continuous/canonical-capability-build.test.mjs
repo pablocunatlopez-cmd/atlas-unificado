@@ -36,14 +36,20 @@ test('canonical acceptance data is isolated from mutation by the injected builde
  assert.equal(candidate.passed,true);assert.deepEqual(candidate.acceptanceTests,task.acceptanceTests);assert.equal(candidate.acceptanceResults.length,8);
 });
 
-test('the latest matching history contributes exact regression cases, never unrelated records or mutations',async()=>{
+test('matching history preserves older and latest exact regression cases, never unrelated records or mutations',async()=>{
  const task=getAutonomousTask('stable-dedupe'),regression={input:{values:['new-value',false,'new-value']},expected:{values:['new-value',false]}},previous={id:'previous-source',curriculumTaskId:task.id,regressionTests:[regression,regression],tests:[task.acceptanceTests[0]],acceptanceTests:task.acceptanceTests};
  const tools=[{id:'older',curriculumTaskId:task.id,regressionTests:[{input:{values:['old']},expected:{values:['old']}}]},previous,{id:'unrelated',curriculumTaskId:'other',regressionTests:[{input:null,expected:999}]}],before=structuredClone(tools);
  const faulty=source.replace('const seen=new Set();','if(input.values.includes("new-value"))return{values:[]};const seen=new Set();');
  const candidate=await buildCanonicalCapability(task.id,{tools,build:async()=>built({source:faulty})});
  assert.equal(candidate.acceptanceResults.every(item=>item.passed),true);assert.equal(candidate.passed,false);assert.equal(candidate.parentId,previous.id);
- assert.equal(candidate.regressionTests.length,1);assert.deepEqual(candidate.regressionTests[0],regression);assert.ok(candidate.contractCheck.contractResults.slice(8).some(item=>item.passed===false));
+ assert.equal(candidate.regressionTests.length,2);assert.deepEqual(candidate.regressionTests[0],regression);assert.ok(candidate.regressionTests.some(item=>item.input.values[0]==='old'));assert.ok(candidate.contractCheck.contractResults.slice(8).some(item=>item.passed===false));
  assert.deepEqual(tools,before);
+});
+
+test('a failed large audit does not hide an earlier measured source when choosing the next repair seed',()=>{
+ const task=getAutonomousTask('stable-dedupe'),measurements=task.acceptanceTests.map(item=>({...structuredClone(item),actual:structuredClone(item.expected),passed:true}));
+ const record={id:'measured-before-audit-limit',curriculumTaskId:task.id,source,contractCheck:{contractResults:[]},acceptanceResults:[],attempts:[{source,acceptanceResults:measurements}]};
+ assert.equal(selectCapabilitySeed(task.id,[record]).id,record.id);
 });
 
 test('cancellation before or immediately after building returns no candidate',async()=>{

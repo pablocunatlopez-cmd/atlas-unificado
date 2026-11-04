@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import http from 'node:http';
+import {pipeline} from 'node:stream/promises';
 import {fileURLToPath} from 'node:url';
 import {randomBytes} from 'node:crypto';
 import {TinyLanguageModel,validateSnapshot} from '../public/core/language-model.mjs';
@@ -44,6 +45,7 @@ import {publicTools,publicToolIntent} from './public-tools.mjs';
 import {sanitizeLearningTelemetry} from './learning-telemetry.mjs';
 import {selectAutonomousTask} from './autonomy-curriculum.mjs';
 import {createExperienceRuntime} from './experience-runtime.mjs';
+import {createAgentResearch} from './agent-research.mjs';
 import {generateExperienceCases} from './experience-lab.mjs';
 import {createCreativeExperience} from './experience-creative.mjs';
 import {atlasApplicationCapabilities} from './atlas-capabilities.mjs';
@@ -51,6 +53,11 @@ import {atlasIdentityPrompt} from './atlas-identity.mjs';
 import {createPublicMcp} from './public-mcp.mjs';
 import {createAtlasEvidence} from './docs-evidence.mjs';
 import {createGuidedEvidence} from './guided-evidence.mjs';
+import {createLocalInferenceRouter} from './local-inference-router.mjs';
+import {createRuntimeInventory} from './runtime-inventory.mjs';
+import {createBackupMaintenance} from './backup-maintenance.mjs';
+import {openAssessmentLedger,DEFAULT_ASSESSMENT_PATH} from './library-assessment.mjs';
+import {streamRepositoryCsv} from './repository-export.mjs';
 const publicDocs=createPublicMcp();
 const atlasEvidence=createAtlasEvidence({publicDocs,web:webEvidence,guided:createGuidedEvidence({read:webEvidence})});
 void publicDocs.discover().catch(()=>{});
@@ -58,6 +65,12 @@ let chatBusy=false,creativeTask=null;
 let mediaBusy=false,mediaAbort=null,mediaProgress=null,gpuActivity=null,autonomousWeights=false,mediaDone=Promise.resolve();
 const root=path.dirname(fileURLToPath(import.meta.url));
 const data=path.join(root,'data');
+// Existing loaded local alternatives may answer after a transport failure. This
+// adapter never starts a runtime, loads weights or transmits a local API key.
+const localInference=createLocalInferenceRouter({discoverLoadedAlternatives:true});
+const currentRuntimeInventory=createRuntimeInventory({root,routerStatus:localInference.status});
+let assessmentLedger=null;
+const assessments=()=>assessmentLedger??=openAssessmentLedger({dbPath:DEFAULT_ASSESSMENT_PATH});
 const cognitiveCore=createCognitiveCore({directory:path.join(data,'cognitive-core')});
 const lorLab=createLorLab();
 const qwenEvolution=createQwenEvolution();
@@ -99,6 +112,7 @@ let extensions=await read('extensions.json',[]);
 let collaborations=await read('collaborations.json',[]);
 let repositoryNotes=await read('repository-reflections.json',[]);
 let libraryBackup=await read('library-backup.json',{at:null,lastAttempt:null});
+let assessmentBackup=await read('assessment-backup.json',{at:null,lastAttempt:null});
 let discoverySchedule=await read('repository-discovery-schedule.json',{nextRun:null});
 let gameReferences=null;
 let gameRefreshBusy=false;
@@ -121,6 +135,20 @@ const token=randomBytes(24).toString('hex');
 let autonomousTimer,autonomousBusy=false;
 let autonomousAbort=null,autonomousDone=Promise.resolve();
 let libraryTimer,libraryBusy=false,libraryAbort=null,libraryNextRun=null;
+let backupTimer,backupDone=Promise.resolve();const backupAbort=new AbortController();
+const backupMaintenance=createBackupMaintenance({
+ jobs:[{id:'library',sourcePath:path.join(data,'repo-library.sqlite'),outputDir:path.join(data,'backups')},{id:'assessment',sourcePath:DEFAULT_ASSESSMENT_PATH,outputDir:path.join(data,'assessment-backups')}],
+ readState:id=>id==='library'?libraryBackup:assessmentBackup,
+ writeState:async(id,value)=>{await write(id==='library'?'library-backup.json':'assessment-backup.json',value);if(id==='library')libraryBackup=value;else assessmentBackup=value;},
+ sourceExists:async source=>{try{await fs.access(source);return true;}catch(error){if(error.code==='ENOENT')return false;throw error;}},
+ backup:backupRepositoryLibrary
+});
+function backupCycle(){
+ if(closing)return;
+ backupDone=backupMaintenance.tick({signal:backupAbort.signal}).then(result=>{
+  for(const job of result.jobs)if(job.status==='verified')event('backup',`Respaldo ${job.id} comprobado con integridad y SHA256`);else if(job.status==='failed'||job.status==='state-unavailable')event('backup_error',`Respaldo ${job.id}: ${job.code||job.status}`);
+ }).catch(()=>{if(!closing)event('backup_error','No se completó la revisión de respaldos locales');}).finally(()=>{if(!closing)backupTimer=setTimeout(backupCycle,60000);});
+}
 async function libraryCycle(){
  if(closing)return;
  const scheduleLibrary=delay=>{libraryNextRun=new Date(Date.now()+delay).toISOString();libraryTimer=setTimeout(libraryCycle,delay);};
@@ -140,11 +168,6 @@ async function libraryCycle(){
     event('discovery',`${found.added} repositorios nuevos localizados; evaluación pendiente`,{url:found.sourceUrl});if(queued)await persist();
    }
   }
-  if(Date.now()-Date.parse(libraryBackup.lastAttempt||'1970-01-01')>24*60*60*1000){
-   libraryBackup.lastAttempt=new Date().toISOString();await write('library-backup.json',libraryBackup);
-   try{const backup=await backupRepositoryLibrary();libraryBackup={...backup,at:new Date().toISOString(),lastAttempt:libraryBackup.lastAttempt};await write('library-backup.json',libraryBackup);event('backup','Respaldo SQLite comprobado con integridad y SHA256');}
-   catch(error){event('backup_error',error.message);}
-  }
  }
  catch(error){if(!libraryAbort.signal.aborted)event('repository_error',error.message);}
  finally{libraryBusy=false;libraryAbort=null;if(!closing){const next=Date.parse(librarySummary().nextRun||'');scheduleLibrary(Math.max(120000,Number.isFinite(next)?next-Date.now():120000));}}
@@ -153,10 +176,11 @@ let autonomy=await read('autonomous-review.json',{enabled:true,history:[],nextRu
 const experienceEnabled=config.experienceSpiral!==false&&config.autonomousProgramming!==false;
 let repositoryPerspectiveBusy=false,lastRepositoryPerspectiveAt=0;
 const creativeExperience=createCreativeExperience({directory:path.join(config.experienceRoot||path.join(data,'experience'),'creative'),generate:generatePolicyCandidate});
-const experienceRuntime=createExperienceRuntime({directory:config.experienceRoot||path.join(data,'experience'),getTools:async()=>extensions,setTools:async next=>{extensions=next;await write('extensions.json',extensions);},build:(task,cases,options)=>codingCollaborators.build(task,chatKey,cases,input=>chat(input,[],fetch,chatKey,'',null,'',[],'',{signal:options.signal,sharedSession:true,cognitiveCore}),options),generate:generatePolicyCandidate,referenceLibrary:codingReferences,getAgentStatus:codingCollaborators.status,creative:creativeExperience,lookup:atlasEvidence,waitMs:1000});
+const agentResearch=createAgentResearch({listRepositories:combinedLibraryItems,getCollaborators:codingCollaborators.status});
+const experienceRuntime=createExperienceRuntime({directory:config.experienceRoot||path.join(data,'experience'),getTools:async()=>extensions,setTools:async next=>{extensions=next;await write('extensions.json',extensions);},build:(task,cases,options)=>codingCollaborators.build(task,chatKey,cases,input=>chat(input,[],localInference.request,chatKey,'',null,'',[],'',{signal:options.signal,sharedSession:true,cognitiveCore}),options),generate:generatePolicyCandidate,referenceLibrary:codingReferences,getAgentStatus:codingCollaborators.status,getResearchContext:agentResearch,creative:creativeExperience,lookup:atlasEvidence,waitMs:1000});
 if(experienceEnabled)autonomy.nextRun=null;
 async function generatePolicyCandidate(prompt,{signal}){
- const response=await fetch('http://127.0.0.1:11435/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+chatKey},signal:AbortSignal.any([signal,AbortSignal.timeout(150000)]),body:JSON.stringify({model:'atlas-local',messages:[{role:'system',content:atlasIdentityPrompt+' Tu programa dispone de casa virtual ERAS/Three, estudio Web Audio, prototipos 3D, vídeo local condicionado y ejecutores de funciones/políticas con contratos. La acción concreta depende del ejecutor indicado en la petición. No eres solo texto ni puedes inventar permisos o resultados. Los colaboradores locales comparten Qwen; un MCP documental no es otro modelo. Aplica el marco cuando aclare la tarea, sin añadir filosofía a un contrato de código o JSON.'},{role:'user',content:prompt}],temperature:.2,max_tokens:3500,chat_template_kwargs:{enable_thinking:false},response_format:{type:'json_object'}})});
+ const response=await localInference.request('http://127.0.0.1:11435/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+chatKey},signal:AbortSignal.any([signal,AbortSignal.timeout(150000)]),body:JSON.stringify({model:'atlas-local',messages:[{role:'system',content:atlasIdentityPrompt+' Tu programa dispone de casa virtual ERAS/Three, estudio Web Audio, prototipos 3D, vídeo local condicionado y ejecutores de funciones/políticas con contratos. La acción concreta depende del ejecutor indicado en la petición. No eres solo texto ni puedes inventar permisos o resultados. Los colaboradores locales comparten Qwen; un MCP documental no es otro modelo. Aplica el marco cuando aclare la tarea, sin añadir filosofía a un contrato de código o JSON.'},{role:'user',content:prompt}],temperature:.2,max_tokens:3500,chat_template_kwargs:{enable_thinking:false},response_format:{type:'json_object'}})});
  if(!response.ok)throw Error('El motor local no pudo proponer una política.');const output=await response.json();return output.choices?.[0]?.message?.content;
 }
 async function runAutonomousWeightCandidate(candidate,{signal}){
@@ -419,14 +443,20 @@ server=http.createServer(async(req,res)=>{
  }
  if(req.method==='GET'&&url.pathname==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end((await fs.readFile(path.join(root,'index.html'),'utf8')).replace('__TOKEN__',token).replace('</head>','<link rel="stylesheet" href="/atlas-theme.css"></head>'));}
  if(req.method==='GET'&&url.pathname==='/status'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({...status(),media:{busy:mediaBusy,progress:mediaProgress}}));}
+ if(req.method==='GET'&&url.pathname==='/runtime/status'){
+  res.setHeader('Content-Type','application/json');
+  try{return res.end(JSON.stringify(await currentRuntimeInventory()));}
+  catch{res.writeHead(503);return res.end(JSON.stringify({error:'No se ha podido leer el inventario local.'}));}
+ }
  if(req.method==='GET'&&url.pathname==='/process/status'){
   res.setHeader('Content-Type','application/json');try{
    const core=await cognitiveCore.status(),lor=await lorLab.status(),evolution={...await qwenEvolution.status(),autonomy:await weightAutonomy.status()},agents=await codingCollaborators.status(),experience={...await experienceRuntime.status(),enabled:experienceEnabled,paused:state.paused};
    const experiencePhase={mind:'understand',ion:'apply',constellation:'connect',logic:'refute',retained:'retain',waiting:'observe'}[experience.phase]||'observe';
    const pendingTask=selectAutonomousTask(extensions,autonomy.history||[]);
    const learning=sanitizeLearningTelemetry({reviewEnabled:autonomy.enabled!==false,paused:state.paused,running:autonomousBusy,lastCycleAt:autonomy.history?.at(-1)?.at,nextRun:autonomy.nextRun,pendingTask:pendingTask?{taskId:pendingTask.id}:null,tools:extensions});
+   const research=await agentResearch();
    const coding=[agents.aider,agents.smolagents,agents.native],agentCounters=coding.reduce((sum,item)=>({trials:sum.trials+item.attempts,accepted:sum.accepted+item.passed,rejected:sum.rejected+item.failed}),{trials:0,accepted:0,rejected:0});
-   return res.end(JSON.stringify(sanitizeProcessTelemetry({at:new Date().toISOString(),core:{...core,version:core.activeId},lor:lor.last,evolution,agents,learning,experience,publicDocs:publicDocs.status(),processes:[
+   return res.end(JSON.stringify(sanitizeProcessTelemetry({at:new Date().toISOString(),core:{...core,version:core.activeId},lor:lor.last,evolution,agents,research,learning,experience,publicDocs:publicDocs.status(),processes:[
     {id:'chat',state:chatBusy?'running':mediaBusy?'waiting':'idle',phase:'understand'},
     {id:'research',state:libraryBusy||repositoryPerspectiveBusy?'running':state.paused?'waiting':'idle',phase:repositoryPerspectiveBusy?'connect':'observe',counters:{observations:documents.filter(document=>document.role==='reference').length}},
     {id:'tools',state:extensionBusy&&!coreReviewBusy&&(!autonomousBusy||!experienceEnabled||experience.phase==='ion')?'running':'idle',phase:'apply',counters:{trials:extensions.length,accepted:extensions.filter(item=>item.passed).length,rejected:extensions.filter(item=>!item.passed).length}},
@@ -472,7 +502,7 @@ server=http.createServer(async(req,res)=>{
    const cases=[{input:{values:[1,2,1]},expected:[1,2]},{input:{values:['a','b','a']},expected:['a','b']},{input:{values:[]},expected:[]},{input:{values:[null,false,null,false]},expected:[null,false]},{input:{values:[1,'1',1,false,0,false]},expected:[1,'1',false,0]},{input:{},expected:[]},{input:null,expected:[]},{input:{values:'abc'},expected:[]}];
    const task='Recibe input={values:[primitivos JSON]} y devuelve el array sin valores repetidos, conservando el orden de la primera aparición. No confundas número 1 con texto "1", false con 0, ni null con otros valores. Si input o values no tienen el formato esperado devuelve []. No modifica la entrada.';
    const provider=url.searchParams.get('provider')==='smolagents'?'smolagents':'aider';
-   const result=await codingCollaborators.build(task,chatKey,cases,(input)=>chat(input,[],fetch,chatKey,'',null,'',[],'',{signal,sharedSession:true,cognitiveCore}),{provider,format:'code',name:'Deduplicación estable · benchmark de agentes',curriculumTaskId:'stable-dedupe',signal});
+   const result=await codingCollaborators.build(task,chatKey,cases,(input)=>chat(input,[],localInference.request,chatKey,'',null,'',[],'',{signal,sharedSession:true,cognitiveCore}),{provider,format:'code',name:'Deduplicación estable · benchmark de agentes',curriculumTaskId:'stable-dedupe',signal});
    await write('agent-benchmark.json',result);return res.end(JSON.stringify({passed:result.passed,collaborator:result.collaborator,cases:result.acceptanceResults?.length,attempts:result.attempt,sourceReferences:result.sourceReferences||[],referenceErrors:result.referenceErrors||[],referenceContextProvided:result.referenceContextProvided===true}));
   }catch(error){res.writeHead(400);return res.end(JSON.stringify({error:error.message}));}finally{extensionBusy=false;coreAbort=null;res.off('close',close);}
  }
@@ -563,6 +593,26 @@ server=http.createServer(async(req,res)=>{
  }
  if(req.method==='GET'&&url.pathname==='/library/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(sitePage(await fs.readFile(path.join(root,'repo-library.html'),'utf8')));}
  if(req.method==='GET'&&url.pathname==='/library/status'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(currentLibraryStatus()));}
+ if(req.method==='HEAD'&&url.pathname==='/library/export.csv'){res.setHeader('Content-Type','text/csv; charset=utf-8');return res.end();}
+ if(req.method==='GET'&&url.pathname==='/library/export.csv'){
+  const abort=new AbortController(),cancel=()=>{if(!res.writableFinished)abort.abort(Error('Descarga cancelada'));};
+  res.once('close',cancel);req.once('aborted',cancel);
+  const source=streamRepositoryCsv({dbPath:path.join(data,'repo-library.sqlite'),signal:abort.signal});
+  try{
+   const first=await source.next(); // Validate the read-only snapshot before headers.
+   res.setHeader('Content-Type','text/csv; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename="atlas-repositories.csv"');
+   await pipeline((async function*(){try{if(!first.done)yield first.value;yield* source;}finally{await source.return();}})(),res,{signal:abort.signal});
+  }catch{
+   if(!res.headersSent&&!res.destroyed){res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'La exportación no se completó.'}));}
+   else if(!res.destroyed)res.destroy();
+  }finally{await source.return();res.off('close',cancel);req.off('aborted',cancel);}
+  return;
+ }
+ if(req.method==='GET'&&url.pathname==='/library/assessments'){
+  res.setHeader('Content-Type','application/json');
+  try{const ledger=assessments();return res.end(JSON.stringify({...ledger.list({limit:40}),integrity:ledger.verifyIntegrity(),scope:'Expedientes con evidencia; elegible para revisión no significa seleccionado.'}));}
+  catch{res.writeHead(503);return res.end(JSON.stringify({error:'El registro de evaluaciones no está disponible.'}));}
+ }
  if(req.method==='GET'&&url.pathname==='/library/taxonomy'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(loadRepositoryTaxonomy()));}
  if(req.method==='GET'&&url.pathname==='/library/notes'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({total:repositoryNotes.length,items:repositoryNotes.slice(-10).reverse()}));}
  if(req.method==='GET'&&url.pathname==='/library/items'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(combinedLibraryItems({query:url.searchParams.get('q')||'',limit:url.searchParams.get('limit')||30,offset:url.searchParams.get('offset')||0})));}
@@ -628,7 +678,7 @@ server=http.createServer(async(req,res)=>{
      signal.throwIfAborted();
      if(coreReviewBusy||chatBusy||mediaBusy||closing||extensionBusy)throw Error('Atlas está terminando otra tarea.');
      extensionBusy=true;ownsBuild=true;coreAbort=canonicalAbort;
-     const record=await buildCanonicalCapability(input.curriculumTaskId,{tools:extensions,signal,confirmationTests:generateExperienceCases(input.curriculumTaskId,Date.now()>>>0),build:(task,cases,options)=>codingCollaborators.build(task,chatKey,cases,spec=>chat(spec,[],fetch,chatKey,'',null,'',[],'',{signal,sharedSession:true,cognitiveCore}),options)});
+     const record=await buildCanonicalCapability(input.curriculumTaskId,{tools:extensions,signal,confirmationTests:generateExperienceCases(input.curriculumTaskId,Date.now()>>>0),build:(task,cases,options)=>codingCollaborators.build(task,chatKey,cases,spec=>chat(spec,[],localInference.request,chatKey,'',null,'',[],'',{signal,sharedSession:true,cognitiveCore}),options)});
      signal.throwIfAborted();const next=[...extensions,record];await write('extensions.json',next,{signal});extensions=next;return res.end(JSON.stringify(record));
     }
     if(extensionBusy||chatBusy||mediaBusy)throw Error('Atlas está ocupado. Espera a que termine.');extensionBusy=true;ownsBuild=true;
@@ -665,8 +715,13 @@ server=http.createServer(async(req,res)=>{
  }
  if(req.method==='GET'&&url.pathname==='/chat/health'){
   res.setHeader('Content-Type','application/json');
-  try{const r=await fetch('http://127.0.0.1:11435/health',{signal:AbortSignal.timeout(2000)});return res.end(JSON.stringify({ready:r.ok,model:'atlas-local',modelName:chatModelName,gpu:'GPU local · backend configurado',externalAgents:!!providerKey,reflectionMemory:collaborations.length,weightAdapterActive:false,webSearchEngine:'duckduckgo-lite',webSearchProviders:['Google','DuckDuckGo Lite','Wikipedia'],googleSearch:googleSearchStatus()}));}
-  catch{return res.end(JSON.stringify({ready:false,externalAgents:!!providerKey}));}
+  let primaryReady=false;try{primaryReady=(await fetch('http://127.0.0.1:11435/health',{signal:AbortSignal.timeout(2000)})).ok;}catch{}
+  let fallback=null;
+  if(!primaryReady)try{
+   const {snapshot}=await currentRuntimeInventory({maxAgeMs:5000});
+   fallback=snapshot.runtimes.find(item=>['ollama','lm-studio'].includes(item.id)&&item.endpointCompatible&&item.loadedInventoryAvailable&&item.loadedRouteModelIds.length);
+  }catch{}
+  return res.end(JSON.stringify({ready:primaryReady||!!fallback,model:'atlas-local',modelName:primaryReady?chatModelName:fallback?fallback.loadedRouteModelIds[0]+' · '+fallback.id:'Modelo local no disponible',gpu:primaryReady?'RTX 3060 · CUDA':'Según el motor local configurado',externalAgents:!!providerKey,reflectionMemory:collaborations.length,weightAdapterActive:false,webSearchEngine:'duckduckgo-lite',webSearchProviders:['Google','DuckDuckGo Lite','Wikipedia'],googleSearch:googleSearchStatus(),localRouting:{primaryReady,loadedAlternative:!!fallback,inferenceVerified:false}}));
  }
  if(req.method==='POST'&&url.pathname==='/learn/source'){
   res.setHeader('Content-Type','application/json');
@@ -711,8 +766,8 @@ server=http.createServer(async(req,res)=>{
    if(input.sharedSession===true){
     if(projectCommand(messages.at(-1).content))throw Error('Los controles del PC solo están disponibles en la interfaz local.');
     const available=publicTools(extensions),requested=publicToolIntent(messages.at(-1).content);let publicToolRun=null;
-    if(requested&&available.length)publicToolRun=await useExtension(messages,available,chatKey,spec=>chat(spec,[],fetch,chatKey,'',null,'',[],'',{signal:requestAbort.signal,sharedSession:true,cognitiveCore}),{signal:requestAbort.signal});
-    const result=await chat({...input,tools:false,external:false,attachments:[]},[],fetch,chatKey,'',publicToolRun,'',[],'',{cognitiveCore,lookupEvidence:atlasEvidence,sharedSession:true,signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined,capabilities:{...atlasApplicationCapabilities({sharedSession:true,experience:{...await experienceRuntime.status(),enabled:experienceEnabled,paused:state.paused},agents:await codingCollaborators.status(),video:await videoStatus().catch(()=>({ready:false})),publicDocs:publicDocs.status()}),localModel:chatModelName,sharedSession:true,internet:{available:true,requested:input.internet===true},tools:{available:available.length,requested,scope:'Solo funciones públicas de currículo canónico, contratos ejecutados y QuickJS aislado.'},externalModels:{configured:false},selfModification:{strategyPolicy:true,weightCandidates:true,serverCode:false,qwenWeights:false,scope:"Herramientas y políticas evolucionan con contratos; LoRA permanece candidata hasta validación."},privateMemory:false}});
+    if(requested&&available.length)publicToolRun=await useExtension(messages,available,chatKey,spec=>chat(spec,[],localInference.request,chatKey,'',null,'',[],'',{signal:requestAbort.signal,sharedSession:true,cognitiveCore}),{signal:requestAbort.signal});
+    const result=await chat({...input,tools:false,external:false,attachments:[]},[],localInference.request,chatKey,'',publicToolRun,'',[],'',{cognitiveCore,lookupEvidence:atlasEvidence,sharedSession:true,signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined,capabilities:{...atlasApplicationCapabilities({sharedSession:true,experience:{...await experienceRuntime.status(),enabled:experienceEnabled,paused:state.paused},agents:await codingCollaborators.status(),video:await videoStatus().catch(()=>({ready:false})),publicDocs:publicDocs.status()}),localModel:chatModelName,sharedSession:true,internet:{available:true,requested:input.internet===true},tools:{available:available.length,requested,scope:'Solo funciones públicas de currículo canónico, contratos ejecutados y QuickJS aislado.'},externalModels:{configured:false},selfModification:{strategyPolicy:true,weightCandidates:true,serverCode:false,qwenWeights:false,scope:"Herramientas y políticas evolucionan con contratos; LoRA permanece candidata hasta validación."},privateMemory:false}});
     if(streaming){sendEvent({type:'result',result});return res.end();}return res.end(JSON.stringify(result));
    }
    const command=projectCommand(messages.at(-1).content);
@@ -724,7 +779,7 @@ server=http.createServer(async(req,res)=>{
    }
    if(input.external===true&&providerKey){const day=new Date().toISOString().slice(0,10);if(state.providerUsage?.day!==day)state.providerUsage={day,count:0};if(state.providerUsage.count>=20)throw Error('Límite local de 20 colaboraciones gratuitas al día alcanzado. Desactiva el colaborador para seguir en local.');state.providerUsage.count++;await persist();}
    if(input.tools===true)sendEvent({type:'stage',stage:'tools'});
-   const toolRun=input.tools===true?await useExtension(messages,extensions,chatKey,(request,docs,fetcher,key)=>chat(request,docs,fetcher,key,'',null,'',[],'',{signal:requestAbort.signal}),{signal:requestAbort.signal}):null;
+   const toolRun=input.tools===true?await useExtension(messages,extensions,chatKey,(request,docs,_fetcher,key)=>chat(request,docs,localInference.request,key,'',null,'',[],'',{signal:requestAbort.signal}),{signal:requestAbort.signal}):null;
    requestAbort.signal.throwIfAborted();
    if(toolRun){const runs=await read('tool-runs.json',[]);runs.push(toolRun);await write('tool-runs.json',runs.slice(-50));}
    const gameContext=gameLibraryContext(gameReferences,messages.at(-1).content);
@@ -732,7 +787,7 @@ server=http.createServer(async(req,res)=>{
    capabilities.repositoryLibrary={...librarySummary().counts,reflections:repositoryNotes.length};
    capabilities.integratedLab={available:(await secondaryStatus()).available,route:'/project/',commands:['/atlas estado','/prototipo <idea>','/laboratorio <pregunta>','/atlas aprender','/atlas parar'],scope:'Laboratorio CPU del modelo pequeño de decisiones y prototipos Canvas 2D por reglas; no cambia Qwen'};
    let importedMemory=[];try{importedMemory=await searchSecondaryMemory(memoryQuery(messages.at(-1).content));}catch(error){event('imported_memory_error',error.message);}
-   const result=await chat(input,documents,fetch,chatKey,providerKey,toolRun,mandate,collaborations,gameContext,{cognitiveCore,lookupEvidence:atlasEvidence,capabilities,importedMemory,repositoryNotes:matchingRepositoryNotes(messages.at(-1).content),signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined});
+   const result=await chat(input,documents,localInference.request,chatKey,providerKey,toolRun,mandate,collaborations,gameContext,{cognitiveCore,lookupEvidence:atlasEvidence,capabilities,importedMemory,repositoryNotes:matchingRepositoryNotes(messages.at(-1).content),signal:requestAbort.signal,onEvent:streaming?sendEvent:undefined});
    if(result.collaborators?.length){collaborations.push(...result.collaborators.map(peer=>({at:new Date().toISOString(),model:peer.model,question:messages.at(-1).content,critique:peer.text,answer:result.answer,status:'spiral-reviewed-unverified',reviewedBy:'Qwen local second pass',trained:false,weightUpdate:false})));collaborations=collaborations.slice(-100);await write('collaborations.json',collaborations);}
    if(streaming){sendEvent({type:'result',result});return res.end();}
    return res.end(JSON.stringify(result));
@@ -796,14 +851,15 @@ await persist();console.log(`Atlas local: http://127.0.0.1:${config.port}`);
 cycle();
 autonomousTimer=setTimeout(autonomousReview,20000);
 libraryTimer=setTimeout(libraryCycle,10000);
+backupTimer=setTimeout(backupCycle,15000);
 async function shutdown(){
- closing=true;clearTimeout(timer);clearTimeout(autonomousTimer);clearTimeout(libraryTimer);server.close();
+ closing=true;clearTimeout(timer);clearTimeout(autonomousTimer);clearTimeout(libraryTimer);clearTimeout(backupTimer);backupAbort.abort(Error('Reinicio del coordinador'));server.close();
  libraryAbort?.abort(Error('Reinicio del coordinador'));
  autonomousAbort?.abort(Error('Reinicio del coordinador'));
  mediaAbort?.abort(Error('Reinicio del coordinador'));
  coreAbort?.abort(Error('Reinicio del coordinador'));
  await runSecondary('stop').catch(()=>{});
  while(busy||autonomousBusy||chatBusy||extensionBusy||libraryBusy||mediaBusy)await new Promise(r=>setTimeout(r,100));
- await persist();await stateWriter.drain();await fs.rm(path.join(data,'service.pid'),{force:true});process.exit(0);
+ await backupDone;assessmentLedger?.close();await persist();await stateWriter.drain();await fs.rm(path.join(data,'service.pid'),{force:true});process.exit(0);
 }
 process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);

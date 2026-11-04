@@ -16,6 +16,30 @@ function fixture(t,options={}){
 const next=(message='Hola Atlas',extra={})=>({message,requestId:crypto.randomUUID(),...extra});
 const bridge={agentId:'atlas-pc',modelName:'Qwen3.5 local GPU'};
 const result={answer:'Respuesta local comprobada.',model:'atlas-local',modelName:'Qwen local'};
+
+test('claim enriches only the transport copy while idempotency and the stored user message remain exact',async t=>{
+ let reads=0;const {queue}=fixture(t,{enrichMessages:async(messages,options)=>{reads++;assert.equal(options.kind,'chat');assert.equal(options.internet,false);return messages.map((message,i)=>i===messages.length-1?{...message,content:message.content+'\nFicha pública de referencia.'}:message);}});
+ const input=next('Compara agentes gratuitos.');const accepted=await queue.enqueue('pablo',input);
+ assert.equal((await queue.enqueue('pablo',input)).jobId,accepted.jobId);
+ const {job}=await queue.claim(bridge);assert.equal(reads,1);assert.match(job.messages.at(-1).content,/Ficha pública/);
+ assert.equal((await queue.conversation('pablo',accepted.conversationId)).messages[0].content,input.message);
+ assert.equal((await queue.enqueue('pablo',input)).jobId,accepted.jobId);
+ await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result});
+ assert.equal((await queue.conversation('pablo',accepted.conversationId)).messages[0].content,input.message);
+});
+
+test('failed, replacing or oversized reference enrichment cannot change a queued request',async t=>{
+ for(const enrichMessages of [async()=>{throw Error('private detail');},async messages=>{messages[0].content='mutated';throw Error('failure');},async()=>[{role:'user',content:'replaced'}],async messages=>[{...messages[0],content:messages[0].content+'x'.repeat(6000)}]]){
+  const {queue}=fixture(t,{enrichMessages}),input=next('Pregunta original.');await queue.enqueue('pablo',input);const {job}=await queue.claim(bridge);assert.deepEqual(job.messages,[{role:'user',content:input.message}]);
+ }
+ let reads=0;const {queue}=fixture(t,{enrichMessages:async messages=>{reads++;return messages;}});await queue.enqueue('pablo',next('Crea un mundo de agentes',{kind:'world'}));await queue.claim(bridge);assert.equal(reads,0);
+});
+
+test('cancelling during a public-reference lookup never returns an already cancelled job to the PC',async t=>{
+ let release,entered;const gate=new Promise(resolve=>release=resolve),started=new Promise(resolve=>entered=resolve);
+ const {queue}=fixture(t,{enrichMessages:async messages=>{entered();await gate;return messages;}}),accepted=await queue.enqueue('pablo',next('Compara agentes.'));
+ const claim=queue.claim(bridge);await started;await queue.cancel('pablo',accepted.jobId);release();assert.equal((await claim).job,null);
+});
 test('live learning summaries survive heartbeat storage while private tool details stay on the PC',async t=>{
  const {queue,advance,now}=fixture(t),at=new Date(now()).toISOString();
  await queue.heartbeat({...bridge,capabilities:{processTelemetry:{at,learning:{reviewEnabled:true,paused:false,running:true,lastCycleAt:at,nextRun:at,pendingTask:{taskId:'json-pointer-resolve',name:'private task'},tools:[{taskId:'dag-dependency-plan',name:'private name',cases:8,passed:8,createdAt:at,source:'private code',prompt:'private prompt'}],approvedTools:999,token:'private key'}}}});

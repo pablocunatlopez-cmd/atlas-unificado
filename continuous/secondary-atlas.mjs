@@ -15,32 +15,71 @@ async function exists(file) { try { await fs.access(file); return true; } catch 
 function alive(pid) { if (!Number.isInteger(pid) || pid <= 0) return false; try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; } }
 async function atomicJson(file, value) { await fs.mkdir(path.dirname(file), { recursive: true }); const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`; await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`); await fs.rename(tmp, file); }
 function killTree(child) {
-  if (!child?.pid) return;
-  if (process.platform === 'win32') execFile(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }, () => {});
-  else child.kill('SIGKILL');
+  if (!Number.isInteger(child?.pid) || child.pid <= 0 || process.platform !== 'win32') return Promise.resolve(false);
+  return new Promise(resolve => {
+    try { execFile(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, timeout: 500, killSignal: 'SIGKILL' }, error => resolve(!error)); }
+    catch { resolve(false); }
+  });
+}
+function boundedResult(work, milliseconds) {
+  return new Promise(resolve => {
+    let done = false;
+    const finish = value => { if (done) return; done = true; clearTimeout(timer); resolve(value); };
+    const timer = setTimeout(() => finish(false), milliseconds);
+    Promise.resolve(work).then(finish, () => finish(false));
+  });
+}
+// Internal lifecycle helper exported for deterministic closed-child tests.
+export async function terminateChild(child, terminateTree) {
+  let childExited = child.exitCode !== null || child.signalCode !== null, directKillRequested = false;
+  let reportExit;
+  const exited = new Promise(resolve => reportExit = resolve);
+  const onExit = () => { childExited = true; reportExit(true); };
+  child.once('exit', onExit);
+  try {
+    // Only this spawn's PID is eligible. Tree cleanup can fail in a sandbox;
+    // its failure must not leave the direct child and inherited pipes alive.
+    const treeCommandSucceeded = !childExited && await boundedResult(Promise.resolve().then(() => childExited ? false : terminateTree(child)), 200) === true;
+    if (!childExited) { try { directKillRequested = child.kill('SIGKILL'); } catch {} }
+    if (!childExited) await boundedResult(exited, 500);
+    return { treeCommandSucceeded, directKillRequested, childExited, stdioDetached: true, entireTreeVerified: false };
+  } finally {
+    child.removeListener('exit', onExit);
+    for (const stream of [child.stdin, child.stdout, child.stderr]) stream?.destroy();
+    child.unref();
+  }
 }
 
 /** Internal process primitive; HTTP callers only reach the fixed action enum. */
-export function runBoundedCommand(command, args, { cwd, env, input = '', signal, timeoutMs = 90_000, maxOutputBytes = 1_000_000, onSpawn } = {}) {
+export function runBoundedCommand(command, args, { cwd, env, input = '', signal, timeoutMs = 90_000, maxOutputBytes = 1_000_000, onSpawn, terminateTree = killTree } = {}) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(signal.reason || new Error('Operación cancelada'));
-    let child, timer, settled = false, bytes = 0, out = '', err = '';
+    let child, timer, settled = false, terminating = false, bytes = 0, out = '', err = '';
     const finish = (error, result) => { if (settled) return; settled = true; clearTimeout(timer); signal?.removeEventListener('abort', abort); error ? reject(error) : resolve(result); };
-    const abort = () => { killTree(child); finish(signal?.reason || new Error('Operación cancelada')); };
+    const stop = reason => {
+      if (settled || terminating) return;
+      terminating = true; clearTimeout(timer); signal?.removeEventListener('abort', abort);
+      void terminateChild(child, terminateTree).then(cleanup => {
+        const error = new Error(reason?.message || String(reason || 'Operación cancelada'), { cause: reason });
+        error.cleanup = cleanup; finish(error);
+      }, problem => finish(new Error('No se pudo completar la limpieza del laboratorio', { cause: problem })));
+    };
+    const abort = () => stop(signal?.reason || new Error('Operación cancelada'));
     try { child = spawn(command, args, { cwd, env, windowsHide: true, shell: false, stdio: ['pipe', 'pipe', 'pipe'] }); }
     catch (error) { finish(error); return; }
-    child.once('error', error => finish(error));
-    child.once('spawn', () => { try { onSpawn?.(child.pid); } catch (error) { killTree(child); finish(error); } });
+    child.once('error', error => { if (!terminating) finish(error); });
+    child.once('spawn', () => { try { onSpawn?.(child.pid); } catch (error) { stop(error); } });
     child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8');
-    child.stdout.on('data', chunk => { bytes += Buffer.byteLength(chunk); if (bytes > maxOutputBytes) { killTree(child); finish(new Error('Salida del laboratorio demasiado grande')); } else out += chunk; });
+    child.stdout.on('data', chunk => { bytes += Buffer.byteLength(chunk); if (bytes > maxOutputBytes) stop(new Error('Salida del laboratorio demasiado grande')); else out += chunk; });
     child.stderr.on('data', chunk => { err = (err + chunk).slice(-8000); });
     child.stdin.on('error', () => {});
     child.once('close', (code, stoppedBy) => {
+      if (terminating) return;
       if (code !== 0) return finish(new Error(`Laboratorio local: salida ${code ?? stoppedBy}. ${err.slice(-1800)}`));
       try { const result = JSON.parse(out); if (result.ok === false) return finish(new Error(result.error || 'Error del laboratorio')); finish(null, result); }
       catch (error) { finish(new Error(`Respuesta JSON inválida del laboratorio: ${error.message}`)); }
     });
-    timer = setTimeout(() => { killTree(child); finish(new Error('Tiempo máximo del laboratorio agotado')); }, timeoutMs);
+    timer = setTimeout(() => stop(new Error('Tiempo máximo del laboratorio agotado')), timeoutMs);
     timer.unref?.(); signal?.addEventListener('abort', abort, { once: true });
     child.stdin.end(input);
   });

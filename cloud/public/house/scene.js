@@ -2,6 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {ROOMS,WALLS} from './layout.js';
 import {createProcessCreatures} from './process-creatures.js';
+import {createCreativeInstallation} from './creative-installation.js';
 
 export function buildHouse(){
  const scene=new THREE.Scene();scene.background=new THREE.Color('#bfcbd0');scene.fog=new THREE.Fog('#bfcbd0',65,140);
@@ -54,22 +55,22 @@ export function buildHouse(){
  inscription(['Γ / CENTRO','Animal · Mente · Suceso'],0,.78,2.8,1.9);
  plant(-3.2,6.8,1.4);plant(3.1,1.1,1.0);
  // Music studio: piano keys, acoustic slats, monitors, nearfield speakers, guitar.
- desk(-10.3,4,Math.PI/2);monitor(-10.1,4,Math.PI/2,palette.glow);chair(-8.9,4,-Math.PI/2);box(palette.black,.8,.16,2.45,-9.95,.96,4);
+ desk(-10.3,4,Math.PI/2);monitor(-10.1,4,Math.PI/2,palette.glow);chair(-8.9,4,Math.PI/2);box(palette.black,.8,.16,2.45,-9.95,.96,4);
  for(let i=0;i<24;i++){box(palette.white,.48,.025,.088,-9.55,1.06,2.9+i*.094);if(![2,6].includes(i%7))box(palette.black,.25,.045,.042,-9.68,1.09,2.94+i*.094);}
  for(const z of [2.7,5.3]){box(palette.black,.4,.6,.35,-10.5,1.14,z);ball(palette.bronze,.13,-10.26,1.14,z,.35,1,1);}
  for(let z=.65;z<7.7;z+=.22)box(palette.wood,.12,2.5,.065,-11.8,1.7,z);
  box(palette.darkWood,1.9,.13,.85,-6.1,.8,6.8);for(let i=0;i<10;i++)box(i%3?palette.black:palette.gold,.11,.04,.44,-6.8+i*.15,.89,6.8);
  ball(palette.gold,.28,-5.4,.82,1.2,.75,1.2,.26);box(palette.wood,.08,1.05,.06,-5.4,1.5,1.2);box(palette.black,.12,.24,.08,-5.4,2.04,1.2);plant(-5.2,7,1.2);
  // Laboratory: island bench, sample glass, microscope and molecule sculpture.
- desk(-10.1,-4,Math.PI/2);monitor(-10,-4,Math.PI/2,palette.blue);chair(-8.8,-4,-Math.PI/2);
+ desk(-10.1,-4,Math.PI/2);monitor(-10,-4,Math.PI/2,palette.blue);chair(-8.8,-4,Math.PI/2);
  box(palette.white,2.25,.85,.75,-8.2,.47,-6.3);box(palette.stone,2.4,.09,.9,-8.2,.94,-6.3);obstacle(-8.2,-6.3,2.5,1.0);
  for(let i=0;i<6;i++){cyl(palette.glass,.065,.085,.35,-9+i*.25,1.16,-6.3,12);cyl(palette.blue,.063,.073,.14,-9+i*.25,1.07,-6.3,12);}
  box(palette.black,.24,.12,.43,-7.6,1.05,-6.2);cyl(palette.white,.06,.08,.45,-7.6,1.32,-6.2,12);box(palette.black,.3,.1,.08,-7.5,1.5,-6.2,Math.PI/3);
  const molecule=new THREE.Group();molecule.position.set(-6.2,1.45,-5.9);scene.add(molecule);for(let i=0;i<7;i++){const sphere=new THREE.Mesh(new THREE.SphereGeometry(i? .11:.18,12,10),i%2?palette.blue:palette.white);sphere.position.set(Math.sin(i*2.4)*.5,Math.cos(i*1.8)*.38,Math.sin(i)*.3);molecule.add(sphere);}animated.push({type:'molecule',object:molecule});plant(-10.8,-1.0,1.2);
  // World workshop: creation table and small floating architectural maquette.
- desk(10.1,4,-Math.PI/2);monitor(10,4,-Math.PI/2,palette.violet);chair(8.8,4,Math.PI/2);
+ desk(10.1,4,-Math.PI/2);monitor(10,4,-Math.PI/2,palette.violet);chair(8.8,4,-Math.PI/2);
  box(palette.darkWood,2.3,.13,1.6,7.5,.85,6.5);for(const x of [-.95,.95])box(palette.black,.08,.8,1.2,7.5+x,.4,6.5);obstacle(7.5,6.5,2.4,1.6);
- for(let i=0;i<7;i++){const x=6.65+(i%4)*.5,z=6.1+Math.floor(i/4)*.6;box(i%3?palette.white:palette.violet,.35,.3+i*.07,.35,x,1.08+i*.035,z);}
+ // The workshop maquette and terrace intervention are supplied by Atlas's latest validated 3D experience.
  box(palette.black,.08,1.75,2.4,11.7,1.55,1.8);for(let i=0;i<4;i++)box(palette.glow,.1,.025,1.9,11.62,1.0+i*.35,1.8);plant(5.2,1.0,1.2);
  // Cinema: wall screen, upholstered seats and projector.
  box(palette.black,.12,2.35,5.8,11.65,1.8,-4);box(palette.blue,.025,2.08,5.5,11.55,1.8,-4);box(palette.darkWood,.4,.2,6.3,11.1,.18,-4);
@@ -98,12 +99,12 @@ export function buildHouse(){
  for(const x of [9.5,12,14.5]){cyl(palette.stone,.36,.42,.55,x,.31,-14.4,16);ball(x===12?palette.glow:palette.violet,.23,x,.95,-14.4);obstacle(x,-14.4,.85,.85);}
  plant(14.8,-9.1,1.0);
  // Garden, reflecting pool and distant silhouette: all lightweight geometry.
- box(palette.stone,5,.15,1.6,-7,.05,10.5);box(palette.glass,4.7,.05,1.3,-7,.15,10.5);for(const x of [-11,-3,3,11])plant(x,11.4,1.3);
+ box(palette.stone,5,.15,1.6,-7,.05,10.5);box(palette.glass,4.7,.05,1.3,-7,.15,10.5);for(const x of [-12,-3,12.5,15.5])plant(x,11.4,1.3);
  for(let i=0;i<22;i++){const a=i*.91,x=Math.sin(a)*(19+random()*12),z=Math.cos(a)*(20+random()*14);cyl(palette.wood,.12,.18,2.2,x,1,z);ball(i%2?palette.green:palette.leaf,1.2,x,3,z,1,1.45,1);}
  // Commit each material group as one draw call. Geometry no longer needed after
  // merging is explicitly released; dynamic parts remain separate and cheap.
  for(const [mat,geometries] of batches){const merged=mergeGeometries(geometries,false);for(const geometry of geometries)geometry.dispose();const mesh=new THREE.Mesh(merged,mat);mesh.castShadow=!mat.transparent;mesh.receiveShadow=!mat.transparent;statics.add(mesh);}
  const hemi=new THREE.HemisphereLight('#eef4ee','#777a69',2.4);scene.add(hemi);const sun=new THREE.DirectionalLight('#fff0d5',3.0);sun.position.set(-15,25,12);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-23;sun.shadow.camera.right=23;sun.shadow.camera.top=23;sun.shadow.camera.bottom=-23;sun.shadow.camera.near=1;sun.shadow.camera.far=65;sun.shadow.bias=-.0006;sun.shadow.normalBias=.04;sun.target.position.set(0,0,0);scene.add(sun,sun.target);
- const creatures=createProcessCreatures(scene,textures);let disposed=false;
- return {scene,ceilings,interactive,solids,sun,setProcessState:value=>creatures.setState(value),update(time,camera,viewportHeight){creatures.update(time,camera,viewportHeight);for(const entry of animated){if(entry.type==='orb'){entry.object.rotation.y=time*.11;entry.object.position.y=1.43+Math.sin(time*.7)*.045;}else entry.object.rotation.y=time*(entry.type==='globe'?.055:.14);}},dispose(){if(disposed)return;disposed=true;const geometries=new Set(),materials=new Set();scene.traverse(object=>{if(object.isInstancedMesh)object.dispose();if(object.geometry)geometries.add(object.geometry);if(object.material)for(const mat of Array.isArray(object.material)?object.material:[object.material])materials.add(mat);});for(const geometry of geometries)geometry.dispose();for(const mat of materials)mat.dispose();for(const map of textures)map.dispose();scene.clear();}};
+ const creatures=createProcessCreatures(scene,textures),installation=createCreativeInstallation(scene);let disposed=false;
+ return {scene,ceilings,interactive,solids,sun,setProcessState:value=>creatures.setState(value),setCreativeState:value=>installation.setState(value),creativeStatus:()=>installation.status(),update(time,camera,viewportHeight){creatures.update(time,camera,viewportHeight);if(camera)for(const marker of interactive)marker.visible=camera.position.y>3.5;for(const entry of animated){if(entry.type==='orb'){entry.object.rotation.y=time*.11;entry.object.position.y=1.43+Math.sin(time*.7)*.045;}else entry.object.rotation.y=time*(entry.type==='globe'?.055:.14);}},dispose(){if(disposed)return;disposed=true;installation.dispose();const geometries=new Set(),materials=new Set();scene.traverse(object=>{if(object.isInstancedMesh)object.dispose();if(object.geometry)geometries.add(object.geometry);if(object.material)for(const mat of Array.isArray(object.material)?object.material:[object.material])materials.add(mat);});for(const geometry of geometries)geometry.dispose();for(const mat of materials)mat.dispose();for(const map of textures)map.dispose();scene.clear();}};
 }

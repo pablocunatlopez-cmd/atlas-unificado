@@ -40,6 +40,12 @@
       "adapted": false
     },
     {
+      "path": "app/api/agent-mirror/route.ts",
+      "bytes": 489,
+      "sha256": "cd501210b0d4592dbd214c3708a6a26ec1bf17e7e7fb1f21102d5133e2c84ba0",
+      "adapted": false
+    },
+    {
       "path": "app/api/archive/route.ts",
       "bytes": 752,
       "sha256": "8b3881b9f436050d41b4a912ecb71a1a84bdd9f9da56c1eb64d8a963c068389d",
@@ -136,6 +142,12 @@
       "adapted": true
     },
     {
+      "path": "app/api/technical-reading/route.ts",
+      "bytes": 844,
+      "sha256": "0d69b26a2f563cc8e4d888fbf6cc46c6c393eda6bde337b9af71348250ca7336",
+      "adapted": false
+    },
+    {
       "path": "app/api/web/route.ts",
       "bytes": 1135,
       "sha256": "b1757243cfa2bd213b0be04175859759c0cdd364499d1e6988266407033c38e1",
@@ -149,14 +161,14 @@
     },
     {
       "path": "app/atlas-house.module.css",
-      "bytes": 15515,
-      "sha256": "52deca2153cb4f2ed507da3b4785bbbb89ab846e763a2f1ea5a96d394b92939a",
+      "bytes": 20256,
+      "sha256": "6fc924782fa5902dd01239cf38ba92163913e69a8b55e57e6f99000d3823b16e",
       "adapted": true
     },
     {
       "path": "app/atlas-house.tsx",
-      "bytes": 16149,
-      "sha256": "07a10bac478054d049afab5a4c4b94c2e42635b60d20d6dd19076a09e1ca9f06",
+      "bytes": 21003,
+      "sha256": "fb300366046ba009a39d7141ed8d592f28c9ed7774eb1d15298a5fa49b49290c",
       "adapted": false
     },
     {
@@ -215,8 +227,8 @@
     },
     {
       "path": "app/constellation-panel.tsx",
-      "bytes": 6926,
-      "sha256": "eac09a755184c355356c63c87c9a0c972fb240440d2cffb45402acd78690552d",
+      "bytes": 16270,
+      "sha256": "54b96d78b16c93336173f318f8f8b3e9454aa87bf76501fbeb6c5a79516b1d87",
       "adapted": false
     },
     {
@@ -257,8 +269,8 @@
     },
     {
       "path": "app/house-scene.tsx",
-      "bytes": 6159,
-      "sha256": "4cec1d146d34f86e5d1c531d6e66ab89a629ddda2e1535156d8307dcd567db94",
+      "bytes": 7761,
+      "sha256": "7700b39c996eab0cb06630fe55c01ef0dc813e6fe11b34343949dd1b5bbc8131",
       "adapted": false
     },
     {
@@ -310,9 +322,15 @@
       "adapted": false
     },
     {
+      "path": "app/technical-reading-panel.tsx",
+      "bytes": 3460,
+      "sha256": "cd183dcc91e18cbf98603e95ca7ee00caf2e5f9746287d10536546b9751c622e",
+      "adapted": false
+    },
+    {
       "path": "app/workspace-tools.module.css",
-      "bytes": 2376,
-      "sha256": "b3744bcdf495407007177c3e9f96620d34663c3a49a5ac178a89e5a2cad1e9f8",
+      "bytes": 3755,
+      "sha256": "ff80f2d690ae5b956bbb2d063e1d33bede3a12caa1b748cad8fc7408f487afc5",
       "adapted": false
     },
     {
@@ -965,8 +983,8 @@
     },
     {
       "path": "lib/cloud/http.ts",
-      "bytes": 3060,
-      "sha256": "44df3ef87e0e29372b3d7997f16d72f514622dc20f4d47b1b6bbaca29b1d0138",
+      "bytes": 3194,
+      "sha256": "a99acae7e8ef4302e1ca57f9580a77394c3b235e91535489cd02fb7bba5722e1",
       "adapted": false
     },
     {
@@ -983,20 +1001,20 @@
     },
     {
       "path": "lib/cloud/queue.d.mts",
-      "bytes": 1007,
-      "sha256": "40a7c05cb0bbf74197d18f0f8bf017f4bffe644ef5d406583a114c02d47b0fad",
+      "bytes": 1155,
+      "sha256": "3361818d36d1a7aee283b672f28d03f72731392ee9e177966958a637d95866ff",
       "adapted": false
     },
     {
       "path": "lib/cloud/queue.mjs",
-      "bytes": 17032,
-      "sha256": "86b80594f4182d74c5ab9658f8ca5c931aef4e545a647f9aa82ecf021a6d2586",
+      "bytes": 17873,
+      "sha256": "c2bb50174253332c4ee1df7fcd879bd88e6c7e233408f337f0eedcf22518b635",
       "adapted": false
     },
     {
       "path": "lib/cloud/queue.test.mjs",
-      "bytes": 21491,
-      "sha256": "5c146c008c995571e16bfa77d59c28fe32760b527508e3017c395dc8c635167e",
+      "bytes": 23928,
+      "sha256": "53cb55458444b3358daf37f92f5d15fb0f7b80a13a19018af3aba47367b03711",
       "adapted": false
     },
     {
@@ -1085,15 +1103,15 @@
     },
     {
       "path": "lib/core/process-telemetry.mjs",
-      "bytes": 4458,
-      "sha256": "23fe27a6a5a1fd75c99c8a160827e611d5d53945dad4e9c8157a9a8b3259c133",
+      "bytes": 8602,
+      "sha256": "ae97023982d5f45ac34871b40189deeb7a352b2dd821a6aa5810cb92e869ba04",
       "adapted": true
     },
     {
       "path": "lib/core/process-telemetry.test.mjs",
-      "bytes": 2490,
-      "sha256": "d18b76a354c7cddc1c17c3689224d83f37937f7c79b1ad8e8b9f3b4673b29731",
-      "adapted": false
+      "bytes": 9192,
+      "sha256": "d7c83401b3fb674477834588ed4ead61771318611ff7ac8801ca8344b3da6163",
+      "adapted": true
     },
     {
       "path": "lib/creative/plan.mjs",
@@ -1114,6 +1132,12 @@
       "adapted": false
     },
     {
+      "path": "lib/house/creative-installation.test.mjs",
+      "bytes": 16438,
+      "sha256": "b2b63005fc07fa7286c819794a4f9e4790046cc3daabf246608c24b5982e1670",
+      "adapted": true
+    },
+    {
       "path": "lib/house/layout.test.mjs",
       "bytes": 2605,
       "sha256": "a185c48c1c1dc648d9c2874495eff51de4e552c9f12f62207c5213eb5037c7fa",
@@ -1121,14 +1145,20 @@
     },
     {
       "path": "lib/house/process-creatures.test.mjs",
-      "bytes": 5806,
-      "sha256": "8f58c8472f134b1238ac7a87887af71adac912e4c6c4b0279d3942786c941993",
-      "adapted": false
+      "bytes": 9098,
+      "sha256": "9db6096e0a33852cb6c2a5f8c45d8ff87cccbfdb401c9aa79e54071ec628c593",
+      "adapted": true
     },
     {
       "path": "lib/house/process-state.test.mjs",
       "bytes": 4572,
       "sha256": "4787c4ba9e09c6cad2e5d60e90d57297609f1f3ac00801af2c175124615f56ee",
+      "adapted": false
+    },
+    {
+      "path": "lib/house/residents.test.mjs",
+      "bytes": 3826,
+      "sha256": "c8ea290efc03d4263fe1d044ae1cd5b11c65d0f94e6d7c18904eab1946680bed",
       "adapted": false
     },
     {
@@ -1186,6 +1216,30 @@
       "adapted": false
     },
     {
+      "path": "lib/research/agent-mirror-context.mjs",
+      "bytes": 3475,
+      "sha256": "16e4f2957ff41fc7f389f04afaba83753b7d02b77cd4a659bb6fccef6c078104",
+      "adapted": false
+    },
+    {
+      "path": "lib/research/agent-mirror-context.test.mjs",
+      "bytes": 5019,
+      "sha256": "f2129806a7c0df4dc5ac5dd46642b36e87a0c458751b9a91c076118c26cd92fb",
+      "adapted": false
+    },
+    {
+      "path": "lib/research/agent-mirror.mjs",
+      "bytes": 9312,
+      "sha256": "ef59c6d8e99d774177413e88adf7642ae64751ab6db77679095889a97b3a5f16",
+      "adapted": false
+    },
+    {
+      "path": "lib/research/agent-mirror.test.mjs",
+      "bytes": 7309,
+      "sha256": "71ca358d183c981b30d99be2de7c7471df396ee28d8a59903c3b2efc4f6340fc",
+      "adapted": false
+    },
+    {
       "path": "lib/research/chat.ts",
       "bytes": 3441,
       "sha256": "239efdfa0172d7cffe08294ab77e9a47ecf5b426accc0a40e5d9641119051de5",
@@ -1214,6 +1268,18 @@
       "bytes": 827,
       "sha256": "ab852d8ac0fbd6e72b78964282b7c330bf07e722e6e8e14bb0199a5cfedd2e72",
       "adapted": true
+    },
+    {
+      "path": "lib/research/technical-reading.mjs",
+      "bytes": 15705,
+      "sha256": "a1c5d6f338e1274698ead1946aa01d8270a5d566a0dc092a91b22423751faedf",
+      "adapted": false
+    },
+    {
+      "path": "lib/research/technical-reading.test.mjs",
+      "bytes": 20441,
+      "sha256": "c5a5706440dceeefa3dcb4f3e1e1db4cef16ec84bfe5629262bca5a010b016df",
+      "adapted": false
     },
     {
       "path": "lib/research/topics.ts",
@@ -1378,6 +1444,12 @@
       "adapted": true
     },
     {
+      "path": "public/house/creative-installation.js",
+      "bytes": 10924,
+      "sha256": "e89f019ea521bfc8e03037f1c08d445de8a68031d6b7b9f772981957fb44b1bd",
+      "adapted": true
+    },
+    {
       "path": "public/house/house.css",
       "bytes": 7213,
       "sha256": "10420255a73d5670420446c3b4d0c978ac84809a0b8a958709c652c96b1b1f85",
@@ -1387,6 +1459,12 @@
       "path": "public/house/index.html",
       "bytes": 2234,
       "sha256": "34acf2992067d3058bd5f9eb81d88473f95364749f7446b0fce8bfe62ecf23d2",
+      "adapted": false
+    },
+    {
+      "path": "public/house/initial-creative.json",
+      "bytes": 1290,
+      "sha256": "7ec6cd0f9f87237e5001743d8218caecfd20079dce6f3556b834359c2cb2e027",
       "adapted": false
     },
     {
@@ -1403,8 +1481,8 @@
     },
     {
       "path": "public/house/process-creatures.js",
-      "bytes": 8507,
-      "sha256": "a2e9923d05c4d38c5f4a226a8e7f35901b0ea25ffd074b187e62a912a2d2d716",
+      "bytes": 12187,
+      "sha256": "664e80b5127e67f3c51492c8a3906da4aaad8c967c915595184c4498539bb343",
       "adapted": true
     },
     {
@@ -1420,15 +1498,21 @@
       "adapted": true
     },
     {
+      "path": "public/house/residents.js",
+      "bytes": 6272,
+      "sha256": "b4836e95e7597b41c0dca5615f2c5d5834657bec5e1b6c97525f483bbeca4593",
+      "adapted": false
+    },
+    {
       "path": "public/house/runtime.js",
-      "bytes": 13214,
-      "sha256": "e72ed62beba8d16bf375ad0353b9cdc593c4f9f0445280565595a5c937f93445",
+      "bytes": 15585,
+      "sha256": "8f09a9a034af838f73a4bbab5f458e65c08f3aa6727b523bdf4166563e68b5b0",
       "adapted": false
     },
     {
       "path": "public/house/scene.js",
-      "bytes": 18369,
-      "sha256": "725448b53583e9500359d2994680f8e420b1be4e6fd67fd4aac5285683ecfee3",
+      "bytes": 18652,
+      "sha256": "3b0a404ad39ce50f634c8f3df296fbc1ee8d605e8e6f78cac24154353b4e4648",
       "adapted": false
     },
     {
@@ -1606,7 +1690,7 @@
       "adapted": true
     }
   ],
-  "totalBytes": 4844543,
+  "totalBytes": 4995299,
   "scan": {
     "findings": 0,
     "privateConversationLinksRemoved": 1
@@ -1620,12 +1704,16 @@
     "q517-counterexample.json",
     "studio-runtime.json"
   ],
-  "updatedAt": "2026-11-02T11:54:11.969Z",
+  "updatedAt": "2026-11-04T00:38:39.169Z",
   "runtimeCodeSeeds": [
     "studio-runtime.json",
     "studio-runtime-legacy.json"
   ],
-  "sourcePublishedVersion": "V18",
-  "sourceCommit": "5d179fa2ceda4370e76af8797c90d504783d75a4",
-  "publishedAt": "2026-11-02T07:40:42Z"
+  "sourcePublishedVersion": "V24",
+  "sourceCommit": "a5b6a4daa56fd012ef59f1fae57592ac1bfb1b90",
+  "publishedAt": "2026-11-03T07:47:38.471444Z",
+  "preparedVersion": "V25",
+  "preparedStatus": "unpublished-network-blocked",
+  "workingTreeMatchesPublished": false,
+  "preparedBackendDelivery": "2026-11-04"
 }

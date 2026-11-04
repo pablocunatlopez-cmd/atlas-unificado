@@ -34,8 +34,38 @@ test('Aider and smolagents receive coordinator references outside the 4000-chara
   let received;const adapter={status:async()=>({ready:true}),buildCandidate:async value=>{received=value;return {code:'function transform(input){return input;}'};}};
   const instance=createCodingCollaborators({directory:await directory(t),agent:adapter,smolAgent:adapter,referenceLibrary:{get:async()=>referenceSnapshot()},buildNative:async(task,key,cases,generate)=>{await generate({messages:[{role:'user',content:task},{role:'assistant',content:'old code'},{role:'user',content:'Corrección real.'}]});return {passed:true};}});
   await instance.build('Tarea canónica','key',[{input:1,expected:1}],async()=>{throw Error('Should use selected adapter');},{provider,curriculumTaskId:'json-pointer-resolve'});
-  assert.equal(received.referenceContext,referenceSnapshot().context);assert.match(received.task,/Corrección real/);assert.ok(received.task.length<=4000);assert.equal(received.fetch,undefined);assert.equal(received.network,undefined);assert.deepEqual(received.contract,[{input:1,expected:1}]);
+  assert.equal(received.referenceContext,referenceSnapshot().context);assert.equal(received.task,'Tarea canónica');assert.equal(received.repairContext,'Corrección real.');assert.ok(received.task.length<=4000);assert.equal(received.fetch,undefined);assert.equal(received.network,undefined);assert.deepEqual(received.contract,[{input:1,expected:1}]);
  }
+});
+
+test('a full task and the latest repair failure reach both adapters in separate bounded fields',async t=>{
+ for(const provider of ['aider','smolagents']){
+  let received;const adapter={status:async()=>({ready:true}),buildCandidate:async value=>{received=value;return{code:'function transform(input){return input;}'};}};
+  const task='T'.repeat(3990)+'TASK-END!!',feedback='old source noise '.repeat(800)+'LATEST-COUNTEREXAMPLE';
+  const instance=createCodingCollaborators({directory:await directory(t),agent:adapter,smolAgent:adapter,buildNative:async(original,key,cases,generate)=>{assert.equal(original,task);await generate({messages:[{role:'user',content:task},{role:'assistant',content:'previous measured code'},{role:'user',content:feedback}]});return{passed:false};}});
+  await instance.build(task,'key',[{input:1,expected:1}],()=>assert.fail('No external model'),{provider});
+  assert.equal(received.task,task);assert.equal(received.currentCode,'previous measured code');assert.equal(received.repairContext,feedback.slice(-3000));assert.ok(received.repairContext.endsWith('LATEST-COUNTEREXAMPLE'));
+ }
+});
+
+test('task-specific evidence determines selection without rewriting earlier global measurements',async t=>{
+ const dir=await directory(t),stat=(passed,failed)=>({attempts:passed+failed,passed,failed,cancelled:0,totalMs:1000*(passed+failed)});
+ const global={native:stat(10,0),aider:stat(0,10),smolagents:stat(0,0)};
+ const csv={native:stat(0,10),aider:stat(10,0),smolagents:stat(0,0)},patch={native:stat(10,0),aider:stat(0,10),smolagents:stat(0,0)};
+ await fs.writeFile(path.join(dir,'coding-agents.json'),JSON.stringify({...global,taskMetrics:{'csv-parse':csv,'json-patch-apply':patch,'untrusted-family':csv}}));
+ const instance=createCodingCollaborators({directory:dir,agent:{status:async()=>({ready:true}),buildCandidate:async()=>({code:'function transform(input){return input;}'})},buildNative:async(task,key,cases,generate)=>{await generate({messages:[{role:'user',content:task}]});return{passed:true};}});
+ const first=await instance.build('CSV','key',[{input:1,expected:1}],async()=>({answer:'code'}),{curriculumTaskId:'csv-parse'});
+ assert.equal(first.collaborator.framework,'Aider');assert.equal(first.collaborator.selectionScope,'task');assert.equal(first.collaborator.curriculumTaskId,'csv-parse');assert.equal(first.collaborator.selectionEvidence.find(x=>x.id==='aider').passed,10);
+ const second=await instance.build('Patch','key',[{input:1,expected:1}],async()=>({answer:'code'}),{curriculumTaskId:'json-patch-apply'});assert.equal(second.collaborator.framework,'Atlas native');
+ const restored=await createCodingCollaborators({directory:dir}).status();assert.equal(restored.aider.passed,1);assert.equal(restored.native.passed,11);assert.equal(restored.taskMetrics['csv-parse'].aider.passed,11);assert.equal(restored.taskMetrics['json-patch-apply'].native.passed,11);assert.equal(restored.taskMetrics['untrusted-family'],undefined);assert.equal(restored.measurementScope,'builder-contracts');
+});
+
+test('legacy history remains global and cancellation does not become a failed task attempt',async t=>{
+ const dir=await directory(t),old={attempts:4,passed:2,failed:2,cancelled:1,totalMs:1000};await fs.writeFile(path.join(dir,'coding-agents.json'),JSON.stringify({aider:old,native:old}));
+ const controller=new AbortController();const instance=createCodingCollaborators({directory:dir,buildNative:async()=>{controller.abort(Error('chat priority'));throw controller.signal.reason;}});
+ assert.deepEqual((await instance.status()).taskMetrics,{});
+ await assert.rejects(instance.build('CSV','key',[{input:1,expected:1}],()=>{}, {provider:'native',curriculumTaskId:'csv-parse',signal:controller.signal}),/chat priority/);
+ const state=await instance.status();assert.equal(state.native.attempts,4);assert.equal(state.native.failed,2);assert.equal(state.taskMetrics['csv-parse'].native.attempts,0);assert.equal(state.taskMetrics['csv-parse'].native.cancelled,1);assert.equal(state.taskMetrics['csv-parse'].native.failed,0);
 });
 test('unavailable references and a full native prompt preserve candidate generation rather than invent a consultation',async t=>{
  const instance=createCodingCollaborators({directory:await directory(t),referenceLibrary:{get:async()=>{throw Error('offline');}},buildNative:async(task,key,cases,generate)=>({passed:true,source:(await generate({messages:[{role:'user',content:task}]})).answer})});

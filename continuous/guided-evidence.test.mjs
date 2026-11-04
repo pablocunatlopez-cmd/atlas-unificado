@@ -3,11 +3,19 @@ import assert from 'node:assert/strict';
 import {createGuidedEvidence} from './guided-evidence.mjs';
 
 const source=url=>({sources:[{url,excerpt:'Observed reference text.',method:'Page read'}],errors:[]});
+test('Claude public references are read without sending a question or attempting model authentication',async()=>{
+ for(const [name,url] of [['Claude Agent SDK','https://raw.githubusercontent.com/anthropics/claude-agent-sdk-python/main/README.md'],['skills de Claude','https://raw.githubusercontent.com/anthropics/skills/main/README.md']]){
+  const calls=[],lookup=createGuidedEvidence({read:async(target,options)=>{calls.push({target,options});return source(target);}});
+  const result=await lookup(name+' para mi proyecto privado, never-send-this');
+  assert.equal(calls.length,1);assert.equal(calls[0].target,url);assert.deepEqual(Object.keys(calls[0].options),['signal']);
+  assert.doesNotMatch(JSON.stringify(calls),/never-send-this|authorization|api_key/);assert.equal(result.sources[0].epistemicStatus,'unverified-source');
+ }
+});
 
 test('a specific rendering term selects Three.js docs without transmitting the private question',async()=>{
  const calls=[],lookup=createGuidedEvidence({read:async(url,options)=>{calls.push({url,options});return source(url);}});
  const result=await lookup('InstancedMesh para mi casa privada, clave=never-send-this');
- assert.deepEqual(calls.map(item=>item.url),['https://threejs.org/docs/']);
+ assert.deepEqual(calls.map(item=>item.url),['https://threejs.org/docs/pages/InstancedMesh.html']);
  assert.equal(Object.keys(calls[0].options).join(','),'signal');
  assert.equal(result.sources.length,1);assert.match(result.sources[0].method,/Lectura directa/);assert.match(result.sources[0].method,/no búsqueda global/);assert.equal(result.sources[0].epistemicStatus,'unverified-source');
  assert.doesNotMatch(JSON.stringify(calls),/privada|never-send/);
@@ -61,4 +69,25 @@ test('distinctive known tools and course names route to their curated references
  for(const [question,url] of [['llama.cpp server','https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md'],['EvalPlus casos','https://github.com/evalplus/evalplus'],['lm-evaluation-harness','https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/API_guide.md'],['MIT 6.006 algorithms','https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/']]){
   const calls=[],lookup=createGuidedEvidence({read:async current=>{calls.push(current);return source(current);}});await lookup(question);assert.equal(calls[0],url);
  }
+});
+
+test('Spanish spatial geometry questions reach the fixed readable bounds reference without naming a library',async()=>{
+ for(const question of ['¿Cómo contrastar la geometría 3D y sus semiejes?','Quiero comprobar las colisiones de las mallas de mi casa privada, clave=never-send','Envolventes de la maqueta de la terraza','AABB y Box3: comprobar límites']){
+  const calls=[],lookup=createGuidedEvidence({read:async(url,options)=>{calls.push({url,options});return source(url);}});
+  const result=await lookup(question);
+  assert.equal(calls.length,1);assert.equal(calls[0].url,'https://threejs.org/docs/pages/Box3.html');assert.equal(result.sources[0].requestedUrl,calls[0].url);
+  assert.deepEqual(Object.keys(calls[0].options),['signal']);assert.doesNotMatch(JSON.stringify(calls),/privada|never-send|clave/);
+ }
+ let calls=0;const lookup=createGuidedEvidence({read:async()=>{calls++;return source('https://threejs.org/docs/');}});
+ for(const question of ['Mejora mi casa','Explora una mejora 3D','Mejora mi geometría lógica','Geometría de mi argumento sobre Dios'])assert.deepEqual((await lookup(question)).sources,[]);
+ assert.equal(calls,0);
+});
+
+test('a static class read can use the known repository once and a custom resource cannot acquire reviewed URLs by id',async()=>{
+ const calls=[],lookup=createGuidedEvidence({read:async url=>{calls.push(url);return calls.length===1?{sources:[]}:source(url);}});
+ const result=await lookup('Colisiones de la geometría 3D');
+ assert.deepEqual(calls,['https://threejs.org/docs/pages/Box3.html','https://github.com/mrdoob/three.js']);assert.equal(result.sources.length,1);
+ const customCalls=[],custom=createGuidedEvidence({resources:[{id:'three',name:'Three.js',url:'https://example.org/engine',docs:'https://example.org/docs/'}],read:async url=>{customCalls.push(url);return source(url);}});
+ await custom('Geometría 3D');assert.deepEqual(customCalls,[]);
+ await custom('Three.js');assert.deepEqual(customCalls,['https://example.org/docs/']);
 });

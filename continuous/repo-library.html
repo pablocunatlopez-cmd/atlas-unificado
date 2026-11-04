@@ -27,6 +27,13 @@
   <div class="library-totals"><span><strong id="count-entries">—</strong> fichas importadas</span><span><strong id="count-unique">—</strong> URL únicas</span><span><strong id="count-verified">—</strong> metadatos contrastados</span><span><strong id="count-reflections">—</strong> reflexiones locales</span></div>
   <p class="pulse-detail" id="library-backup">Copia de seguridad: esperando información.</p>
 
+  <section class="library-discovery" aria-labelledby="assessment-heading">
+    <div class="library-catalog-head"><div><h2 id="assessment-heading">Evaluaciones con evidencia</h2><p>Fuentes, pruebas y cuestiones pendientes de cada candidato.</p></div><a id="library-csv" href="/library/export.csv" hidden>Descargar catálogo CSV ↗</a></div>
+    <p class="pulse-detail" id="assessment-state" role="status">Consultando los expedientes guardados…</p>
+    <div class="library-cards" id="assessment-records" aria-busy="true"></div>
+    <p class="pulse-detail">Criterios: reutilización lícita 30 · IA 20 · calidad y seguridad 15 · producto 15 · utilidad 10 · mantenimiento 10. Una puntuación pendiente permanece sin asignar.</p>
+  </section>
+
   <section class="library-discovery" aria-labelledby="discovery-heading">
     <div class="library-catalog-head"><div><h2 id="discovery-heading">Descubrimiento automático</h2><p>Consultas públicas a GitHub. Cada hallazgo queda pendiente de evaluación.</p></div><span class="repo-badge" id="discovery-state">Esperando estado</span></div>
     <dl class="discovery-metrics">
@@ -36,6 +43,7 @@
       <div><dt>Consultas parciales</dt><dd id="discovery-partial">—</dd></div>
     </dl>
     <p class="discovery-schedule" id="discovery-schedule" role="status">Consultando el siguiente turno de búsqueda…</p>
+    <p class="discovery-schedule" id="discovery-segments">Consultando los rangos de búsqueda…</p>
     <div class="discovery-history" id="discovery-history"><p class="pulse-detail">Esperando el registro de consultas.</p></div>
     <p class="library-alert" id="discovery-error" role="status"></p>
     <p class="discovery-coverage" id="discovery-coverage">Las categorías y los resultados son preliminares. Terminar una consulta no acredita cobertura, calidad ni ganadores.</p>
@@ -73,7 +81,30 @@ const date=value=>{if(!value)return null;const parsed=new Date(value);return Num
 const make=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=String(text);return n;};
 const safeUrl=value=>{try{const url=new URL(value);return ['https:','http:'].includes(url.protocol)&&!url.username&&!url.password?url.href:null;}catch{return null;}};
 let offset=0,total=0,query='',requestVersion=0,controller=null,searchTimer=null,statusBusy=false,notesBusy=false,notesLoaded=false,notesCount=null,taxonomyBusy=false,taxonomyLoaded=false;
-const limit=30;
+const limit=30;let assessmentBusy=false;
+const publicRepository=value=>{const href=safeUrl(value);if(!href)return null;const url=new URL(href);return url.protocol==='https:'&&url.hostname==='github.com'&&!url.port&&!url.search&&!url.hash&&/^\/[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/.test(url.pathname)?href:null;};
+async function loadAssessments(){
+  if(assessmentBusy||document.hidden)return;assessmentBusy=true;
+  try{
+    const response=await fetch('/library/assessments',{cache:'no-store',signal:AbortSignal.timeout(12000)});if(!response.ok)throw Error('El coordinador aún no ofrece los expedientes.');
+    const result=await response.json();if(!Array.isArray(result.items)||finite(result.total)===null)throw Error('No se pudo comprobar el registro.');
+    const cards=[];for(const item of result.items.slice(0,40)){
+      const value=item?.assessment,href=publicRepository(value?.repository?.url);if(!href||!['A','B','C','D'].includes(value?.evidence?.level))continue;
+      const card=make('article','repo-card'),header=make('div','repo-card-head'),link=make('a','repo-name',new URL(href).pathname.slice(1));link.href=href;link.target='_blank';link.rel='noopener noreferrer';header.append(link,make('span','repo-badge','Evidencia '+value.evidence.level));card.append(header);
+      const points=finite(value.score?.total);card.append(make('p','repo-description',points===null?'Puntuación pendiente':num(points)+' / 100 · puntuación documentada'));
+      card.append(make('p','pulse-detail','Categoría propuesta: '+String(value.categoryId||'pendiente')+' · '+(date(value.evaluatedAt||item.at)||'Sin fecha')));
+      const pending=Array.isArray(value.eligibility?.winnerBlockers)?value.eligibility.winnerBlockers:[];const labels={'scores-incomplete':'puntuaciones justificadas','evidence-b-required':'revisión de código, licencia y documentación','evidence-a-required':'pruebas reproducibles','revision-required':'versión de código fijada','legal-review-required':'revisión de derechos y obligaciones','security-review-required':'revisión de seguridad','comparison-required':'comparación de alternativas','reproducible-test-required':'prueba ejecutada y reproducible'};
+      const missing=[...new Set(pending.map(key=>labels[key]).filter(Boolean))];card.append(make('p','pulse-detail',missing.length?'Pendiente: '+missing.join(' · '):'Consultar las pruebas del expediente antes de seleccionar.'));
+      card.append(make('p','pulse-detail',value.selection?.winner===true?'Selección final registrada':value.selection?.elite===true?'Selección élite registrada':'Sin selección acreditada'));
+      const details=make('details','repo-evidence');details.append(make('summary',null,'Consultar las fuentes del expediente'));
+      for(const proof of Array.isArray(value.evidence?.records)?value.evidence.records.slice(0,12):[]){const source=safeUrl(proof.sourceUrl);details.append(make('p',null,String(proof.method||'Método no indicado').slice(0,500)+' · '+(date(proof.observedAt)||'Sin fecha')));if(source?.startsWith('https:')){const a=make('a',null,'Fuente registrada ↗');a.href=source;a.target='_blank';a.rel='noopener noreferrer';details.append(a);}}
+      card.append(details);cards.push(card);
+    }
+    byId('assessment-records').replaceChildren(...cards);if(!cards.length)byId('assessment-records').append(make('div','library-empty','Todavía no hay expedientes disponibles.'));
+    byId('assessment-state').textContent=num(result.total)+' expedientes registrados · '+(result.integrity?.ok===true?'integridad del registro comprobada':'integridad sin comprobar')+'. La evidencia y la elegibilidad no equivalen a una selección.';
+  }catch(error){byId('assessment-state').textContent=error.message;}
+  finally{assessmentBusy=false;byId('assessment-records').setAttribute('aria-busy','false');}
+}
 function setPaging(loading=false){byId('library-previous').disabled=loading||offset===0;byId('library-next').disabled=loading||offset+limit>=total;byId('library-page-number').textContent='Página '+format.format(Math.floor(offset/limit)+1)+(total?' de '+format.format(Math.ceil(total/limit)):'');}
 function badgeText(item){if(item.metadataVerifiedAt&&item.metadata)return 'Metadatos GitHub';if(item.verificationStatus==='not_found')return 'No localizado';if(item.verificationStatus==='rate_limited')return 'Consulta aplazada';if(item.verificationStatus==='error')return 'Consulta fallida';if(item.verificationStatus==='redirect_pending')return 'Redirección por revisar';return 'Por verificar';}
 function renderItem(item){
@@ -170,11 +201,13 @@ function renderDiscovery(value){
     byId('discovery-history').replaceChildren(make('p','pulse-detail','No hay un registro de la última consulta disponible.'));byId('discovery-error').textContent='';return;
   }
   const jobs=value.jobs&&typeof value.jobs==='object'?value.jobs:{};
-  const partial=finite(value.partialQueries)??(['truncated','incomplete'].every(key=>finite(jobs[key]??0)!==null)?(jobs.truncated??0)+(jobs.incomplete??0):null);
+  const partial=finite(value.partialQueries)??finite(value.segmentationPendingQueries)??(['truncated','incomplete'].every(key=>finite(jobs[key]??0)!==null)?(jobs.truncated??0)+(jobs.incomplete??0):null);
   byId('discovery-count').textContent=num(value.discovered);
   byId('discovery-attempts').textContent=num(value.searchObservations);
   byId('discovery-completed').textContent=num(finite(value.completedQueries)??finite(jobs.complete??0));
   byId('discovery-partial').textContent=num(partial);
+  const shards=value.segmentation?.shards;
+  byId('discovery-segments').textContent=shards&&typeof shards==='object'?'Rangos por fecha: '+num(shards.pending||0)+' pendientes · '+num(shards.paged||0)+' en paginación · '+num(shards.split||0)+' subdivididos · '+num(shards.complete||0)+' consultas completas · '+num(shards.saturated||0)+' saturados.':'Este coordinador aún no publica particiones de búsqueda.';
   const states={ready:'En cola',busy:'Consulta en curso',waiting:'Esperando turno',rate_limited:'Búsqueda aplazada',paused:'En pausa'};
   byId('discovery-state').textContent=states[value.state]||'Estado registrado';
   const next=date(value.nextRun),retry=date(value.backoffUntil);
@@ -192,6 +225,9 @@ function renderDiscovery(value){
     if(finite(last.added)!==null)details.push(num(last.added)+' nuevos');
     if(last.truncated===true)details.push('Resultados limitados por la búsqueda');
     if(last.incomplete===true)details.push('GitHub informó resultados incompletos');
+    if(last.range&&typeof last.range.startDay==='string'&&typeof last.range.endDay==='string')details.push('Rango '+last.range.startDay+' → '+last.range.endDay);
+    if(last.splitCreated===2)details.push('Dividido en dos rangos para continuar');
+    if(last.shardStatus==='saturated')details.push('Rango saturado: cobertura pendiente');
     if(details.length)history.append(make('p','pulse-detail',details.join(' · ')));
     const href=safeUrl(last.sourceUrl);
     if(href){const source=make('a','discovery-source','Ver la consulta de origen ↗');source.href=href;source.target='_blank';source.rel='noopener noreferrer';history.append(source);}
@@ -252,8 +288,9 @@ byId('library-query').addEventListener('input',()=>{clearTimeout(searchTimer);se
 byId('library-clear').addEventListener('click',()=>{byId('library-query').value='';search();byId('library-query').focus();});
 byId('library-previous').addEventListener('click',()=>{offset=Math.max(0,offset-limit);void loadItems();});
 byId('library-next').addEventListener('click',()=>{if(offset+limit<total){offset+=limit;void loadItems();}});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){void loadStatus();void loadNotes();void loadTaxonomy();}});
-void loadItems();void loadStatus();void loadNotes();void loadTaxonomy();setInterval(loadStatus,30000);setInterval(loadNotes,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){void loadStatus();void loadNotes();void loadTaxonomy();void loadAssessments();}});
+void fetch('/library/export.csv',{method:'HEAD',cache:'no-store',signal:AbortSignal.timeout(10000)}).then(response=>{if(response.ok)byId('library-csv').hidden=false;}).catch(()=>{});
+void loadItems();void loadStatus();void loadNotes();void loadTaxonomy();void loadAssessments();setInterval(loadStatus,30000);setInterval(loadNotes,60000);setInterval(loadAssessments,60000);
 </script>
 </body>
 </html>

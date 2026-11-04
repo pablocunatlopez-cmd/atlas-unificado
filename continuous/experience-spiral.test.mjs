@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
-import {createExperienceSpiral} from './experience-spiral.mjs';
+import {createExperienceSpiral,canonicalInquiryQuery,canonicalInquiryKey} from './experience-spiral.mjs';
 import {LOR_FIELDS,validateLorRecord} from './lor-omega.mjs';
 
 const digest=value=>createHash('sha256').update(String(value)).digest('hex');
@@ -188,4 +188,97 @@ test('Atlas can choose Dios / Suceso as an open focus and preserve the experienc
  assert.equal(result.experience.L.newEvidence,true);assert.equal(result.experience.L.acceptedChange,false);assert.equal(result.experience.L.countsAsLearning,false);
  assert.equal(result.experience.language.S.O[0].focus,'suceso');assert.equal((await read()).history[0].goal.focus,'suceso');
  const restored=createExperienceSpiral(options),status=await restored.status();assert.equal(status.objective.focus,'suceso');assert.equal(status.last.focus,'suceso');assert.equal(status.last.epistemicStatus,'unexplained');assert.equal(status.experiences,1);assert.equal(status.learningChanges,0);
+});
+
+test('canonical public inquiries share spelling and punctuation while excluding private additions',()=>{
+ const base='¿Qué documentación pública de gráficos 3D falta?';
+ assert.equal(canonicalInquiryKey(base),canonicalInquiryKey(' QUE DOCUMENTACION   PUBLICA de GRAFICOS 3D falta!!! '));
+ assert.equal(canonicalInquiryKey(base),canonicalInquiryKey(base+' https://example.org/private somebody@example.org C:\\private\\file.txt'));
+ assert.equal(canonicalInquiryQuery(' https://example.org/alone '),'');
+});
+
+test('volatile prose and unrelated planned cases do not reopen a repair, but measured source or failure changes do',async t=>{
+ let source='source-a',failure='failure-a',executions=0;
+ const task='csv-parse';
+ const {api,advance}=await fixture(t,{
+  observe:async({ordinal})=>({facts:['Último resultado número '+ordinal],unknowns:['Pregunta narrativa '+ordinal],gaps:[{taskId:task,reason:'Texto de diagnóstico '+ordinal}],failures:Array.from({length:ordinal%2+1},()=>({taskId:task,summary:'Resumen '+ordinal,caseHash:digest(failure)})),caseHash:digest('unrelated-'+ordinal),eligibleActions:[{kind:'curriculum-repair',taskId:task,key:digest(source)}]}),
+  proposeGoal:async({ordinal})=>({...goal,kind:'curriculum-repair',taskId:task,question:'¿Qué reparación textual '+ordinal+' debe revisarse ahora?'}),
+  execute:async()=>{executions++;return{executed:false,cases:0,passed:0,invariantsPreserved:true,summary:'No se ejecutaron casos.'};}
+ });
+ assert.equal((await api.tick()).status,'retained');
+ for(let index=0;index<3;index++){advance(30000);assert.equal((await api.tick()).status,'waiting');}
+ assert.equal(executions,1);
+ failure='failure-b';advance(30000);assert.equal((await api.tick()).status,'retained');
+ source='source-b';advance(30000);assert.equal((await api.tick()).status,'retained');
+ assert.equal(executions,3);assert.equal((await api.status()).learningChanges,0);
+});
+
+test('an explicit empty eligibility contract prevents historical failures and cached model goals from forcing work',async t=>{
+ let eligible=true,planned=0,executions=0;
+ const {api,advance}=await fixture(t,{
+  observe:async()=>({facts:['Una reparación anterior quedó refutada.'],failures:[{taskId:'json-pointer-resolve',caseHash:digest('old-failure'),summary:'Fallo histórico.'}],eligibleActions:eligible?[{kind:'curriculum-repair',taskId:'json-pointer-resolve',key:digest('repair-source')}]:[]}),
+  proposeGoal:async()=>{planned++;return{...goal,kind:'curriculum-repair',taskId:'json-pointer-resolve'};},
+  execute:async()=>{executions++;return{executed:false,cases:0,passed:0,summary:'Fallo sin casos.'};}
+ });
+ await api.tick();eligible=false;advance(30000);
+ const waiting=await api.tick();assert.equal(waiting.status,'waiting');assert.equal(waiting.reason,'no_eligible_goal');
+ assert.equal(planned,1);assert.equal(executions,1);assert.equal((await api.status()).experiences,1);
+});
+
+test('explicit fallback keeps the executable kind instead of turning a missing-function gap into a tool trial',async t=>{
+ const {api}=await fixture(t,{
+  observe:async()=>({facts:['Falta una función contrastada.'],gaps:[{taskId:'json-pointer-resolve',reason:'Requiere construcción.'}],failures:[{taskId:'merge-intervals',summary:'Un fallo anterior ya no es elegible.'}],eligibleActions:[{kind:'curriculum-repair',taskId:'json-pointer-resolve',key:digest('eligible-repair')}]}),
+  proposeGoal:async()=>({...goal,taskId:'merge-intervals'})
+ });
+ const result=await api.tick();assert.equal(result.experience.goal.kind,'curriculum-repair');assert.equal(result.experience.goal.taskId,'json-pointer-resolve');
+});
+
+test('inquiry retryAt replaces the provisional lease, survives restart and expires without synthetic fallback',async t=>{
+ let executions=0,turn=0;const question='¿Qué documentación pública de gráficos falta?';
+ const setup=await fixture(t,{
+  observe:async({ordinal})=>({facts:['Última área '+ordinal],caseHash:digest('volatile-'+ordinal),eligibleActions:[{kind:'open-inquiry',taskId:null,focus:'research'}]}),
+  proposeGoal:async()=>({...goal,kind:'open-inquiry',taskId:null,focus:'research',question:++turn%2?question:' QUE DOCUMENTACION PUBLICA DE GRAFICOS FALTA!!! '}),
+  execute:async()=>{executions++;return{executed:false,cases:0,passed:0,retryAt:setup.options.now()+90000,summary:'Proveedor en espera.'};}
+ });
+ await setup.api.tick();setup.advance(30000);
+ assert.equal((await setup.api.tick()).status,'waiting');assert.equal(executions,1);
+ const resumed=createExperienceSpiral(setup.options);setup.advance(30000);assert.equal((await resumed.tick()).status,'waiting');
+ setup.advance(30000);assert.equal((await resumed.tick()).status,'retained');assert.equal(executions,2);
+ assert.equal((await resumed.status()).learningChanges,0);
+});
+
+test('observed pending inquiries and general budgets are enforced before an executor can run',async t=>{
+ const clock=Date.parse('2026-11-01T12:00:00Z'),question='¿Qué dato público distingue estas explicaciones?';let executions=0,budget=false;
+ const {api,advance}=await fixture(t,{
+  observe:async()=>({facts:['Consulta conocida en espera.'],eligibleActions:[{kind:'open-inquiry',taskId:null}],pendingInquiries:[{key:canonicalInquiryKey(question),retryAt:clock+600000}],inquiryBudgetRetryAt:budget?clock+600000:null}),
+  proposeGoal:async()=>({...goal,kind:'open-inquiry',taskId:null,focus:'suceso',question:budget?'¿Qué otro dato público requiere una búsqueda diferente?':question}),
+  execute:async()=>{executions++;return{};}
+ });
+ assert.equal((await api.tick()).status,'waiting');budget=true;advance(30000);assert.equal((await api.tick()).status,'waiting');assert.equal(executions,0);assert.equal((await api.status()).experiences,0);
+});
+
+test('legacy history migrates stable action leases without resetting counters or blocking the same evidence forever',async t=>{
+ let executions=0;const source=digest('migration-source');
+ const setup=await fixture(t,{
+  observe:async()=>({facts:['Misma evidencia física.'],caseHash:digest('cases'),eligibleActions:[{kind:'curriculum-repair',taskId:'json-pointer-resolve',key:source}]}),
+  proposeGoal:async()=>({...goal,kind:'curriculum-repair',taskId:'json-pointer-resolve'}),
+  execute:async()=>{executions++;return{executed:false,cases:0,passed:0,summary:'No se produjo otra evidencia.'};}
+ });
+ await setup.api.tick();const saved=await setup.read();delete saved.actionAttempts;
+ await fs.writeFile(path.join(setup.options.directory,'experience-spiral.json'),JSON.stringify(saved));
+ setup.advance(30000);const resumed=createExperienceSpiral(setup.options);
+ assert.equal((await resumed.tick()).status,'waiting');assert.equal(executions,1);assert.equal((await resumed.status()).experiences,1);
+ const migrated=await setup.read();assert.equal(migrated.actionAttempts.length,1);assert.equal(migrated.history[0].id,saved.history[0].id);assert.equal(migrated.learningChanges,saved.learningChanges);
+ setup.advance(24*3600000);assert.equal((await resumed.tick()).status,'retained');assert.equal(executions,2);
+});
+
+test('creative inquiries retain distinct design questions while narration does not repeat the same design',async t=>{
+ let turn=0,executions=0;
+ const {api,advance}=await fixture(t,{
+  observe:async({ordinal})=>({facts:['Otro resumen '+ordinal],caseHash:digest('prose-'+ordinal),eligibleActions:[{kind:'creative-experiment',taskId:null,focus:'3d'}]}),
+  proposeGoal:async()=>({...goal,kind:'creative-experiment',taskId:null,focus:'3d',question:++turn<3?'¿Qué banco 3D se puede construir con dos soportes?':'¿Qué lámpara 3D resulta legible junto a los puestos?'}),
+  execute:async({ordinal})=>{executions++;return{executed:true,cases:6,passed:6,acceptedChange:false,invariantsPreserved:true,evidenceHash:digest('artwork-'+ordinal)};}
+ });
+ assert.equal((await api.tick()).status,'retained');advance(5000);assert.equal((await api.tick()).status,'waiting');advance(30000);assert.equal((await api.tick()).status,'retained');
+ assert.equal(executions,2);assert.equal((await api.status()).learningChanges,0);
 });

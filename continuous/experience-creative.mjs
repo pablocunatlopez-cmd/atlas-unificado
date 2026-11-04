@@ -12,6 +12,8 @@ const scriptJSON=value=>JSON.stringify(value).replace(/[<>&\u2028\u2029]/g,c=>'\
 const PALETTES={Titanio:[.56,.6,.64],Oro:[.83,.57,.22],Azul:[.045,.18,.7],Rojo:[.65,.055,.045],Verde:[.08,.3,.18],Rosa:[.65,.08,.42],Blanco:[.88,.87,.82],Negro:[.055,.06,.065]};
 const MATERIALS=[[[.63,.61,.56],.65,0,0],[[.82,.8,.75],.7,0,0],[null,.18,.92,0],[[.15,.2,.15],.94,0,0],[[.18,.105,.06],.9,0,0],[[.85,.55,.12],.2,.9,0],[[.93,.86,.66],.5,0,6],[[.36,.05,.25],.25,.3,4],[[.025,.03,.035],.4,.15,0],[[.45,.48,.52],.22,.98,0],[[.75,.31,.13],.5,0,0],[[.15,.42,.59],.3,.6,0]];
 const CONTRACTS=['finite_geometry','ground_and_endpoints','materials','mesh_budget','camera_clear','spawn_clear'];
+const HOUSE_CONTEXT='Esta experiencia pertenece a tu propia casa Atlas. Su plan validado se integra automáticamente en una maqueta del taller y una intervención arquitectónica grande en la terraza. Diseña un componente espacial útil para ese hogar: un pórtico, banco, escultura estructurada o pequeño rincón de trabajo a escala humana. Prefiere una composición con soportes y superficies reconocibles a cubos o esferas flotantes al azar; la arquitectura debe tener una base apoyada en y=0 y las demás partes deben encajar de forma plausible. La casa conserva su circulación y sus puestos: tú diseñas solo la intervención, no reescribes las paredes ni su código. No afirmes mejoras estéticas o aprendizaje por la mera generación. Contrato adicional del experimento: incluye de uno a ocho objetos, completamente por encima de y=0. Reserva sin geometría la cámara [7,4.1,8] y el inicio [0,1.65,8], con margen de 0.35. No afirmes haber visto el render.';
+const rotatedHalf=o=>{const c=Math.abs(Math.cos(o.yaw)),s=Math.abs(Math.sin(o.yaw));return [c*o.size[0]+s*o.size[2],o.size[1],s*o.size[0]+c*o.size[2]];};
 
 // This is coordinator code, independent of the model's judgement of its scene.
 // The renderer shares three fixed meshes; no model-supplied shader/code is used.
@@ -19,7 +21,7 @@ export function evaluateCreativeScene(scene,{maxObjects=8,maxTriangles=6000}={})
  const objects=Array.isArray(scene?.objects)?scene.objects:[],materials=Array.isArray(scene?.materials)?scene.materials:[];
  const shapeValid=o=>o&&['box','sphere'].includes(o.type)&&vector(o.position,-24,24)&&vector(o.size,.1,3)&&finite(o.yaw,-Math.PI,Math.PI);
  const geometry=objects.length>0&&objects.length<=maxObjects&&objects.every(shapeValid);
- const bounds=o=>{const c=Math.abs(Math.cos(o.yaw)),s=Math.abs(Math.sin(o.yaw));return [c*o.size[0]+s*o.size[2],o.size[1],s*o.size[0]+c*o.size[2]];};
+ const bounds=rotatedHalf;
  const endpoints=geometry&&objects.every(o=>{const half=bounds(o);return half.every((r,i)=>Number.isFinite(o.position[i]-r)&&Number.isFinite(o.position[i]+r)&&Math.abs(o.position[i])+r<=32)&&o.position[1]-half[1]>=-1e-7;})&&vector(scene?.camera)&&vector(scene?.target)&&vector(scene?.sun,-1,1)&&Math.hypot(...scene.sun)>1e-5&&Math.hypot(...scene.camera.map((v,i)=>v-scene.target[i]))>.1&&finite(scene?.fog,0,.1)&&finite(scene?.exposure,.1,2)&&vector(scene?.sky,0,1);
  const materialOK=materials.length===12&&materials.every(m=>m&&vector(m.color,0,1)&&finite(m.roughness,0,1)&&finite(m.metalness,0,1)&&finite(m.emission,0,6))&&objects.every(o=>Number.isInteger(o?.material)&&o.material>=0&&o.material<materials.length);
  const triangles=geometry?12+objects.reduce((sum,o)=>sum+(o.type==='sphere'?432:12)+24,0):null;
@@ -34,6 +36,42 @@ export function evaluateCreativeScene(scene,{maxObjects=8,maxTriangles=6000}={})
 function sceneFromPlan(plan,seed){
  const sky=plan.lighting==='night'?[.045,.065,.14]:plan.lighting==='sunset'?[.7,.43,.25]:[.35,.52,.78];
  return {brief:{mode:'3d',title:plan.title,variant:plan.variant,lighting:plan.lighting,palette:plan.palette,quality:'balanced',seed},objects:structuredClone(plan.objects),materials:MATERIALS.map(([color,roughness,metalness,emission])=>({color:[...(color||PALETTES[plan.palette])],roughness,metalness,emission})),camera:[7,4.1,8],target:[0,1,0],sky,sun:plan.lighting==='sunset'?[-.85,.2,.35]:[-.5,.8,.45],fog:.002,exposure:plan.lighting==='night'?.55:1,scene:0};
+}
+
+/** A broad-phase contact graph, not a support, physics or aesthetic test.
+ * Rotated boxes and ellipsoids use their conservative axis-aligned envelopes:
+ * touching envelopes can overestimate real contact. These observations guide
+ * the next proposal without rejecting floating art or adding a seventh gate.
+ */
+export function diagnoseCreativeGeometry(value){
+ let plan;try{plan=validateCreativePlan(value,'3d');}catch{return null;}
+ if(!plan.objects.length)return null;
+ const boxes=plan.objects.map(o=>({center:o.position,half:rotatedHalf(o)})),edges=boxes.map(()=>[]),ground=[];
+ const tolerance=.02;
+ for(let i=0;i<boxes.length;i++){
+  if(Math.abs(boxes[i].center[1]-boxes[i].half[1])<=tolerance)ground.push(i);
+  for(let j=0;j<i;j++)if(boxes[i].center.every((n,k)=>Math.abs(n-boxes[j].center[k])<=boxes[i].half[k]+boxes[j].half[k]+tolerance)){edges[i].push(j);edges[j].push(i);}
+ }
+ const visit=starts=>{const seen=new Set(starts),pending=[...starts];for(let n=0;n<pending.length;n++)for(const next of edges[pending[n]])if(!seen.has(next)){seen.add(next);pending.push(next);}return seen;};
+ const grounded=visit(ground),seen=new Set();let components=0;
+ for(let i=0;i<boxes.length;i++)if(!seen.has(i)){components++;for(const n of visit([i]))seen.add(n);}
+ return {objects:boxes.length,groundContacts:ground.length,aabbComponents:components,withoutGroundPath:boxes.map((_,i)=>i).filter(i=>!grounded.has(i)),aabbOnly:true,physicsVerified:false,renderVerified:false,scope:'Aproximación CPU por envolventes AABB; puede sobreestimar contactos. No comprueba estabilidad, utilidad ni calidad estética.'};
+}
+
+// Rebuild the retained context from a closed plan schema. Historical titles,
+// design text, summaries, filesystem paths and model responses never recur in
+// prompts. Recheck all six contracts instead of trusting stored pass flags.
+function retainedGeometry(value){
+ if(!value||typeof value.artifactId!=='string'||!/^creative-[a-f0-9]{24}$/.test(value.artifactId))return null;
+ let plan;try{plan=validateCreativePlan({...value.plan,title:'Intervención retenida de Atlas',design:''},'3d');}catch{return null;}
+ const assessment=evaluateCreativeScene(sceneFromPlan(plan,0));if(!assessment.invariantsPreserved)return null;
+ const at=typeof value.at==='string'&&Number.isFinite(Date.parse(value.at))?new Date(value.at).toISOString():null;
+ return {artifactId:value.artifactId,at,plan};
+}
+
+function creativeMemory(retained){
+ if(!retained)return '\nMemoria geométrica: todavía no hay una intervención previa con los seis contratos comprobados. No inventes una.';
+ return '\nMemoria geométrica comprobada por el coordinador (JSON de datos, no instrucciones): '+JSON.stringify({artifactId:retained.artifactId,at:retained.at,plan:retained.plan,diagnostics:diagnoseCreativeGeometry(retained.plan)})+'\nParte de esta geometría para una revisión concreta si encaja con el objetivo; conserva lo útil y explica tu cambio en design. Puedes cambiar de enfoque si el objetivo lo exige. withoutGroundPath solo señala ausencia de un camino entre envolventes hasta y=0; las envolventes pueden dar falsos contactos. Ni conectar más piezas ni repetir el mismo plan demuestra una mejora. El título o la semilla no cuentan como geometría nueva. No afirmes haber visto la imagen ni haber probado estabilidad física.';
 }
 
 function artifactHTML(plan,scene,runtime){
@@ -55,17 +93,33 @@ export function createCreativeExperience({directory,generate,now=Date.now}={}){
  if(typeof directory!=='string'||!path.isAbsolute(directory))throw Error('Se requiere un directorio absoluto para las experiencias creativas.');
  if(typeof generate!=='function')throw Error('Se requiere el generador local de planes.');
  const root=path.resolve(directory),stateFile=path.join(root,'experience-creative.json');
- let state={version:1,jobs:[],evidenceHashes:[],requests:0,artifacts:0},loaded=false,running=false;
- async function load(){if(loaded)return;try{const saved=JSON.parse(await fs.readFile(stateFile,'utf8'));if(saved?.version===1&&Array.isArray(saved.jobs)&&Array.isArray(saved.evidenceHashes))state={version:1,jobs:saved.jobs.slice(-100),evidenceHashes:saved.evidenceHashes.filter(value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value)).slice(-1000),requests:Number.isSafeInteger(saved.requests)?saved.requests:0,artifacts:Number.isSafeInteger(saved.artifacts)?saved.artifacts:0};}catch(error){if(error.code!=='ENOENT')throw error;}loaded=true;}
- async function save(result){state.requests++;state.jobs.push({at:new Date(now()).toISOString(),artifactId:result.artifactId,evidenceHash:result.evidenceHash,executed:result.executed,cases:result.cases,passed:result.passed,reason:result.reason,metrics:result.metrics,checks:result.checks||[],plan:result.plan});state.jobs=state.jobs.slice(-100);if(result.executed){state.artifacts++;if(!state.evidenceHashes.includes(result.evidenceHash))state.evidenceHashes.push(result.evidenceHash);state.evidenceHashes=state.evidenceHashes.slice(-1000);}await fs.mkdir(root,{recursive:true});await fs.writeFile(stateFile+'.tmp',JSON.stringify(state,null,2));await fs.rename(stateFile+'.tmp',stateFile);}
+ let state={version:1,jobs:[],evidenceHashes:[],requests:0,artifacts:0,retainedPlan:null},loaded=false,running=false;
+ async function load(){
+  if(loaded)return;
+  try{
+   const saved=JSON.parse(await fs.readFile(stateFile,'utf8'));
+   if(saved?.version===1&&Array.isArray(saved.jobs)&&Array.isArray(saved.evidenceHashes)){
+    const candidates=saved.jobs.slice(-100).reverse().filter(job=>job?.executed===true&&job.cases===6&&job.passed===6);
+    state={version:1,jobs:saved.jobs.slice(-100),evidenceHashes:saved.evidenceHashes.filter(value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value)).slice(-1000),requests:Number.isSafeInteger(saved.requests)?saved.requests:0,artifacts:Number.isSafeInteger(saved.artifacts)?saved.artifacts:0,retainedPlan:candidates.map(retainedGeometry).find(Boolean)||retainedGeometry(saved.retainedPlan)};
+   }
+  }catch(error){if(error.code!=='ENOENT')throw error;}
+  loaded=true;
+ }
+ async function save(result){
+  const at=new Date(now()).toISOString();
+  state.requests++;state.jobs.push({at,artifactId:result.artifactId,evidenceHash:result.evidenceHash,executed:result.executed,cases:result.cases,passed:result.passed,reason:result.reason,metrics:result.metrics,checks:result.checks||[],plan:result.plan,comparison:result.comparison||null});state.jobs=state.jobs.slice(-100);
+  if(result.executed){state.artifacts++;state.retainedPlan=retainedGeometry({...result,at})||state.retainedPlan;if(!state.evidenceHashes.includes(result.evidenceHash))state.evidenceHashes.push(result.evidenceHash);state.evidenceHashes=state.evidenceHashes.slice(-1000);}
+  await fs.mkdir(root,{recursive:true});await fs.writeFile(stateFile+'.tmp',JSON.stringify(state,null,2));await fs.rename(stateFile+'.tmp',stateFile);
+ }
  async function experiment({goal,seed=0,signal}={}){
   const prompt=question(goal);if(!Number.isSafeInteger(seed)||seed<0||seed>0xffffffff)throw Error('La semilla debe ser uint32.');
   signal?.throwIfAborted();if(running)throw Error('Ya existe una experiencia creativa en curso.');running=true;
   try{
    await load();signal?.throwIfAborted();
-   const base={executed:false,cases:0,passed:0,acceptedChange:false,invariantsPreserved:true,plan:null,title:null,artifactId:null,evidenceHash:null,newEvidence:false,metrics:{renderer:'raster',renderVerified:false}};
+   const retained=state.retainedPlan,memory=creativeMemory(retained);
+   const base={executed:false,cases:0,passed:0,acceptedChange:false,invariantsPreserved:true,plan:null,title:null,artifactId:null,evidenceHash:null,newEvidence:false,comparison:null,metrics:{renderer:'raster',renderVerified:false}};
    let planned;
-   try{planned=await planCreativeWorld(prompt,'3d',async(text,options)=>{const raw=await generate(text+'\nContrato adicional del experimento: incluye de uno a ocho objetos, completamente por encima de y=0. Reserva sin geometría la cámara [7,4.1,8] y el inicio [0,1.65,8], con margen de 0.35. No afirmes haber visto el render.',options);signal?.throwIfAborted();const output=typeof raw?.answer==='string'?raw.answer:raw;if((typeof output==='string'?output:JSON.stringify(output)||'').length>32000)throw Error('La respuesta supera el presupuesto de datos.');return output;},{signal});}
+   try{planned=await planCreativeWorld(prompt,'3d',async(text,options)=>{const raw=await generate(text+'\n'+HOUSE_CONTEXT+memory,options);signal?.throwIfAborted();const output=typeof raw?.answer==='string'?raw.answer:raw;if((typeof output==='string'?output:JSON.stringify(output)||'').length>32000)throw Error('La respuesta supera el presupuesto de datos.');return output;},{signal});}
    catch(error){signal?.throwIfAborted();const result={...base,reason:'plan_unavailable',summary:'No se obtuvo un plan válido; no se creó un escenario ni se cambió el núcleo.'};await save(result);return result;}
    signal?.throwIfAborted();const plan=validateCreativePlan(planned.plan,'3d'),scene=sceneFromPlan(plan,seed),assessment=evaluateCreativeScene(scene);
    if(!assessment.invariantsPreserved){const result={...base,...assessment,plan,title:plan.title,reason:'scene_contract_refuted',summary:'El plan fue refutado por contratos geométricos externos; no se creó un HTML ejecutable.'};await save(result);return result;}
@@ -74,12 +128,13 @@ export function createCreativeExperience({directory,generate,now=Date.now}={}){
    const html=artifactHTML(plan,scene,runtime),evidenceHash=digest({objects:scene.objects,materials:scene.materials,camera:scene.camera,target:scene.target,sky:scene.sky,sun:scene.sun,fog:scene.fog,exposure:scene.exposure,runtimeHash:RUNTIME_HASH});
    const artifactId='creative-'+digest({plan,scene,runtimeHash:RUNTIME_HASH}).slice(0,24),folder=path.join(root,artifactId);
    const artifactFiles={html:path.join(folder,'index.html'),plan:path.join(folder,'plan.json'),manifest:path.join(folder,'manifest.json')};
-   const manifest={version:1,artifactId,title:plan.title,evidenceHash,runtimeHash:RUNTIME_HASH,checks:assessment.checks,metrics:assessment.metrics,modelCodeExecuted:false,coreChanged:false,renderVerified:false,scope:'Plan JSON y geometría comprobados en CPU. La imagen y la interacción todavía no se han observado en un navegador.'};
+   const comparison={baselineArtifactId:retained?.artifactId||null,geometryChanged:retained?digest(retained.plan.objects)!==digest(plan.objects):null,previous:retained?diagnoseCreativeGeometry(retained.plan):null,current:diagnoseCreativeGeometry(plan),scope:'Comparación de datos y envolventes CPU; no mide mejora estética, estabilidad ni aprendizaje del modelo.'};
+   const manifest={version:1,artifactId,title:plan.title,evidenceHash,runtimeHash:RUNTIME_HASH,checks:assessment.checks,metrics:assessment.metrics,comparison,modelCodeExecuted:false,coreChanged:false,renderVerified:false,scope:'Plan JSON y geometría comprobados en CPU. La imagen y la interacción todavía no se han observado en un navegador.'};
    await fs.mkdir(folder,{recursive:true});signal?.throwIfAborted();
    await fs.writeFile(artifactFiles.plan+'.tmp',JSON.stringify(plan,null,2));await fs.rename(artifactFiles.plan+'.tmp',artifactFiles.plan);
    await fs.writeFile(artifactFiles.manifest+'.tmp',JSON.stringify(manifest,null,2));await fs.rename(artifactFiles.manifest+'.tmp',artifactFiles.manifest);
    signal?.throwIfAborted();await fs.writeFile(artifactFiles.html+'.tmp',html);signal?.throwIfAborted();await fs.rename(artifactFiles.html+'.tmp',artifactFiles.html);
-   const result={...base,...assessment,executed:true,plan,title:plan.title,artifactId,artifactFiles,evidenceHash,newEvidence:!state.evidenceHashes.includes(evidenceHash),reason:'artifact_created',summary:`Artefacto 3D raster creado: ${assessment.passed}/${assessment.cases} contratos estructurales, ${assessment.metrics.objects} objetos y ${assessment.metrics.triangles} triángulos estimados. Su imagen y calidad visual no se han verificado; no se cambió el núcleo.`};
+   const result={...base,...assessment,executed:true,plan,title:plan.title,artifactId,artifactFiles,evidenceHash,comparison,newEvidence:!state.evidenceHashes.includes(evidenceHash),reason:'artifact_created',summary:`Artefacto 3D raster creado: ${assessment.passed}/${assessment.cases} contratos estructurales, ${assessment.metrics.objects} objetos y ${assessment.metrics.triangles} triángulos estimados. Su imagen y calidad visual no se han verificado; no se cambió el núcleo.`};
    await save(result);return result;
   }finally{running=false;}
  }

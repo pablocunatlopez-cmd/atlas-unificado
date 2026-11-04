@@ -6,11 +6,25 @@ import {openRepositoryLibrary,DEFAULT_LIBRARY_PATH,METADATA_TTL_MS} from './repo
 export const DISCOVERY_PAGE_SIZE=100;
 export const DISCOVERY_MAX_PAGES=10;
 export const DISCOVERY_INTERVAL_MS=10000;
+export const DISCOVERY_SEGMENT_START_DAY='1970-01-01';
+export const DISCOVERY_SEGMENT_MAX_DEPTH=16;
+export const DISCOVERY_SEGMENT_MAX_SHARDS=4095;
+export const DISCOVERY_PASS_MAX_IDS=1000;
 export const DISCOVERY_FOCUS_MACROAREAS=Object.freeze(['M15','M14','M12','M10','M03','M08','M19','M13','M07','M02']);
 const ownerPattern=/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/;
 const repoPattern=/^[A-Za-z0-9_.-]{1,100}$/;
 const iso=value=>value==null?null:new Date(value).toISOString();
 const json=(value,fallback=null)=>{try{return JSON.parse(value);}catch{return fallback;}};
+const DAY_MS=86400000,day=value=>new Date(value).toISOString().slice(0,10);
+const dayNumber=value=>Date.parse(value+'T00:00:00.000Z')/DAY_MS;
+const dayAt=value=>day(value*DAY_MS);
+const shardId=(jobId,start,end)=>jobId+':created:'+start+':'+end;
+function dateHalves(start,end){
+ const first=dayNumber(start),last=dayNumber(end);
+ if(!Number.isInteger(first)||!Number.isInteger(last)||first>=last)return null;
+ const middle=Math.floor((first+last)/2);
+ return [[start,dayAt(middle)],[dayAt(middle+1),end]];
+}
 
 export function loadRepositoryTaxonomy(){
  const raw=readFileSync(new URL('./repository-taxonomy.json',import.meta.url),'utf8');
@@ -39,8 +53,29 @@ CREATE TABLE IF NOT EXISTS discovery_jobs (
  status TEXT NOT NULL DEFAULT 'pending', total_count INTEGER, truncated INTEGER NOT NULL DEFAULT 0,
  incomplete INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0,
  last_checked_ms INTEGER, next_run_ms INTEGER NOT NULL DEFAULT 0, last_error TEXT,
+ coverage_pass_id TEXT REFERENCES discovery_passes(pass_id),
  UNIQUE(taxonomy_version,category_id)
 );
+CREATE TABLE IF NOT EXISTS discovery_shards (
+ shard_id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES discovery_jobs(job_id),
+ parent_shard_id TEXT REFERENCES discovery_shards(shard_id),
+ start_day TEXT NOT NULL CHECK(length(start_day)=10), end_day TEXT NOT NULL CHECK(length(end_day)=10 AND end_day>=start_day),
+ depth INTEGER NOT NULL CHECK(depth BETWEEN 0 AND 16),
+ next_page INTEGER NOT NULL DEFAULT 1 CHECK(next_page BETWEEN 1 AND 10), last_page INTEGER NOT NULL DEFAULT 0 CHECK(last_page BETWEEN 0 AND 10),
+ status TEXT NOT NULL DEFAULT 'pending', total_count INTEGER, truncated INTEGER NOT NULL DEFAULT 0, incomplete INTEGER NOT NULL DEFAULT 0,
+ attempts INTEGER NOT NULL DEFAULT 0, last_checked_ms INTEGER, next_run_ms INTEGER NOT NULL DEFAULT 0, last_error TEXT,
+ saturation_reason TEXT, created_at TEXT NOT NULL,
+ coverage_pass_id TEXT REFERENCES discovery_passes(pass_id),
+ UNIQUE(job_id,start_day,end_day)
+);
+CREATE TABLE IF NOT EXISTS discovery_passes (
+ pass_id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES discovery_jobs(job_id),
+ shard_id TEXT REFERENCES discovery_shards(shard_id), created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS discovery_pass_members (
+ pass_id TEXT NOT NULL REFERENCES discovery_passes(pass_id),
+ github_id INTEGER NOT NULL CHECK(github_id>0), PRIMARY KEY(pass_id,github_id)
+) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS discovered_repositories (
  github_id INTEGER PRIMARY KEY CHECK(github_id>0),
  resource_id INTEGER NOT NULL UNIQUE REFERENCES resources(resource_id),
@@ -54,6 +89,8 @@ CREATE TABLE IF NOT EXISTS discovery_hits (
 );
 CREATE TABLE IF NOT EXISTS discovery_observations (
  observation_id INTEGER PRIMARY KEY, job_id TEXT NOT NULL REFERENCES discovery_jobs(job_id),
+ shard_id TEXT REFERENCES discovery_shards(shard_id),
+ coverage_pass_id TEXT REFERENCES discovery_passes(pass_id), coverage_json TEXT,
  source_url TEXT NOT NULL, page INTEGER NOT NULL, checked_at TEXT NOT NULL, status TEXT NOT NULL,
  http_status INTEGER, total_count INTEGER, truncated INTEGER NOT NULL DEFAULT 0,
  incomplete INTEGER NOT NULL DEFAULT 0, received INTEGER NOT NULL DEFAULT 0, added INTEGER NOT NULL DEFAULT 0,
@@ -61,6 +98,7 @@ CREATE TABLE IF NOT EXISTS discovery_observations (
  invalid_count INTEGER NOT NULL DEFAULT 0, capped_count INTEGER NOT NULL DEFAULT 0, raw_json TEXT, error TEXT
 );
 CREATE INDEX IF NOT EXISTS discovery_job_queue ON discovery_jobs(next_run_ms,last_checked_ms);
+CREATE INDEX IF NOT EXISTS discovery_shard_queue ON discovery_shards(job_id,status,next_run_ms,last_checked_ms);
 CREATE INDEX IF NOT EXISTS discovery_resource_github_id ON resources(CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json,'$.githubId') END);
 `;
 
@@ -119,6 +157,10 @@ export function openRepositoryDiscovery({dbPath=DEFAULT_LIBRARY_PATH,now=Date.no
  try{transaction(()=>{
   db.exec(schema);
   if(!db.prepare('PRAGMA table_info(discovery_observations)').all().some(column=>column.name==='capped_count'))db.exec('ALTER TABLE discovery_observations ADD COLUMN capped_count INTEGER NOT NULL DEFAULT 0');
+  if(!db.prepare('PRAGMA table_info(discovery_observations)').all().some(column=>column.name==='shard_id'))db.exec('ALTER TABLE discovery_observations ADD COLUMN shard_id TEXT REFERENCES discovery_shards(shard_id)');
+  for(const table of ['discovery_jobs','discovery_shards','discovery_observations'])if(!db.prepare('PRAGMA table_info('+table+')').all().some(column=>column.name==='coverage_pass_id'))db.exec('ALTER TABLE '+table+' ADD COLUMN coverage_pass_id TEXT REFERENCES discovery_passes(pass_id)');
+  if(!db.prepare('PRAGMA table_info(discovery_observations)').all().some(column=>column.name==='coverage_json'))db.exec('ALTER TABLE discovery_observations ADD COLUMN coverage_json TEXT');
+  db.exec('CREATE INDEX IF NOT EXISTS discovery_observation_shard ON discovery_observations(shard_id,observation_id)');
   const prior=state('discoveryTaxonomy');
   if(prior?.version===taxonomy.version&&prior.sha256!==taxonomy.sha256)throw Error('La taxonomía cambió sin incrementar su versión; se conserva la cola existente.');
   const insert=db.prepare('INSERT INTO discovery_jobs(job_id,taxonomy_version,category_id,category_name,macroarea_id,query) VALUES(?,?,?,?,?,?) ON CONFLICT(job_id) DO NOTHING');
@@ -126,12 +168,58 @@ export function openRepositoryDiscovery({dbPath=DEFAULT_LIBRARY_PATH,now=Date.no
   save('discoveryTaxonomy',{version:taxonomy.version,sha256:taxonomy.sha256,status:'draft',categories:250,macroareas:25});
  });}catch(error){db.close();throw error;}
 
+ function insertShard(job,start,end,instant,{parent=null,depth=0}={}){
+  const id=shardId(job.job_id,start,end);
+  db.prepare('INSERT INTO discovery_shards(shard_id,job_id,parent_shard_id,start_day,end_day,depth,next_run_ms,created_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(shard_id) DO NOTHING').run(id,job.job_id,parent,start,end,depth,instant,iso(instant));
+  return id;
+ }
+ function segmentInfo(jobId){
+  return db.prepare(`SELECT COUNT(*) AS nodes,MAX(end_day) AS end_day,
+   MIN(CASE WHEN status<>'split' THEN next_run_ms END) AS next_run,
+   SUM(CASE WHEN status NOT IN ('split','complete') THEN 1 ELSE 0 END) AS unresolved,
+   SUM(CASE WHEN status IN ('pending','paged','error','cancelled','rate_limited') THEN 1 ELSE 0 END) AS active,
+   SUM(CASE WHEN status='saturated' THEN 1 ELSE 0 END) AS saturated,
+   SUM(CASE WHEN status='incomplete' THEN 1 ELSE 0 END) AS incomplete,
+   SUM(CASE WHEN status='capacity_limited' THEN 1 ELSE 0 END) AS capped FROM discovery_shards WHERE job_id=?`).get(jobId);
+ }
+ function updateSegmentedJob(jobId,instant){
+  const info=segmentInfo(jobId),tailPending=info.end_day<day(instant);
+  const status=info.active?'segmenting':info.saturated||tailPending?'saturated':info.capped?'capacity_limited':info.incomplete?'incomplete':'segmented';
+  const nextRun=info.next_run??instant+METADATA_TTL_MS;
+  db.prepare('UPDATE discovery_jobs SET status=?,next_run_ms=? WHERE job_id=?').run(status,nextRun,jobId);
+  return {status,nextRun,pending:!!info.unresolved||tailPending};
+ }
+ function ensureSegments(job,instant){
+  let info=segmentInfo(job.job_id);
+  if(!info.nodes){
+   // Do not combine potentially contradictory created qualifiers. The current
+   // taxonomy has none; an unsupported future query remains explicitly open.
+   if(/(?:^|\s)-?created:/i.test(job.query))return false;
+   insertShard(job,DISCOVERY_SEGMENT_START_DAY,day(instant),instant);info=segmentInfo(job.job_id);
+  }else if(info.end_day<day(instant)&&info.nodes<DISCOVERY_SEGMENT_MAX_SHARDS){
+   // New time is a separate disjoint tail; prior nodes and observations stay.
+   insertShard(job,dayAt(dayNumber(info.end_day)+1),day(instant),instant);
+  }
+  updateSegmentedJob(job.job_id,instant);return true;
+ }
+ function splitShard(job,shard,instant){
+  const halves=dateHalves(shard.start_day,shard.end_day);
+  if(!halves)return {created:0,reason:'day-resolution'};
+  if(shard.depth>=DISCOVERY_SEGMENT_MAX_DEPTH)return {created:0,reason:'max-depth'};
+  if(segmentInfo(job.job_id).nodes+2>DISCOVERY_SEGMENT_MAX_SHARDS)return {created:0,reason:'shard-budget'};
+  for(const [start,end] of halves)insertShard(job,start,end,instant+DISCOVERY_INTERVAL_MS,{parent:shard.shard_id,depth:shard.depth+1});
+  return {created:2,reason:null};
+ }
+
  function summary(){
   const instant=now(),blocked=state('githubBackoff'),lease=state('githubLease'),nextSearch=state('githubSearchNextAt',0);
   const next=db.prepare('SELECT MIN(next_run_ms) AS next FROM discovery_jobs WHERE taxonomy_version=?').get(taxonomy.version).next;
   const count=sql=>db.prepare(sql).get().count;
   const repositories=count('SELECT COUNT(*) AS count FROM resources WHERE github_owner IS NOT NULL');
   const jobs={};for(const row of db.prepare('SELECT status,COUNT(*) AS count FROM discovery_jobs WHERE taxonomy_version=? GROUP BY status').all(taxonomy.version))jobs[row.status]=row.count;
+  const shards={};for(const row of db.prepare('SELECT s.status,COUNT(*) AS count FROM discovery_shards s JOIN discovery_jobs j USING(job_id) WHERE j.taxonomy_version=? GROUP BY s.status').all(taxonomy.version))shards[row.status]=row.count;
+  const segmentationPending=db.prepare(`SELECT COUNT(*) AS count FROM discovery_jobs j WHERE j.taxonomy_version=? AND (j.truncated=1 OR j.incomplete=1 OR EXISTS(SELECT 1 FROM discovery_shards s WHERE s.job_id=j.job_id)) AND
+   (NOT EXISTS(SELECT 1 FROM discovery_shards s WHERE s.job_id=j.job_id) OR EXISTS(SELECT 1 FROM discovery_shards s WHERE s.job_id=j.job_id AND s.status NOT IN ('split','complete')) OR (SELECT MAX(s.end_day) FROM discovery_shards s WHERE s.job_id=j.job_id)<?)`).get(taxonomy.version,day(instant)).count;
   return {categories:250,macroareas:25,taxonomyVersion:taxonomy.version,taxonomyStatus:'draft',validatedCategories:0,
    discovered:count('SELECT COUNT(*) AS count FROM discovered_repositories d WHERE NOT EXISTS(SELECT 1 FROM catalog_entries e WHERE e.resource_id=d.resource_id)'),
    matchedSeeds:count('SELECT COUNT(*) AS count FROM discovered_repositories d WHERE EXISTS(SELECT 1 FROM catalog_entries e WHERE e.resource_id=d.resource_id)'),
@@ -141,8 +229,9 @@ export function openRepositoryDiscovery({dbPath=DEFAULT_LIBRARY_PATH,now=Date.no
    backoffUntil:blocked?.until>instant?iso(blocked.until):null,lastRun:state('discoveryLastRun'),lastError:state('discoveryLastError'),
    state:blocked?.until>instant?'rate_limited':lease?.until>instant?'busy':Math.max(next??0,nextSearch)>instant?'waiting':'ready',
    truncatedQueries:count('SELECT COUNT(*) AS count FROM discovery_jobs WHERE truncated=1'),
-   segmentationPendingQueries:count('SELECT COUNT(*) AS count FROM discovery_jobs WHERE truncated=1'),
-   coverage:'Búsquedas preliminares, máximo 1.000 resultados por consulta. La segmentación de consultas truncadas queda pendiente. Una consulta agotada no demuestra cobertura ni calidad; las categorías aún no están validadas.'};
+   segmentationPendingQueries:segmentationPending,
+   segmentation:{version:2,passCoverageTracked:true,method:'created-date-bisection',startDay:DISCOVERY_SEGMENT_START_DAY,granularity:'UTC-day',maxDepth:DISCOVERY_SEGMENT_MAX_DEPTH,maxShardsPerQuery:DISCOVERY_SEGMENT_MAX_SHARDS,shards,saturatedShards:shards.saturated||0},
+   coverage:'Búsquedas preliminares con particiones persistentes y disjuntas por día de creación. Cada consulta conserva el máximo de 1.000 resultados; días saturados, respuestas incompletas y límites siguen pendientes. Agotar rangos no demuestra cobertura global, estabilidad del índice, calidad ni categorías validadas.'};
  }
 
  function list({query='',limit=40,offset=0}={}){
@@ -166,6 +255,7 @@ export function openRepositoryDiscovery({dbPath=DEFAULT_LIBRARY_PATH,now=Date.no
 
  function ingest(items,job,sourceUrl,at,instant){
   let added=0,duplicates=0,imported=0,invalid=0,capped=0;
+  const coveredIds=[];
   let available=Math.max(0,repositoryLimit-db.prepare('SELECT COUNT(*) AS count FROM resources WHERE github_owner IS NOT NULL').get().count);
   for(const item of items){
    let descriptor;try{descriptor=metadataFor(item);}catch{invalid++;continue;}
@@ -194,8 +284,20 @@ export function openRepositoryDiscovery({dbPath=DEFAULT_LIBRARY_PATH,now=Date.no
    db.prepare(`INSERT INTO discovered_repositories(github_id,resource_id,name,description,first_job_id,first_seen_at,last_seen_at,source_url,metadata_json) VALUES(?,?,?,?,?,?,?,?,?)
     ON CONFLICT(github_id) DO UPDATE SET name=excluded.name,description=excluded.description,last_seen_at=excluded.last_seen_at,source_url=excluded.source_url,metadata_json=excluded.metadata_json`).run(item.id,resource.resource_id,metadata.fullName,metadata.description,job.job_id,at,at,sourceUrl,JSON.stringify(metadata));
    db.prepare('INSERT INTO discovery_hits(github_id,job_id,first_seen_at,last_seen_at) VALUES(?,?,?,?) ON CONFLICT(github_id,job_id) DO UPDATE SET last_seen_at=excluded.last_seen_at').run(item.id,job.job_id,at,at);
+   coveredIds.push(item.id);
   }
-  return {added,duplicates,imported,invalid,capped};
+  return {added,duplicates,imported,invalid,capped,coveredIds};
+ }
+
+ function recordCoverage(passId,ids,expectedIds,invalidItems){
+  let distinctIds=db.prepare('SELECT COUNT(*) AS n FROM discovery_pass_members WHERE pass_id=?').get(passId).n,overlapIds=0,untrackedIds=0;
+  const exists=db.prepare('SELECT 1 FROM discovery_pass_members WHERE pass_id=? AND github_id=?'),insert=db.prepare('INSERT INTO discovery_pass_members(pass_id,github_id) VALUES(?,?)');
+  for(const id of ids){
+   if(exists.get(passId,id)){overlapIds++;continue;}
+   if(distinctIds>=DISCOVERY_PASS_MAX_IDS){untrackedIds++;continue;}
+   insert.run(passId,id);distinctIds++;
+  }
+  return {passId,distinctIds,expectedIds,overlapIds,invalidItems,untrackedIds,limit:DISCOVERY_PASS_MAX_IDS};
  }
 
  async function discover({signal,request=fetch}={}){
@@ -206,32 +308,56 @@ export function openRepositoryDiscovery({dbPath=DEFAULT_LIBRARY_PATH,now=Date.no
    const nextSearch=state('githubSearchNextAt',0);if(nextSearch>instant)return {status:'waiting',added:0,nextRun:iso(nextSearch),message:'Se respeta el intervalo entre búsquedas.'};
    // Visit the Atlas-relevant areas first, interleaving their subcategories.
    // Already scheduled pages still retain their persisted oldest-due ordering.
-   const job=db.prepare('SELECT * FROM discovery_jobs WHERE taxonomy_version=? AND next_run_ms<=?').all(taxonomy.version,instant)
-    .sort((a,b)=>a.next_run_ms-b.next_run_ms||(a.last_checked_ms??0)-(b.last_checked_ms??0)||priority.get(a.category_id)-priority.get(b.category_id))[0];
-   if(!job)return {status:'cached',added:0,nextRun:summary().nextRun,message:'Las consultas están esperando su próxima revisión.'};
-   if(['complete','truncated','incomplete'].includes(job.status)){job.next_page=1;job.truncated=0;job.incomplete=0;}
-   save('githubBackoff',null);save('githubLease',{token:leaseToken,until:instant+60000,kind:'discovery',jobId:job.job_id});
-   return {job};
+   const due=db.prepare('SELECT * FROM discovery_jobs WHERE taxonomy_version=? AND next_run_ms<=?').all(taxonomy.version,instant)
+    .sort((a,b)=>a.next_run_ms-b.next_run_ms||(a.last_checked_ms??0)-(b.last_checked_ms??0)||priority.get(a.category_id)-priority.get(b.category_id));
+   for(const job of due){
+    let shard=null;
+    if(segmentInfo(job.job_id).nodes||job.truncated||job.incomplete){
+     if(!ensureSegments(job,instant)){
+      db.prepare("UPDATE discovery_jobs SET status='saturated',next_run_ms=?,last_error=? WHERE job_id=?").run(instant+METADATA_TTL_MS,'Partición pendiente: la consulta base ya contiene un filtro created.',job.job_id);continue;
+     }
+     shard=db.prepare("SELECT * FROM discovery_shards WHERE job_id=? AND status<>'split' AND next_run_ms<=? ORDER BY CASE WHEN status='complete' THEN 1 ELSE 0 END,next_run_ms,COALESCE(last_checked_ms,0),start_day,shard_id LIMIT 1").get(job.job_id,instant);
+     if(!shard)continue;
+     if(['complete','saturated','incomplete','capacity_limited'].includes(shard.status)){shard.next_page=1;shard.truncated=0;shard.incomplete=0;shard.coverage_pass_id=null;}
+    }else if(['complete','capacity_limited'].includes(job.status)){job.next_page=1;job.truncated=0;job.incomplete=0;job.coverage_pass_id=null;}
+    const target=shard||job;
+    if(!target.coverage_pass_id){
+     // Legacy cursors have no per-pass membership. Restart only their cursor;
+     // their observations and all earlier coverage passes remain intact.
+     target.next_page=1;target.coverage_pass_id=randomUUID();
+     db.prepare('INSERT INTO discovery_passes(pass_id,job_id,shard_id,created_at) VALUES(?,?,?,?)').run(target.coverage_pass_id,job.job_id,shard?.shard_id??null,iso(instant));
+     db.prepare('UPDATE '+(shard?'discovery_shards':'discovery_jobs')+' SET next_page=1,coverage_pass_id=? WHERE '+(shard?'shard_id':'job_id')+'=?').run(target.coverage_pass_id,shard?.shard_id??job.job_id);
+    }
+    save('githubBackoff',null);save('githubLease',{token:leaseToken,until:instant+60000,kind:'discovery',jobId:job.job_id,...(shard?{shardId:shard.shard_id}:{})});
+    return {job,shard};
+   }
+   return {status:'cached',added:0,nextRun:summary().nextRun,message:'Las consultas están esperando su próxima revisión.'};
   });
   if(!reservation.job)return reservation;
-  const job=reservation.job,page=job.next_page,url=new URL('https://api.github.com/search/repositories');
-  url.searchParams.set('q',job.query);url.searchParams.set('per_page',String(DISCOVERY_PAGE_SIZE));url.searchParams.set('page',String(page));url.searchParams.set('sort','updated');url.searchParams.set('order','desc');
+  const job=reservation.job,shard=reservation.shard,target=shard||job,page=target.next_page,url=new URL('https://api.github.com/search/repositories');
+  const searchQuery=job.query+(shard?' created:'+shard.start_day+'..'+shard.end_day:'');
+  url.searchParams.set('q',searchQuery);url.searchParams.set('per_page',String(DISCOVERY_PAGE_SIZE));url.searchParams.set('page',String(page));url.searchParams.set('sort','updated');url.searchParams.set('order','desc');
   const sourceUrl=url.href;let status='error',httpStatus=null,error=null,rawJson=null,payload=null,blockedUntil=null,callerAborted=false;
   try{
    const timeout=AbortSignal.timeout(20000),requestSignal=signal?AbortSignal.any([signal,timeout]):timeout;
    const response=await request(sourceUrl,{method:'GET',redirect:'manual',signal:requestSignal,headers:{Accept:'application/vnd.github+json','User-Agent':'AtlasLocal-Library/1.0','X-GitHub-Api-Version':'2022-11-28'}});
    httpStatus=response.status;
+   if(requestSignal.aborted)try{void response.body?.cancel().catch(()=>{});}catch{}
+   requestSignal.throwIfAborted();
    if(httpStatus===403||httpStatus===429){status='rate_limited';error='GitHub limita o rechaza temporalmente la búsqueda (HTTP '+httpStatus+').';blockedUntil=backoff(response.headers,now());}
    else if(httpStatus!==200){error='GitHub respondió HTTP '+httpStatus+'; el cursor se conserva.';}
    else{
     rawJson=await responseText(response,requestSignal);const raw=JSON.parse(rawJson);
-    if(!raw||!Number.isSafeInteger(raw.total_count)||raw.total_count<0||!Array.isArray(raw.items)||raw.items.length>100)throw Error('La respuesta de búsqueda no respeta el formato o tamaño esperado.');
+    if(!raw||!Number.isSafeInteger(raw.total_count)||raw.total_count<0||typeof raw.incomplete_results!=='boolean'||!Array.isArray(raw.items)||raw.items.length>100)throw Error('La respuesta de búsqueda no respeta el formato o tamaño esperado.');
     payload=raw;requestSignal.throwIfAborted();status='searched';
     if(response.headers?.get?.('x-ratelimit-remaining')==='0')blockedUntil=backoff(response.headers,now());
    }
    if(httpStatus!==200)try{await response.body?.cancel();}catch{}
   }catch(failure){callerAborted=signal?.aborted===true;status=callerAborted?'cancelled':'error';error=callerAborted?'Búsqueda cancelada; cursor conservado.':String(failure?.message||failure).slice(0,600);}
   const completed=now(),at=iso(completed);
+  // A caller may cancel while an HTTP-error body is being released, too.
+  // Commit a cancellation receipt, not its response's quota or retry delay.
+  if(signal?.aborted){callerAborted=true;status='cancelled';error='Búsqueda cancelada; cursor conservado.';payload=null;blockedUntil=null;}
   const result=transaction(()=>{
    const lease=state('githubLease');
    if(lease?.token!==leaseToken)return {status:'superseded',added:0,message:'El turno caducó; no se aplican resultados de una reserva anterior.'};
@@ -239,18 +365,38 @@ export function openRepositoryDiscovery({dbPath=DEFAULT_LIBRARY_PATH,now=Date.no
    if(blockedUntil)save('githubBackoff',{until:blockedUntil,reason:error||'Cuota de búsqueda agotada.'});
    save('githubSearchNextAt',callerAborted?instant:completed+DISCOVERY_INTERVAL_MS);
    let counts={added:0,duplicates:0,imported:0,invalid:0,capped:0},nextPage=page,nextRun=callerAborted?instant:blockedUntil??completed+10*60000;
-   let truncated=job.truncated,incomplete=job.incomplete,totalCount=job.total_count,jobStatus=status;
+   let truncated=target.truncated,incomplete=target.incomplete,totalCount=target.total_count,targetStatus=status,saturationReason=null,splitCreated=0,coverage=null;
    if(payload&&status==='searched'){
-    counts=ingest(payload.items,job,sourceUrl,at,completed);totalCount=payload.total_count;
-    truncated=Number(!!job.truncated||totalCount>1000);incomplete=Number(!!job.incomplete||payload.incomplete_results===true);
+    const {coveredIds,...ingested}=ingest(payload.items,job,sourceUrl,at,completed);counts=ingested;totalCount=payload.total_count;
+    coverage=recordCoverage(target.coverage_pass_id,coveredIds,Math.min(totalCount,page*DISCOVERY_PAGE_SIZE,DISCOVERY_PASS_MAX_IDS),counts.invalid);
+    truncated=Number(!!target.truncated||totalCount>1000);
+    const shortfall=payload.items.length<Math.min(DISCOVERY_PAGE_SIZE,Math.max(0,Math.min(totalCount,1000)-(page-1)*DISCOVERY_PAGE_SIZE));
+    incomplete=Number(!!target.incomplete||payload.incomplete_results===true||shortfall||coverage.overlapIds||coverage.invalidItems||coverage.untrackedIds||coverage.distinctIds<coverage.expectedIds);
     const finished=page>=DISCOVERY_MAX_PAGES||payload.items.length<DISCOVERY_PAGE_SIZE||page*DISCOVERY_PAGE_SIZE>=Math.min(totalCount,1000);
-    jobStatus=finished?(truncated?'truncated':incomplete?'incomplete':'complete'):'paged';
+    targetStatus=finished?(truncated?'saturated':incomplete?'incomplete':'complete'):'paged';
     nextPage=finished?page:page+1;nextRun=finished?completed+METADATA_TTL_MS:completed+DISCOVERY_INTERVAL_MS;
+    if(counts.capped){targetStatus='capacity_limited';saturationReason='capacity';nextPage=page;nextRun=completed+METADATA_TTL_MS;}
+    else if(shard&&(truncated||incomplete)){
+     const split=splitShard(job,shard,completed);splitCreated=split.created;saturationReason=split.reason;
+     if(split.created){targetStatus='split';nextPage=page;nextRun=completed+DISCOVERY_INTERVAL_MS;}
+    }else if(!shard&&(truncated||incomplete))targetStatus='segmenting';
    }
-   db.prepare('UPDATE discovery_jobs SET next_page=?,last_page=?,status=?,total_count=?,truncated=?,incomplete=?,attempts=attempts+1,last_checked_ms=?,next_run_ms=?,last_error=? WHERE job_id=?').run(nextPage,payload&&status==='searched'?page:job.last_page,jobStatus,totalCount,truncated,incomplete,completed,nextRun,error,job.job_id);
-   db.prepare('INSERT INTO discovery_observations(job_id,source_url,page,checked_at,status,http_status,total_count,truncated,incomplete,received,added,duplicate_count,imported_count,invalid_count,capped_count,raw_json,error) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(job.job_id,sourceUrl,page,at,status,httpStatus,totalCount,truncated,incomplete,payload?.items.length??0,counts.added,counts.duplicates,counts.imported,counts.invalid,counts.capped,rawJson,error);
-   const outcome={status,...counts,categoryId:job.category_id,category:job.category_name,query:job.query,page,nextPage:jobStatus==='paged'?nextPage:null,
-    totalCount,truncated:!!truncated,segmentationPending:!!truncated,incomplete:!!incomplete,received:payload?.items.length??0,sourceUrl,checkedAt:at,jobStatus,nextRun:iso(Math.max(nextRun,blockedUntil??0)),
+   let jobStatus=targetStatus,segmentationPending=!!truncated||!!incomplete;
+   if(shard){
+    db.prepare('UPDATE discovery_shards SET next_page=?,last_page=?,status=?,total_count=?,truncated=?,incomplete=?,attempts=attempts+1,last_checked_ms=?,next_run_ms=?,last_error=?,saturation_reason=? WHERE shard_id=?').run(nextPage,payload&&status==='searched'?page:shard.last_page,targetStatus,totalCount,truncated,incomplete,completed,nextRun,error,saturationReason,shard.shard_id);
+    db.prepare('UPDATE discovery_jobs SET attempts=attempts+1,last_checked_ms=?,truncated=MAX(truncated,?),incomplete=MAX(incomplete,?),last_error=? WHERE job_id=?').run(completed,truncated,incomplete,error,job.job_id);
+    const parent=updateSegmentedJob(job.job_id,completed);jobStatus=parent.status;nextRun=parent.nextRun;segmentationPending=parent.pending;
+   }else{
+    db.prepare('UPDATE discovery_jobs SET next_page=?,last_page=?,status=?,total_count=?,truncated=?,incomplete=?,attempts=attempts+1,last_checked_ms=?,next_run_ms=?,last_error=? WHERE job_id=?').run(nextPage,payload&&status==='searched'?page:job.last_page,targetStatus,totalCount,truncated,incomplete,completed,nextRun,error,job.job_id);
+    if(targetStatus==='segmenting'){
+     if(ensureSegments({...job,truncated,incomplete},completed)){const parent=updateSegmentedJob(job.job_id,completed);jobStatus=parent.status;nextRun=parent.nextRun;segmentationPending=parent.pending;}
+     else{jobStatus='saturated';nextRun=completed+METADATA_TTL_MS;db.prepare('UPDATE discovery_jobs SET status=?,next_run_ms=? WHERE job_id=?').run(jobStatus,nextRun,job.job_id);}
+    }
+   }
+   db.prepare('INSERT INTO discovery_observations(job_id,shard_id,coverage_pass_id,coverage_json,source_url,page,checked_at,status,http_status,total_count,truncated,incomplete,received,added,duplicate_count,imported_count,invalid_count,capped_count,raw_json,error) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(job.job_id,shard?.shard_id??null,target.coverage_pass_id,coverage?JSON.stringify(coverage):null,sourceUrl,page,at,status,httpStatus,totalCount,truncated,incomplete,payload?.items.length??0,counts.added,counts.duplicates,counts.imported,counts.invalid,counts.capped,rawJson,error);
+   const outcome={status,...counts,categoryId:job.category_id,category:job.category_name,query:searchQuery,page,nextPage:targetStatus==='paged'?nextPage:null,
+    totalCount,truncated:!!truncated,segmentationPending,incomplete:!!incomplete,received:payload?.items.length??0,sourceUrl,checkedAt:at,jobStatus,nextRun:iso(Math.max(nextRun,blockedUntil??0)),
+    shardId:shard?.shard_id??null,shardStatus:shard?targetStatus:null,range:shard?{startDay:shard.start_day,endDay:shard.end_day,depth:shard.depth}:null,splitCreated,saturationReason,coverage,
     message:status==='searched'?`${counts.added} repositorios nuevos; resultados preliminares de búsqueda, sin evaluación ni ejecución.${counts.capped?' '+counts.capped+' resultados no admitidos por alcanzar el límite de repositorios.':''}`:error};
    save('discoveryLastRun',outcome);save('discoveryLastError',error);return outcome;
   });

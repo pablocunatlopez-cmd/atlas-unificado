@@ -4,23 +4,40 @@ import {webUrl} from './internet.mjs';
 const METHOD='Lectura directa de una referencia curada; no búsqueda global';
 const ALIASES={
  aider:['aider'],smolagents:['smolagents','smol agents'],llama:['llama cpp','llama.cpp'],
+ openhands:['openhands','open hands'],goose:['goose'],
+ 'claude-sdk':['claude agent sdk','claude sdk','agentes de claude'],
+ 'claude-skills':['anthropic skills','claude skills','skills de claude'],
  'lm-eval':['lm eval','lm evaluation harness','lm-evaluation-harness','eleutherai'],
  evalplus:['evalplus','eval plus'],three:['three js','threejs','three.js','instancedmesh'],
  gltf:['gltf','gltf validator'],assets:['gltf','gltf sample assets','khronos sample assets'],
  mit:['6 006','6.006','mit algoritmos','mit algorithms']
 };
 const generic=new Set(['agent','agents','agente','agentes','model','modelo','models','modelos','assets','three','llama','mit','casa','house']);
+// Reviewed static class pages, readable without executing the docs index app.
+// These are fixed public references, never a URL supplied by the question.
+const THREE_PAGES={instances:'https://threejs.org/docs/pages/InstancedMesh.html',bounds:'https://threejs.org/docs/pages/Box3.html'};
 const normalized=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const text=(value,max)=>typeof value==='string'?value.replace(/\s+/g,' ').trim().slice(0,max):'';
 function publicUrl(value){try{const url=webUrl(value);if(url.href.length>2048||url.search||url.hash)return null;return url.href;}catch{return null;}}
 function phraseMatch(question,phrase){const value=normalized(phrase);return value.length>=4&&!generic.has(value)&&(' '+question+' ').includes(' '+value+' ')?value.length:0;}
+function threePage(topic,resource){
+ // A caller's custom resource with an unrelated host must not inherit this
+ // routing just because it reuses the id "three".
+ if(resource.id!=='three'||resource.url!=='https://github.com/mrdoob/three.js'||resource.docs!=='https://threejs.org/docs/')return null;
+ if(/\binstancedmesh\b/.test(topic))return THREE_PAGES.instances;
+ const namedBounds=/\b(?:box3|aabb|bounding boxes?)\b/.test(topic);
+ const spatial=/\b(?:3d|tridimensional|three js|threejs|casa|maqueta|escena|terraza)\b/.test(topic);
+ const geometry=/\b(?:geometria|geometry|geometries|mallas?|semiejes?|colisiones?|collisions?|envolventes?)\b/.test(topic);
+ return namedBounds||spatial&&geometry?THREE_PAGES.bounds:null;
+}
 function candidates(question,resources){
  const topic=normalized(question);
  return resources.map((resource,index)=>{
   if(!resource||typeof resource!=='object')return null;
   const aliases=Object.hasOwn(ALIASES,resource.id)?ALIASES[resource.id]:[resource.id,resource.name];
-  const score=Math.max(0,...aliases.map(value=>phraseMatch(topic,value)),phraseMatch(topic,resource.name));
-  const urls=[resource.docs,resource.url].map(publicUrl).filter((url,index,values)=>url&&values.indexOf(url)===index);
+  const page=threePage(topic,resource);
+  const score=Math.max(page?12:0,...aliases.map(value=>phraseMatch(topic,value)),phraseMatch(topic,resource.name));
+  const urls=(page?[page,resource.url]:[resource.docs,resource.url]).map(publicUrl).filter((url,index,values)=>url&&values.indexOf(url)===index);
   return score&&urls.length?{name:text(resource.name,150)||'Referencia pública',urls,score,index}:null;
  }).filter(Boolean).sort((a,b)=>b.score-a.score||a.index-b.index).slice(0,2);
 }

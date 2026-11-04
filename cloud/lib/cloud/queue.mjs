@@ -28,7 +28,7 @@ async function jobId(userId,requestId){
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(userId+'\0'+requestId));
  return 'job-'+[...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
 }
-export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUUID(),compileCreative}={}){
+export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUUID(),compileCreative,enrichMessages}={}){
  const statement=(sql,...values)=>db.prepare(sql).bind(...values);
  const one=(sql,...values)=>statement(sql,...values).first();
  const all=async(sql,...values)=>(await statement(sql,...values).all()).results||[];
@@ -127,7 +127,11 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    AND (status='queued' OR (status='running' AND lease_until<?)) RETURNING id,conversation_id,question,internet,kind,parameters`,leaseToken,at+LEASE_MS,input.agentId,at,at,at).first();
   if(!row)return {job:null};
   const messages=await all('SELECT role,content FROM cloud_messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 15',row.conversation_id);
-  return {job:{id:row.id,conversationId:row.conversation_id,messages:contextWindow(messages),kind:row.kind,parameters:JSON.parse(row.parameters||'{}'),internet:row.internet===1,leaseToken}};
+  let transport=contextWindow(messages);
+  if(typeof enrichMessages==='function'&&row.kind==='chat')try{const enriched=await enrichMessages(structuredClone(transport),{kind:row.kind,internet:row.internet===1});if(Array.isArray(enriched)&&enriched.length===transport.length&&enriched.every((item,i)=>item?.role===transport[i].role&&typeof item.content==='string'&&(i===transport.length-1?item.content.startsWith(transport[i].content):item.content===transport[i].content)&&item.content.length<=(item.role==='user'?6000:16000))&&enriched.reduce((n,item)=>n+item.content.length,0)<=10000)transport=enriched.map(({role,content})=>({role,content}));}catch{}
+  const reservation=await one('SELECT status,lease_token FROM cloud_jobs WHERE id=?',row.id);
+  if(reservation?.status!=='running'||reservation.lease_token!==leaseToken)return {job:null};
+  return {job:{id:row.id,conversationId:row.conversation_id,messages:transport,kind:row.kind,parameters:JSON.parse(row.parameters||'{}'),internet:row.internet===1,leaseToken}};
  }
  async function complete(input){
   if(typeof input?.jobId!=='string'||!validId(input.leaseToken))fail('Resultado sin reserva válida.');

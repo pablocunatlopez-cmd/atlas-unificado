@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { createSecondaryAtlas, runBoundedCommand } from './secondary-atlas.mjs';
+import { createSecondaryAtlas, runBoundedCommand, terminateChild } from './secondary-atlas.mjs';
 import { DatabaseSync } from 'node:sqlite';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
 
 async function temporary(t) { const root = await fs.mkdtemp(path.join(os.tmpdir(), 'atlas-secondary-')); t.after(() => fs.rm(root, { recursive: true, force: true })); return root; }
 async function fixture(t) {
@@ -26,6 +28,59 @@ test('bounded process enforces timeout, output cap and cancellation', async () =
   await assert.rejects(runBoundedCommand(process.execPath, ['-e', 'console.log("x".repeat(10000))'], { maxOutputBytes: 1000 }), /demasiado grande/);
   const controller = new AbortController(); const work = runBoundedCommand(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { signal: controller.signal });
   controller.abort(new Error('manual stop')); await assert.rejects(work, /manual stop/);
+});
+
+test('tree cleanup failure and a stalled tree command fall back to the owned child without retaining stdio', async () => {
+  for (const terminateTree of [async () => { throw new Error('taskkill denied'); }, () => new Promise(() => {})]) {
+    let pid;
+    const started = performance.now();
+    await assert.rejects(runBoundedCommand(process.execPath, ['-e', 'setInterval(()=>{},1000)'], {
+      timeoutMs: 100, terminateTree, onSpawn: value => { pid = value; }
+    }), error => {
+      assert.match(error.message, /Tiempo máximo/);
+      assert.match(error.cause.message, /Tiempo máximo/);
+      assert.equal(error.cleanup.treeCommandSucceeded, false);
+      assert.equal(error.cleanup.directKillRequested, true);
+      assert.equal(error.cleanup.childExited, true);
+      assert.equal(error.cleanup.stdioDetached, true);
+      assert.equal(error.cleanup.entireTreeVerified, false);
+      return true;
+    });
+    assert.ok(Number.isInteger(pid));
+    assert.ok(performance.now() - started < 5000, 'cleanup has a deadline independent of the failed tree command, with disk contention margin');
+    assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' });
+  }
+});
+
+test('cancellation preserves its cause and observes the owned child exit even when tree cleanup is denied', async () => {
+  const controller = new AbortController(), reason = new Error('cancel this owned process');
+  const work = runBoundedCommand(process.execPath, ['-e', 'setInterval(()=>{},1000)'], {
+    signal: controller.signal, terminateTree: async () => false, onSpawn: () => controller.abort(reason)
+  });
+  await assert.rejects(work, error => {
+    assert.equal(error.cause, reason);
+    assert.match(error.message, /cancel this owned process/);
+    assert.equal(error.cleanup.directKillRequested, true);
+    assert.equal(error.cleanup.childExited, true);
+    assert.equal(error.cleanup.entireTreeVerified, false);
+    return true;
+  });
+});
+
+test('an exited root with inherited pipes is detached without submitting its old PID for termination', async () => {
+  for (const ended of [{ exitCode: 0, signalCode: null }, { exitCode: null, signalCode: 'SIGKILL' }]) {
+    let treeCalls = 0, directCalls = 0, unrefCalls = 0;
+    const child = Object.assign(new EventEmitter(), ended, {
+      stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough(),
+      kill: () => { directCalls++;return true; }, unref: () => { unrefCalls++; }
+    });
+    const cleanup = await terminateChild(child, async () => { treeCalls++;return true; });
+    assert.equal(treeCalls, 0, 'an exited root PID can have been reused by an unrelated process');
+    assert.equal(directCalls, 0);assert.equal(unrefCalls, 1);
+    assert.deepEqual(cleanup, { treeCommandSucceeded: false, directKillRequested: false, childExited: true, stdioDetached: true, entireTreeVerified: false });
+    for (const stream of [child.stdin, child.stdout, child.stderr]) assert.equal(stream.destroyed, true);
+    assert.equal(child.listenerCount('exit'), 0);
+  }
 });
 
 test('fixed action interface rejects user commands, paths, and unbounded training', async t => {

@@ -4,15 +4,23 @@ Verificación del 2 de noviembre de 2026. Este árbol contiene código, configur
 
 ## Publicación web comprobada
 
-La web corresponde a Sites V18, fuente `5d179fa2ceda4370e76af8797c90d504783d75a4`, publicada el 2026-11-02 a las 07:40:42 UTC. La casa tiene diez salas y residentes humanos, robots, animales y aves. Sus gestos dependen de actividad reciente comunicada por el PC; las marcas de aprendizaje dependen del contador de cambios aceptados. Se comprobó el sitio publicado en escritorio y a 390×844, incluida la legibilidad de las etiquetas y el animal del laboratorio.
+La web corresponde a Sites V21, fuente `f2751ba7b7a0920809fb4c5223a7232f577b921c`, publicada el 2026-11-02 a las 20:26:54 UTC. La casa tiene diez salas y 24 residentes: 18 puestos y 6 espectadores. Sus gestos y las etiquetas de actividad comparten el filtro de proceso, fase y señal reciente comunicada por el PC; las marcas de aprendizaje dependen del contador de cambios aceptados. La revisión V21 verificó a 435×528 que al visitar un puesto el panel se pliega y deja visible el rostro, y que los detalles muestran el contador real y el plan vivo. El selector permite visitar cada puesto.
+
+Los planes 3D válidos de experiencias reales llegan ahora a la escena y sustituyen la geometría de dos espacios reservados: maqueta del taller y terraza. La publicación real recibió el plan vivo de ocho objetos frente a los cuatro del estado inicial retenido. Los seis contratos son geométricos: no acreditan una mejora estética ni entrenamiento de Qwen, y no autorizan reescribir toda la casa. Ver `continuous/CASA_VIVA_2026-11-02.md`.
 
 El chat comparte identidad e inventario de capacidades con el coordinador: reconoce la casa virtual y la adaptación de ERAS, las funciones de música y 3D, y los límites de modificación del programa. Una petición explícita de mejorarse puede encolar una revisión real. Encolarla no acredita una mejora terminada.
 
 ## Pruebas desde este árbol
 
-- 488/488 pruebas Node del núcleo aprobadas mediante `node scripts/test-source.mjs`. Incluyen aislamiento QuickJS, contratos, cancelación, espiral, persistencia de contraejemplos, saturación de cobertura, identidad, inventario, guía curada, MCP documental, lectura directa de referencias y memoria de fuentes entre experiencias.
-- La comprobación cloud de Sites V17 permanece en 71/71 pruebas aprobadas; se reejecutó tras ampliar las etiquetas y los ejemplos de las dos familias nuevas, junto con TypeScript y el build de producción. Incluye rutas, cola, privacidad, saneado de telemetría, planes, navegación, geometría, habitantes y música. Sus dependencias de framework permanecen excluidas del repositorio.
+- Tras corregir la limpieza de procesos, la ejecución completa terminó con 498 casos: 491 aprobados, cero fallos y siete omitidos por la dependencia opcional Acorn del adaptador Aider. Esos siete se ejecutaron aparte usando el runtime aislado instalado en el PC y pasaron 7/7. Incluye 15 pruebas de creación/memoria geométrica y 10 de procesos del laboratorio. El verificador de memoria viva revalidó un diseño real sin inferencia y confirmó el estado intacto mediante SHA-256.
+- La comprobación cloud de Sites V21 pasó 93/93 pruebas, junto con TypeScript y el build de producción. Incluye rutas, cola, privacidad, saneado de telemetría, planes, navegación, geometría, habitantes, instalación creativa y música. Sus dependencias de framework permanecen excluidas del repositorio.
 - La espera de la prueba de parada asíncrona del laboratorio secundario se corrigió para comprobar el estado terminal durante un plazo explícito. No cambió el comportamiento de producción.
+
+La cancelación de procesos sí recibió una corrección de producción en esta entrega: termina su hijo propio si falla el cierre del árbol, espera su salida durante un plazo limitado y libera las tuberías. No actúa sobre un PID cuya raíz ya haya salido ni afirma haber verificado el cierre de todo el árbol. La prueba completa tiene además un límite de 60 segundos por archivo para evitar esperas indefinidas.
+
+La memoria incremental y esta corrección del backend están preparadas en código y probadas; requieren cargar los módulos actualizados en el coordinador. La espiral que ya estaba activa se conservó durante la entrega.
+
+El reinicio dispone de `-CheckOnly`: comprueba identidad local y accesos al puente y al mutex antes de enviar la parada. En el entorno restringido detectó el rechazo CIM antes de parar; el coordinador existente siguió saludable. La publicación de Sites está terminada. La subida nueva de GitHub y el cambio de visibilidad siguen pendientes porque el usuario pospuso completar su autenticación.
 
 Las pruebas de distribución no iniciaron otro coordinador, modelo ni entrenamiento GPU. Las dependencias del framework web se instalan por separado según su lockfile.
 

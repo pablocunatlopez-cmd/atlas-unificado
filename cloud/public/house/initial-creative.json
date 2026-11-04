@@ -1,0 +1,79 @@
+{
+  "artifactId": "creative-4d0dc17404ee7dc179b11bc1",
+  "at": "2026-11-02T12:13:27.816Z",
+  "cases": 6,
+  "passed": 6,
+  "executed": true,
+  "invariantsPreserved": true,
+  "renderVerified": false,
+  "plan": {
+    "version": 1,
+    "title": "Experimento 3D de Atlas",
+    "variant": "product",
+    "lighting": "day",
+    "palette": "Titanio",
+    "objects": [
+      {
+        "type": "sphere",
+        "position": [
+          0,
+          2.5,
+          0
+        ],
+        "size": [
+          1,
+          1,
+          1
+        ],
+        "material": 1,
+        "yaw": 0
+      },
+      {
+        "type": "box",
+        "position": [
+          2,
+          2.5,
+          0
+        ],
+        "size": [
+          1,
+          1,
+          1
+        ],
+        "material": 5,
+        "yaw": 0
+      },
+      {
+        "type": "box",
+        "position": [
+          -2,
+          2.5,
+          0
+        ],
+        "size": [
+          0.8,
+          0.8,
+          0.8
+        ],
+        "material": 1,
+        "yaw": 0.5
+      },
+      {
+        "type": "sphere",
+        "position": [
+          0,
+          3.5,
+          0
+        ],
+        "size": [
+          0.6,
+          0.6,
+          0.6
+        ],
+        "material": 9,
+        "yaw": 0
+      }
+    ],
+    "design": ""
+  }
+}

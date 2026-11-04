@@ -1,7 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 import {createRenderEngine} from './render-engine.js';
 import {CircularJoystick,showTouchControls} from './mobile-input.js';
-import {ROOMS,roomById,roomAt,movePlayer,navigationVector} from './layout.js';
+import {ROOMS,roomById,roomAt,movePlayer,navigationVector,blocked} from './layout.js';
+import {WORKSTATIONS,residentById} from './residents.js';
 import {buildHouse} from './scene.js';
 import {normalizeProcessState,processForRoom,processCaption} from './process-state.js';
 
@@ -10,7 +11,7 @@ const send=(event,data={})=>parent.postMessage({type:'atlas:house:'+event,...dat
 let renderer,house,frame=0,disposed=false,paused=false,overview=true,recording=null,currentRoom='salon',ready=false;
 let player={x:roomById('salon').spawn[0],z:roomById('salon').spawn[1]},yaw=roomById('salon').yaw,pitch=.02,orbit=.58,elevation=.68,last=0,frames=0,elapsed=0,lowFrames=0;
 let joystick,stick={x:0,y:0},drag=null,transition=null,recordStart=0,captureAngle=0;
-let processState=normalizeProcessState(null),processReceivedAt=-Infinity;
+let processState=normalizeProcessState(null),processReceivedAt=-Infinity,creativeState=null,creativeSource='coordinator',inspection=false;
 const keys=new Set(),camera=new THREE.PerspectiveCamera(52,1,.08,190),target=new THREE.Vector3(),raycaster=new THREE.Raycaster();
 const coarse=matchMedia('(pointer:coarse)').matches,touch=showTouchControls('auto',{touchPoints:navigator.maxTouchPoints,coarse,width:innerWidth});
 document.body.classList.add(touch?'touch':'desktop','overview');
@@ -26,17 +27,34 @@ function updateRoom(id,force=false){
 }
 function updateProcessLegend(){const legend=$('process-legend');if(!legend)return;const sourceAge=processState.at?Date.now()-Date.parse(processState.at):Infinity;const process=processForRoom(processState,currentRoom,{ageMs:sourceAge<0?sourceAge:Math.max(performance.now()-processReceivedAt,sourceAge)});legend.textContent=processCaption(process)+' · Gestos = trabajo comunicado; adornos ≠ aprendizaje.';}
 function setOverview(value){
- overview=value;drag=null;keys.clear();joystick?.reset();transition=null;
+ overview=value;inspection=false;drag=null;keys.clear();joystick?.reset();transition=null;
  document.body.classList.toggle('overview',value);document.body.classList.toggle('walking',!value);$('walk').classList.toggle('selected',!value);$('overview').classList.toggle('selected',value);$('walk').querySelector('span').textContent=value?'Entrar en casa':'Explorando';$('interact').hidden=value;
  if(house)house.ceilings.visible=!value;
  if(value){$('room-title').textContent='Una casa para tus ideas';$('room-subtitle').textContent='Elige una sala o entra a explorar.';}else updateRoom(currentRoom,true);
 }
-function teleport(id){const room=roomById(id);if(!room)return;const from=camera.position.clone(),previous=currentRoom;setOverview(false);player={x:room.spawn[0],z:room.spawn[1]};yaw=room.yaw;pitch=.01;transition={from,at:performance.now()};updateRoom(id);if(previous===id)send('room',{room:id});}
+function teleport(id){const room=roomById(id);if(!room)return;const from=camera.position.clone(),previous=currentRoom;setOverview(false);player={x:room.spawn[0],z:room.spawn[1]};const resident=WORKSTATIONS.find(item=>item.room===id);yaw=resident?Math.atan2(resident.position[0]-player.x,-(resident.position[2]-player.z)):room.yaw;pitch=resident?Math.atan2((resident.seated?1.22:1.35)-1.64,Math.hypot(resident.position[0]-player.x,resident.position[2]-player.z)):.01;transition={from,at:performance.now()};updateRoom(id);if(previous===id)send('room',{room:id});}
+function reportReady(){
+ send('ready',{backend:'WebGL2',rooms:ROOMS.map(room=>room.id),recordingSupported:typeof canvas.captureStream==='function'&&typeof MediaRecorder!=='undefined'});
+ const value=house?.creativeStatus();if(value?.applied)send('creative',{value:{...value,source:creativeSource}});
+}
+function focusResident(id){
+ const resident=residentById(id);if(!resident)return;
+ const room=roomById(resident.room),[x,,z]=resident.position,side=[Math.cos(resident.yaw)*2.1,Math.sin(resident.yaw)*2.1],front=[Math.sin(resident.yaw)*1.3,-Math.cos(resident.yaw)*1.3];
+ const spots=[[x+side[0]+front[0],z+side[1]+front[1]],[x-side[0]+front[0],z-side[1]+front[1]],[x+side[0],z+side[1]],room.spawn];
+ const point=spots.find(([px,pz])=>roomAt(px,pz)===room.id&&!blocked(px,pz,.25,house.solids)&&Math.hypot(px-x,pz-z)>1.5)||room.spawn;
+ const from=camera.position.clone();setOverview(false);player={x:point[0],z:point[1]};yaw=Math.atan2(x-player.x,-(z-player.z));pitch=Math.atan2((resident.archetype==='animal'?.85:resident.seated?1.20:1.40)-1.64,Math.hypot(x-player.x,z-player.z));transition={from,at:performance.now()};updateRoom(room.id);resize();send('resident',{id:resident.id,room:room.id});
+}
+function focusEvolution(){setOverview(true);inspection=true;orbit=.58;elevation=.58;updateRoom('games');resize();}
+function applyCreative(value,source='coordinator'){
+ if(!house)return;const result=house.setCreativeState(value);
+ if(result.accepted){creativeState=value;creativeSource=source;}
+ send('creative',{value:{...result,source:creativeSource}});
+}
 function interact(){if(!overview)send('interact',{room:currentRoom});}
 function resize(){if(!renderer)return;const width=innerWidth,height=innerHeight;camera.aspect=width/height;camera.fov=overview?46:(width<height?67:58);camera.updateProjectionMatrix();renderer.setSize(width,height,false);}
 function cameraFrame(time){
  const p=camera.position;
- if(overview){const distance=Math.max(42,31/camera.aspect),angle=recording?captureAngle+(time-recordStart)*.00013:orbit;const y=Math.sin(elevation)*distance,z=Math.cos(elevation)*distance;target.set(0,.3,-3.6);p.set(Math.sin(angle)*z,y,Math.cos(angle)*z-3.6);}
+ if(overview){const distance=inspection?Math.max(11,8/camera.aspect):Math.max(42,31/camera.aspect),angle=recording?captureAngle+(time-recordStart)*.00013:orbit;const y=Math.sin(elevation)*distance,z=Math.cos(elevation)*distance;target.set(inspection?7.8:0,inspection?1.05:.3,inspection?10.35:-3.6);p.set(target.x+Math.sin(angle)*z,target.y+y,target.z+Math.cos(angle)*z);}
  else{const desired=new THREE.Vector3(player.x,1.64,player.z);if(transition){const progress=Math.min(1,(time-transition.at)/600),smooth=progress*progress*(3-2*progress);p.lerpVectors(transition.from,desired,smooth);if(progress===1)transition=null;}else p.copy(desired);const lookYaw=yaw+(recording?Math.sin((time-recordStart)*.0004)*.16:0);target.set(p.x+Math.sin(lookYaw)*Math.cos(pitch),p.y+Math.sin(pitch),p.z-Math.cos(lookYaw)*Math.cos(pitch));}
  camera.lookAt(target);
 }
@@ -68,7 +86,7 @@ function tick(now){
  renderNow(now);frames++;elapsed+=rawDelta;
  if(elapsed>=1.2)updateProcessLegend();
  if(elapsed>=1.2){const fps=frames/elapsed;$('fps').textContent=Math.round(fps)+' FPS';canvas.dataset.frames=String(Number(canvas.dataset.frames||0)+frames);send('performance',{fps:Math.round(fps),frames:Number(canvas.dataset.frames),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,backend:'WebGL2'});if(fps<24){lowFrames++;if(lowFrames>=3&&renderer.getPixelRatio()>.85){renderer.setPixelRatio(Math.max(.85,renderer.getPixelRatio()*.85));resize();lowFrames=0;}}else lowFrames=0;frames=0;elapsed=0;}
- if(!ready){ready=true;$('boot').hidden=true;canvas.dataset.ready='true';send('ready',{backend:'WebGL2',rooms:ROOMS.map(room=>room.id),recordingSupported:typeof canvas.captureStream==='function'&&typeof MediaRecorder!=='undefined'});}
+ if(!ready){ready=true;$('boot').hidden=true;canvas.dataset.ready='true';reportReady();}
 }
 function dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);if(recording?.state!=='inactive')recording?.stop();joystick?.destroy();callbacks.forEach(remove=>remove());house?.dispose();renderer?.dispose();renderer?.forceContextLoss();for(const url of urls)URL.revokeObjectURL(url);urls.clear();}
 for(const room of ROOMS){const button=document.createElement('button');button.type='button';button.dataset.room=room.id;button.textContent=room.short;button.setAttribute('aria-label','Ir a '+room.title);button.setAttribute('aria-pressed','false');listen(button,'click',()=>teleport(room.id));$('roomnav').append(button);}
@@ -84,7 +102,11 @@ listen(canvas,'webglcontextlost',event=>{event.preventDefault();paused=true;fail
 listen(window,'message',async event=>{
  if(event.source!==parent||event.origin!==location.origin||!event.data||typeof event.data!=='object')return;
  const message=event.data;
+ if(message.type==='atlas:house:hello'&&ready){reportReady();}
  if(message.type==='atlas:house:teleport'){teleport(message.room);resize();}
+ if(message.type==='atlas:house:resident'){focusResident(message.id);}
+ if(message.type==='atlas:house:evolution'){focusEvolution();}
+ if(message.type==='atlas:house:creative'){applyCreative(message.value);}
  if(message.type==='atlas:house:overview'){setOverview(true);resize();}
  if(message.type==='atlas:house:pause'){paused=message.value===true;keys.clear();joystick?.reset();drag=null;last=0;}
  if(message.type==='atlas:house:processes'){processState=normalizeProcessState(message.value);processReceivedAt=performance.now();house?.setProcessState(processState);updateProcessLegend();}
@@ -98,5 +120,7 @@ listen(window,'message',async event=>{
 listen(window,'pagehide',dispose);
 try{
  const engine=await createRenderEngine(canvas,{gpu:null});renderer=engine.renderer;renderer.setPixelRatio(Math.min(devicePixelRatio||1,touch?1.35:1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
- house=buildHouse();house.setProcessState(processState);setOverview(true);resize();joystick=new CircularJoystick($('joystick'),{enabled:()=>!paused&&!overview,onChange:value=>{stick=value;$('joystick').setAttribute('aria-valuenow',String(Math.round(value.strength*100)));}});frame=requestAnimationFrame(tick);
+ house=buildHouse();house.setProcessState(processState);
+ void fetch('./initial-creative.json',{cache:'no-cache'}).then(response=>response.ok?response.json():null).then(value=>applyCreative(value,'retained')).catch(()=>{});
+setOverview(true);resize();joystick=new CircularJoystick($('joystick'),{enabled:()=>!paused&&!overview,onChange:value=>{stick=value;$('joystick').setAttribute('aria-valuenow',String(Math.round(value.strength*100)));}});frame=requestAnimationFrame(tick);
 }catch(error){fail('No ha sido posible iniciar WebGL 2 en este navegador. Abre Atlas en Safari o Chrome y vuelve a intentarlo.');console.error('Atlas house renderer:',error);}
