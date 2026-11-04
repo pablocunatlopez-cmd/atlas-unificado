@@ -47,8 +47,8 @@
     },
     {
       "path": "continuous/AGENTS.md",
-      "bytes": 15345,
-      "sha256": "cd2748fd6814d5eeb8781b29c471144f28b250bbe74334ce1809b4a3c4a72457",
+      "bytes": 16806,
+      "sha256": "eed29c9d93d3c603b148e6a57040f7923ca6dbad6710ba5698de1049cb8b4102",
       "adapted": true
     },
     {
@@ -304,6 +304,12 @@
       "adapted": false
     },
     {
+      "path": "continuous/chat-rag-scope.test.mjs",
+      "bytes": 1593,
+      "sha256": "05a6a6bb323ba81258c73d054da145aef59a54ffec36b391d45991575c02ac70",
+      "adapted": false
+    },
+    {
       "path": "continuous/chat-resilience.test.mjs",
       "bytes": 3880,
       "sha256": "91d195e57c95aaf38b7abd87d565a438d648a06cb3a7d7572b406573fb8dc372",
@@ -341,8 +347,8 @@
     },
     {
       "path": "continuous/chat.mjs",
-      "bytes": 23741,
-      "sha256": "db4b12c3e2dab92f1ff43ede23d7a8507e8c36ecfdf37f7eb0c1a21518beea89",
+      "bytes": 23874,
+      "sha256": "5930e28e89b5fabe58ed72675d2d49dea4b535525889444a5ca09dbd98d4b6ea",
       "adapted": true
     },
     {
@@ -353,8 +359,8 @@
     },
     {
       "path": "continuous/CLOUD_ACCESS.md",
-      "bytes": 20235,
-      "sha256": "d6d77979da43e5c7f7a4998105e200fae36e4b7cca1337893344cfa566f1fc01",
+      "bytes": 20841,
+      "sha256": "a002f8df076eb78e0b61d5f153694b1335a954bdcf7fb44394f31569e773047c",
       "adapted": true
     },
     {
@@ -917,14 +923,14 @@
     },
     {
       "path": "continuous/engine.mjs",
-      "bytes": 7518,
-      "sha256": "d16697fa76dcda0e9333705ede4993364bec6de43e72e83bb684320acef94671",
+      "bytes": 8206,
+      "sha256": "965b9dc7057a4fc16f85b6c574722c6184b2b8ac874d19e8bf51cb60f665fdc6",
       "adapted": false
     },
     {
       "path": "continuous/engine.test.mjs",
-      "bytes": 3093,
-      "sha256": "93822fc0d24994491b2280b9bf2584d20cde3e4370c7dcbb812081caa2cb3a46",
+      "bytes": 6390,
+      "sha256": "5f663abf56a398fecaa793c690969836805f29cc0b00da6572b3a63df77c20b0",
       "adapted": false
     },
     {
@@ -1264,6 +1270,12 @@
       "adapted": false
     },
     {
+      "path": "continuous/MEMORIA_RAG_Y_AGENTES_2026-11-04.md",
+      "bytes": 7885,
+      "sha256": "555a0a688508ae75afdbbe47e9fd9639129d7460945ed28694e9d6b0b362012b",
+      "adapted": false
+    },
+    {
       "path": "continuous/memory-search.test.mjs",
       "bytes": 4750,
       "sha256": "7b4fc3c26c161de6ee23655fc8b9ae68985a6a6ed50769b9617b958f8ceb4363",
@@ -1534,6 +1546,18 @@
       "adapted": false
     },
     {
+      "path": "continuous/retrieval-lab.mjs",
+      "bytes": 5954,
+      "sha256": "53162dc858cf57bf7c5f55703b8075ab64399c804b5aedc9b03c292572375430",
+      "adapted": false
+    },
+    {
+      "path": "continuous/retrieval-lab.test.mjs",
+      "bytes": 2313,
+      "sha256": "d246cbd14d5d46313f817187f34a1bb84ed75fad2894fcc74eaa7fd36025fc00",
+      "adapted": false
+    },
+    {
       "path": "continuous/runtime-inventory.mjs",
       "bytes": 3650,
       "sha256": "08726a8fd21ced24f21b9c7463264ed13cc389c8fd94b8bab80428ae4ad6cfae",
@@ -1768,6 +1792,12 @@
       "adapted": false
     },
     {
+      "path": "continuous/verify-retrieval-lab.mjs",
+      "bytes": 4213,
+      "sha256": "3bc55c3f5e94effe9ad0f95ceaf80485946e839e338849e3cd1c8213b084732a",
+      "adapted": false
+    },
+    {
       "path": "continuous/visible-output.mjs",
       "bytes": 5515,
       "sha256": "41661df219b2bb7230c9818a12159150d1b62afe4d0faefda06ed9ea16cf63eb",
@@ -1810,7 +1840,7 @@
       "adapted": false
     }
   ],
-  "totalBytes": 2268999,
+  "totalBytes": 2297142,
   "scan": {
     "patterns": 6,
     "findings": 0
@@ -1824,6 +1854,6 @@
     "Local vendor packages restored from npm; cloud ERAS/Three source modules and MIT notices retained",
     "Qwen/Wan weights, training corpora and adapters, Aider jobs and environment, process status, private histories and keys are excluded"
   ],
-  "updatedAt": "2026-11-04T00:38:39.013Z",
+  "updatedAt": "2026-11-04T00:55:18.751Z",
   "lineEndings": "UTF-8 source text normalized to LF before hashing; binary files preserved."
 }

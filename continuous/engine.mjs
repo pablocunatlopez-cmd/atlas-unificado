@@ -37,21 +37,28 @@ export function extractText(html) {
 }
 const normalize=text=>text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const searchIndexCache=new WeakMap();
-function indexedRows(documents){
-  const cached=searchIndexCache.get(documents);if(cached)return cached;
-  const rows=documents.filter(d=>d.role==='train').map(doc=>{
+function indexedRows(documents,includeReferences){
+  let scopes=searchIndexCache.get(documents);
+  if(!scopes){scopes=new Map();searchIndexCache.set(documents,scopes);}
+  const cached=scopes.get(includeReferences);if(cached)return cached;
+  const rows=documents.filter(d=>d.role==='train'||includeReferences&&d.role==='reference').map(doc=>{
     const tokens=normalize(doc.text).match(/[a-z0-9_]{2,}/g)||[],freq=new Map();
     for(const token of tokens)freq.set(token,(freq.get(token)||0)+1);
     return {doc,freq,length:tokens.length};
   });
   const result={rows,averageLength:Math.max(1,rows.reduce((sum,row)=>sum+row.length,0)/Math.max(rows.length,1))};
-  searchIndexCache.set(documents,result);return result;
+  scopes.set(includeReferences,result);return result;
 }
-export function searchDocuments(documents,query,limit=5){
+// Lexical relevance only: scores are neither confidence nor measured truth.
+// Reference retrieval is an explicit caller choice; it never changes training.
+export function searchDocuments(documents,query,limit=5,options={}){
+  if(!options||typeof options!=='object'||Array.isArray(options)||Object.keys(options).some(key=>key!=='includeReferences'))throw new TypeError('Opciones de búsqueda no válidas.');
+  const {includeReferences=false}=options;
+  if(typeof includeReferences!=='boolean')throw new TypeError('includeReferences debe ser booleano.');
   const stop=new Set('para por con sin una uno unos unas los las del que como donde cuando desde hasta sobre entre esta este esto estos estas son ser eres soy tengo tienes quiero puedes puede puedo ayuda atlas'.split(' '));
   const terms=[...new Set((normalize(query).match(/[a-z0-9_]{2,}/g)||[]).filter(t=>!stop.has(t)))].slice(0,12);
   if(!terms.length)return [];
-  const {rows,averageLength}=indexedRows(documents);
+  const {rows,averageLength}=indexedRows(documents,includeReferences);
   const idf=new Map(terms.map(term=>{
     const df=rows.reduce((sum,row)=>sum+(row.freq.has(term)?1:0),0);
     return [term,Math.log(1+(rows.length-df+0.5)/(df+0.5))];

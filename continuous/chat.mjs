@@ -14,7 +14,7 @@ import {sanitizeModelAnswer} from './visible-output.mjs';
 import {formatExecutedToolAnswer} from './verified-tool-answer.mjs';
 export const CHAT_MODEL='atlas-local';
 const stopwords=new Set('hola gracias responde responder respuesta espanol brevemente breve cuanto cuantos por para que puedes puede puedo hacer como cual cuales quien donde cuando desde hasta sobre entre con sin una uno unos unas los las del esta este esto estos estas son ser eres soy es hay tengo tienes quiero dime explica explicame favor atlas tambien muy mas menos mi mis tu tus sus bien ahora prueba chat frase haz palabras'.split(' '));
-export function memoryQuery(text){return (text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[a-z_]{3,}/g)||[]).filter(t=>!stopwords.has(t)).join(' ');}
+export function memoryQuery(text){return (text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[a-z0-9_]{2,}/g)||[]).filter(t=>/[a-z_]/.test(t)&&(t.length>=3||/\d/.test(t))&&!stopwords.has(t)).join(' ');}
 function requestedWebUrls(text){
  const links=(text.match(/https:\/\/[^\s<>"']+/g)||[]).map(value=>value.replace(/[),.;!?]+$/,'')).slice(0,5);
  return [...new Set(links.map(value=>{try{return new URL(value).href;}catch{return null;}}).filter(Boolean))];
@@ -61,7 +61,7 @@ export async function chat(input,documents,request=fetch,apiKey='',providerKey='
  let coreDirective=null;
  try{coreDirective=await runtime.cognitiveCore?.decide(messages.at(-1).content,{json:input.json===true,hasMemory:runtime.sharedSession!==true&&documents.length>0,internet:input.internet===true,tools:input.tools===true});}catch{}
  const requestedUrls=requestedWebUrls(messages.at(-1).content);
- const sources=toolRun?.used?[]:searchDocuments(documents,memoryQuery(messages.at(-1).content)).filter(s=>s.score>=0.35).slice(0,attachments.length?2:3);
+ const sources=toolRun?.used?[]:searchDocuments(runtime.sharedSession===true?[]:documents,memoryQuery(messages.at(-1).content),5,{includeReferences:runtime.sharedSession!==true}).filter(s=>s.score>=0.35).slice(0,attachments.length?2:3);
  const warnings=[];let webRead=false,failedWebUrls=[];
  if(input.internet===true){emit({type:'stage',stage:'web'});try{const web=await (runtime.lookupEvidence||webEvidence)(messages.at(-1).content,{signal:runSignal});const usable=attachments.length?web.sources.slice(0,1):web.sources;sources.push(...usable);warnings.push(...web.errors);webRead=usable.length>0;const fetched=new Set(usable.map(item=>item.requestedUrl||item.url));failedWebUrls=requestedUrls.filter(url=>!fetched.has(url));}catch(e){runSignal?.throwIfAborted();warnings.push(e.message);failedWebUrls=requestedUrls;}}
  const selfAnswer=input.json!==true&&!attachments.length?formatAtlasSelfAnswer(messages.at(-1).content,runtime.capabilities):null;

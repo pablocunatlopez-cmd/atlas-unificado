@@ -1,3 +1,7 @@
+## GitHub actualizado y verificado · 4 de noviembre
+
+Código remoto main: 8903c0871c8ab907368f2f0754fdfc40c1a6633b; exportación local equivalente: 7c24ac9586323f0a5ec0fecf2be1f1ef0dfd702b. El repositorio autorizado conserva visibilidad privada. No se renovó GitHub CLI: el conector creó un árbol coincidente y actualizó main con SHA anterior esperado, luego se leyó la referencia para verificarla. Las mejoras de código están en GitHub. **Sites sigue en V24**: nuevo intento del source helper falló al conectar con su servidor Git. Fuente V25 compilada pendiente, audiencia pública conservada.
+
 ## Continuidad verificada · 4 de noviembre
 
 El backend ya sirve diagnóstico multimotor, expedientes y CSV. La biblioteca usa particiones reales; las correcciones finales de cobertura por pase están probadas y pendientes de carga. Ver CONTINUIDAD_2026-11-04.md (622 pruebas backend). La interfaz local se actualizó; Sites mantiene la publicación V24 y la fuente V25 compilada pendiente de conexión del source helper. No confundir GitHub con una publicación nueva de Sites.
