@@ -17,6 +17,24 @@ async function fixture(t,overrides={}){
  return {api:createExperienceSpiral(options),options,calls,advance:ms=>{time+=ms;},read:async()=>JSON.parse(await fs.readFile(path.join(directory,'experience-spiral.json'),'utf8'))};
 }
 
+test('a transient initialization failure can recover in the same spiral without a restart',async t=>{
+ const parent=await fs.mkdtemp(path.join(os.tmpdir(),'atlas-spiral-init-retry-'));t.after(()=>fs.rm(parent,{recursive:true,force:true}));
+ const directory=path.join(parent,'temporarily-unavailable');await fs.writeFile(directory,'temporary obstruction');
+ let observed=0;const api=createExperienceSpiral({directory,observe:async()=>{observed++;return {eligibleActions:[]};},execute:async()=>assert.fail('No action'),reflect:async()=>assert.fail('No reflection'),formalize:async()=>assert.fail('No promotion')});
+ assert.equal((await api.tick()).status,'failed');assert.equal(observed,0);
+ await fs.unlink(directory);await fs.mkdir(directory);
+ const recovered=await api.tick();assert.equal(recovered.status,'waiting');assert.equal(recovered.reason,'no_eligible_goal');assert.equal(observed,1);assert.equal((await api.status()).attempts,1);
+});
+
+test('concurrent spiral status initialization shares one load and preserves invalid state until repaired',async t=>{
+ const {options}=await fixture(t),file=path.join(options.directory,'experience-spiral.json'),invalid='{"version":1,"history":"invalid"}';await fs.writeFile(file,invalid);
+ const api=createExperienceSpiral(options);let reads=0;const readFile=fs.readFile.bind(fs);t.mock.method(fs,'readFile',async(target,...args)=>{if(target===file)reads++;return readFile(target,...args);});
+ const rejected=await Promise.allSettled([api.status(),api.status(),api.status()]);assert.ok(rejected.every(item=>item.status==='rejected'));assert.equal(reads,1);assert.equal(await readFile(file,'utf8'),invalid);
+ await assert.rejects(api.status(),/Estado de espiral no válido/);assert.equal(await readFile(file,'utf8'),invalid);
+ await fs.unlink(file);
+ const recovered=await Promise.all([api.status(),api.status(),api.status()]);assert.ok(recovered.every(item=>item.attempts===0&&item.experiences===0));assert.equal(reads,3);
+});
+
 test('physical execution precedes constellation and original LOR logic; only accepted new evidence counts',async t=>{
  const {api,calls,read}=await fixture(t),result=await api.tick();
  assert.deepEqual(calls,['observe','mind','ion','constellation','logic']);

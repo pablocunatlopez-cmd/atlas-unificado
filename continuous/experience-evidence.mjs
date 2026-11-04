@@ -56,7 +56,11 @@ export function createExperienceEvidence({directory,now=Date.now}={}){
     if(!source||record.contentHash!==source.contentHash||record.id!==id||ids.has(id)||!timestamp(record.firstSeenAt)||!timestamp(record.lastSeenAt)||Date.parse(record.firstSeenAt)>Date.parse(record.lastSeenAt)||!Array.isArray(record.topics)||record.topics.length>24||record.topics.some(term=>typeof term!=='string'||words(term).length!==1||words(term)[0]!==term))throw Error('Registro de fuentes inválido; se conserva sin sobrescribir.');
     ids.add(id);return {...source,id,firstSeenAt:record.firstSeenAt,lastSeenAt:record.lastSeenAt,topics:record.topics};
    });
-  })();
+  })().catch(error=>{
+   // Keep corrupt/oversized input untouched, but allow a later valid read after
+   // a transient filesystem failure or an explicit repair of that input.
+   loaded=null;throw error;
+  });
   return loaded;
  }
  async function remember({question='',sources=[],signal}={}){

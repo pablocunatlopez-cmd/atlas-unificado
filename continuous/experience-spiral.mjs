@@ -98,7 +98,12 @@ export function createExperienceSpiral({directory,observe,proposeGoal,execute,re
    }else state.actionAttempts=state.actionAttempts.filter(item=>object(item)&&hash(item.key)&&epoch(item.retryAt)!==null&&item.retryAt>now()).slice(-1024);
    // A crash never turns an unfinished action into learning or an approval.
    if(state.current){const record={...state.current,at:stamp(),reason:'interrupted',L:{newEvidence:false,acceptedChange:false,invariantsPreserved:false,countsAsLearning:false}};delete record.language;retain(record);state.current=null;state.phase='waiting';state.waitReason='interrupted';state.nextRun=new Date(now()+failurePause).toISOString();await save();}
-  })();
+  })().catch(error=>{
+   // A rejected first load is not a permanent latch. Retry from disk on the
+   // next call; never let tick's cleanup persist a partially initialized state.
+   // Concurrent callers still share this one promise and the same failure.
+   initialized=null;state=undefined;throw error;
+  });
   await initialized;
  }
  function retain(record){

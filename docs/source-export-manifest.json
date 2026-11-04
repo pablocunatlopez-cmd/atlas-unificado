@@ -46,9 +46,15 @@
       "adapted": true
     },
     {
+      "path": "continuous/AGENTES_Y_FUENTES_2026-11-04.md",
+      "bytes": 6005,
+      "sha256": "4186aa761883cddea8ad3a8fa7f7adfe473ced3f671d6e98eb2b98118c67ca17",
+      "adapted": false
+    },
+    {
       "path": "continuous/AGENTS.md",
-      "bytes": 16806,
-      "sha256": "eed29c9d93d3c603b148e6a57040f7923ca6dbad6710ba5698de1049cb8b4102",
+      "bytes": 18451,
+      "sha256": "27839e73f5198037bf336b0839fffe1edb096db0fa70b74892d51a02fd80faa8",
       "adapted": true
     },
     {
@@ -133,6 +139,18 @@
       "path": "continuous/atlas-self-answer.test.mjs",
       "bytes": 2932,
       "sha256": "168bde638eadf7742979bce836ecfc2c467c2995fadbaa899de965a0e1e43afc",
+      "adapted": false
+    },
+    {
+      "path": "continuous/atlas-specialists.mjs",
+      "bytes": 15537,
+      "sha256": "4399d25e40ad1b16002583309d25b22af1707cc393f8a84d9a1887763572936e",
+      "adapted": false
+    },
+    {
+      "path": "continuous/atlas-specialists.test.mjs",
+      "bytes": 5179,
+      "sha256": "34479a1e3c32fcd8a03894e18126a7a34c65b83b862ba28055c7bb2bd186e30e",
       "adapted": false
     },
     {
@@ -328,6 +346,12 @@
       "adapted": false
     },
     {
+      "path": "continuous/chat-specialists.test.mjs",
+      "bytes": 4005,
+      "sha256": "8496da1e2d4e0e6d39dbb580b608c661c3d891b8468e9b5773d6b48450c0a6ad",
+      "adapted": false
+    },
+    {
       "path": "continuous/chat-ui.css",
       "bytes": 23992,
       "sha256": "48c7e0208b03c960fdcb9aca6254d2d3c3bbb58484e8628afcda0b0c18c691e6",
@@ -335,8 +359,8 @@
     },
     {
       "path": "continuous/chat-ui.js",
-      "bytes": 45659,
-      "sha256": "72e78086e87a0b340bfb5f6bae1f0438a51ab2c6da94146be6e3298b7d36a1dd",
+      "bytes": 48557,
+      "sha256": "6e142e48af93abfde693fbc99952d73cfa7410e2115f8f7fcfb7c106a07b2eab",
       "adapted": false
     },
     {
@@ -347,8 +371,8 @@
     },
     {
       "path": "continuous/chat.mjs",
-      "bytes": 23874,
-      "sha256": "5930e28e89b5fabe58ed72675d2d49dea4b535525889444a5ca09dbd98d4b6ea",
+      "bytes": 26035,
+      "sha256": "626ea4b576a2fc1c978a83ae97959ba199a802856797b0848095827fd76a2116",
       "adapted": true
     },
     {
@@ -358,9 +382,21 @@
       "adapted": false
     },
     {
+      "path": "continuous/citation-audit.mjs",
+      "bytes": 3764,
+      "sha256": "32c7107aa9d099b3c367bcdef955874f3440d60f8e70b0401a86a0afb5ab5781",
+      "adapted": false
+    },
+    {
+      "path": "continuous/citation-audit.test.mjs",
+      "bytes": 2164,
+      "sha256": "8be16fbe6b07b57aea12f7fa0cdee4ce2edda8b9e9ae317c97761408576f7a6b",
+      "adapted": false
+    },
+    {
       "path": "continuous/CLOUD_ACCESS.md",
-      "bytes": 20841,
-      "sha256": "a002f8df076eb78e0b61d5f153694b1335a954bdcf7fb44394f31569e773047c",
+      "bytes": 22161,
+      "sha256": "c9bde34c68195a0fd262c408b16a3e336a2719853623aab648d05bda83a33c03",
       "adapted": true
     },
     {
@@ -923,8 +959,8 @@
     },
     {
       "path": "continuous/engine.mjs",
-      "bytes": 8206,
-      "sha256": "965b9dc7057a4fc16f85b6c574722c6184b2b8ac874d19e8bf51cb60f665fdc6",
+      "bytes": 8073,
+      "sha256": "47037d630e0af3812c82d59c1eff64054141980cd38d4fed79930f1b09a9e6cd",
       "adapted": false
     },
     {
@@ -953,14 +989,14 @@
     },
     {
       "path": "continuous/experience-evidence.mjs",
-      "bytes": 9203,
-      "sha256": "fb50d76018bc1569e721f6f3f78bbc4f08d0c3c1abb341c0a06043f89bdc57f5",
+      "bytes": 9406,
+      "sha256": "48b8a25b814eeedafd45c4ba10951071fe6a4ebed66c3f3502417ef9e131fe0a",
       "adapted": false
     },
     {
       "path": "continuous/experience-evidence.test.mjs",
-      "bytes": 9064,
-      "sha256": "ff6c7b6055a9f8d382d3477e4c1eeb2cd6b23ede43be69abb2375f0a62eb8f21",
+      "bytes": 11034,
+      "sha256": "2b576e8036c7ec57dd040e3ce6c82e696d4e4d00d10424239f79b7318b95f80a",
       "adapted": false
     },
     {
@@ -977,8 +1013,8 @@
     },
     {
       "path": "continuous/experience-runtime.mjs",
-      "bytes": 30445,
-      "sha256": "a1f2c7158902388786b290727df74d9d837a559d88ce01703dab43612bb18bee",
+      "bytes": 31951,
+      "sha256": "451dd9c810361e147ba1f709d9246aa46471f49283fe23efa2eca87cad2170fe",
       "adapted": true
     },
     {
@@ -988,15 +1024,21 @@
       "adapted": true
     },
     {
+      "path": "continuous/experience-specialists.test.mjs",
+      "bytes": 4065,
+      "sha256": "4cdb64dcbf12dfd4e0ad53402990e67b39dab7fcc29c3184f45e283ea4f1f42e",
+      "adapted": false
+    },
+    {
       "path": "continuous/experience-spiral.mjs",
-      "bytes": 24617,
-      "sha256": "717af561de665c06651a96b71837bd20d84a01f5df4ba7cca5c29a50ea31df4a",
+      "bytes": 24920,
+      "sha256": "77b98ba6a72d1c5409aa2cbe18e53c2ce54dd89838a21481729ebf4145610ecd",
       "adapted": false
     },
     {
       "path": "continuous/experience-spiral.test.mjs",
-      "bytes": 29890,
-      "sha256": "60dd9a7a993725f6e726a59ca7721e122c56111b18270263f28b291e89696d31",
+      "bytes": 31863,
+      "sha256": "267bb5a0af88cefa4052935f132e509734c61753625a63eb383e34698c510c42",
       "adapted": true
     },
     {
@@ -1558,6 +1600,18 @@
       "adapted": false
     },
     {
+      "path": "continuous/retrieval-policy.mjs",
+      "bytes": 7457,
+      "sha256": "c83afc04bba63367e15f8c4ac14a30151410561389312f18d039df91e9af3035",
+      "adapted": false
+    },
+    {
+      "path": "continuous/retrieval-policy.test.mjs",
+      "bytes": 6863,
+      "sha256": "77cd69d03b98002a3f416036242553fd363e813b461e6c1dea750c68fcf67385",
+      "adapted": false
+    },
+    {
       "path": "continuous/runtime-inventory.mjs",
       "bytes": 3650,
       "sha256": "08726a8fd21ced24f21b9c7463264ed13cc389c8fd94b8bab80428ae4ad6cfae",
@@ -1595,8 +1649,8 @@
     },
     {
       "path": "continuous/service.mjs",
-      "bytes": 86361,
-      "sha256": "b360848f9339cb348cda1db4bef9b7f7dcca055f9a754ed4498c899d333339d7",
+      "bytes": 87284,
+      "sha256": "21d2fdb44c8ab3a5dc2bf9caa854f412482158d88dea8d761a1176f488e831f5",
       "adapted": true
     },
     {
@@ -1633,6 +1687,18 @@
       "path": "continuous/source-routing.mjs",
       "bytes": 1379,
       "sha256": "2993c2fab0d064b61f990b167c69cd9e301bed7d1513d288fc9284ead053cc62",
+      "adapted": false
+    },
+    {
+      "path": "continuous/specialists-status.mjs",
+      "bytes": 3068,
+      "sha256": "75b79977a4c3a74986f1fcffabcf2cfe7353cc76ee13ce3f3570ad43c1fdb487",
+      "adapted": false
+    },
+    {
+      "path": "continuous/specialists-status.test.mjs",
+      "bytes": 4573,
+      "sha256": "65cb443f0f9e078d5b4e79616c8c4739bd6b2cee84f06b0315a8dd69b70c3222",
       "adapted": false
     },
     {
@@ -1840,7 +1906,7 @@
       "adapted": false
     }
   ],
-  "totalBytes": 2297142,
+  "totalBytes": 2374591,
   "scan": {
     "patterns": 6,
     "findings": 0
@@ -1854,6 +1920,6 @@
     "Local vendor packages restored from npm; cloud ERAS/Three source modules and MIT notices retained",
     "Qwen/Wan weights, training corpora and adapters, Aider jobs and environment, process status, private histories and keys are excluded"
   ],
-  "updatedAt": "2026-11-04T00:55:18.751Z",
+  "updatedAt": "2026-11-04T07:00:24.485Z",
   "lineEndings": "UTF-8 source text normalized to LF before hashing; binary files preserved."
 }

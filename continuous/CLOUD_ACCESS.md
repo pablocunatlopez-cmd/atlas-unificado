@@ -1,3 +1,11 @@
+## A y B activas ·4 noviembre
+
+La revisión local verificó diez especialistas cargados en el PID19644, con159 revisiones automáticas de espiral y una respuesta real de Qwen en12,5s. El arranque fue externo a esta ejecución. La corrección posterior de recuperación por fallo transitorio de disco sigue pendiente de carga. Sites conserva V24 público y el puente registró un latido reciente; la nueva apertura soportada del source helper falló al conectar a su Git. Repositorio GitHub privado: el conector mantiene código, sin operación de visibilidad disponible.
+
+## Diez especialistas y fuentes · 4 de noviembre
+
+667/667 pruebas backend pasan. Diez funciones locales y selección de perspectivas para Qwen integradas en chat/espiral; filtros de permisos, versiones y revocaciones antes de recuperar; auditoría de identidad de citas y metadatos seguros. La UI local está en disco; los módulos nuevos requieren carga verificada del coordinador. El bloqueo CIM previo sigue documentado, sin repetirlo ni detener el servicio saludable. Sites conserva V24; no se presenta este cambio de backend como una publicación web nueva. GitHub base verificada antes de esta entrega: 19a7aabcb28cc0f6b8ff323c10cac55f86f76a26. Leer AGENTES_Y_FUENTES_2026-11-04.md y el checkpoint del export para los envíos posteriores.
+
 ## GitHub actualizado y verificado · 4 de noviembre
 
 Código remoto main: 8903c0871c8ab907368f2f0754fdfc40c1a6633b; exportación local equivalente: 7c24ac9586323f0a5ec0fecf2be1f1ef0dfd702b. El repositorio autorizado conserva visibilidad privada. No se renovó GitHub CLI: el conector creó un árbol coincidente y actualizó main con SHA anterior esperado, luego se leyó la referencia para verificarla. Las mejoras de código están en GitHub. **Sites sigue en V24**: nuevo intento del source helper falló al conectar con su servidor Git. Fuente V25 compilada pendiente, audiencia pública conservada.

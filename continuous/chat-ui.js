@@ -25,6 +25,7 @@ let archiveLoading = false;
 let archiveMode = 'Restaurando el archivo local…';
 let memoryArchiveCount = 0;
 const personalMemoryPairCache = new WeakMap();
+const specialistNames={memory:'Memoria',retrieval:'Recuperación',freshness:'Vigencia',citations:'Citas',security:'Seguridad',evaluation:'Evaluación',performance:'Recursos',programming:'Programación',spatial:'3D',coordination:'Coordinación'};
 let thinkingStartedAt = 0;
 let thinkingTimer = null;
 let activeRequestOptions = { internet: false, external: false, tools: false };
@@ -46,8 +47,14 @@ function cleanMeta(meta) {
     ...(typeof source.title === 'string' ? { title: source.title.slice(0, 300) } : {}),
     ...(typeof source.excerpt === 'string' ? { excerpt: source.excerpt.slice(0, 3000) } : {}),
     ...(typeof source.method === 'string' ? { method: source.method.slice(0, 160) } : {}),
+    ...(/^F\d{1,2}$/.test(source.citationLabel) ? {citationLabel:source.citationLabel} : {}),
+    ...(source.citationUrl===null||typeof source.citationUrl==='string'?{citationUrl:source.citationUrl===null?null:source.citationUrl.slice(0,2000)}:{}),
+    ...(['string','number'].includes(typeof source.version)?{version:String(source.version).slice(0,80)}:{}),
+    ...(typeof source.contentHash==='string'&&/^[a-f0-9]{64}$/.test(source.contentHash)?{contentHash:source.contentHash}:{}),
     ...(typeof source.fetchedAt === 'string' ? { fetchedAt: source.fetchedAt.slice(0, 80) } : {})
   }));
+  if(meta.specialists?.kind==='local-deterministic-review'&&Array.isArray(meta.specialists.results))safe.specialists={kind:'local-deterministic-review',results:meta.specialists.results.slice(0,10).filter(item=>item&&Object.hasOwn(specialistNames,item.id)&&['ok','attention','not-applicable'].includes(item.status)).map(item=>({id:item.id,status:item.status}))};
+  if(['completed','failed','not-requested'].includes(meta.specialistConsultation?.status))safe.specialistConsultation={status:meta.specialistConsultation.status,roles:(Array.isArray(meta.specialistConsultation.roles)?meta.specialistConsultation.roles:[]).filter(id=>Object.hasOwn(specialistNames,id)).slice(0,2)};
   if (Array.isArray(meta.warnings)) safe.warnings = meta.warnings.filter(item => typeof item === 'string').slice(0, 8).map(item => item.slice(0, 600));
   for (const key of ['internetRequested','webRead']) if (typeof meta[key] === 'boolean') safe[key] = meta[key];
   if (Array.isArray(meta.failedWebUrls)) safe.failedWebUrls = meta.failedWebUrls.filter(item => typeof item === 'string').slice(0, 5).map(item => item.slice(0, 2000));
@@ -370,16 +377,19 @@ function addSources(parent, sources) {
   details.append(el('summary', null, `Fuentes y contexto (${sources.length})`));
   for (const source of sources) {
     const card = el('div', 'source-card');
-    const href = safeLink(source.url);
+    if(source.citationLabel)card.append(el('strong',null,`[${source.citationLabel}] `));
+    const href = safeLink(source.citationUrl===null?null:source.citationUrl||source.url);
     if (href) {
       const link = el('a', null, source.title || source.url);
       link.href = href;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       card.append(link);
-    }
+    }else card.append(el('strong',null,source.title||'Fuente local con identificador'));
     if (source.excerpt) card.append(el('p', null, source.excerpt));
     card.append(el('p', null, (source.method || 'Fuente local') + (source.fetchedAt ? ` · ${new Date(source.fetchedAt).toLocaleString()}` : '')));
+    if(source.version)card.append(el('p',null,`Versión ${source.version}`));
+    if(source.contentHash)card.append(el('small',null,`SHA256 ${source.contentHash.slice(0,16)}… · procedencia, no veracidad comprobada`));
     details.append(card);
   }
   parent.append(details);
@@ -395,6 +405,13 @@ function renderMessage(message) {
   else body.textContent = message.content;
   main.append(author, body);
   if (message.meta?.reviewScope) main.append(el('div', 'message-meta', message.meta.reviewScope));
+  if(message.meta?.specialists?.results?.length){
+    const report=message.meta.specialists,details=el('details','sources');
+    details.append(el('summary',null,`${report.results.length} comprobaciones de especialistas locales · ${report.results.filter(item=>item.status==='attention').length} con observaciones`));
+    for(const item of report.results)details.append(el('p',null,`${specialistNames[item.id]}: ${item.status==='attention'?'requiere atención':item.status==='not-applicable'?'no aplicable':'sin incidencias detectadas por las reglas'}`));
+    details.append(el('small',null,'Comprobaciones automáticas; no son modelos independientes ni garantizan corrección.'));main.append(details);
+  }
+  if(message.meta?.specialistConsultation?.status==='completed')main.append(el('div','message-meta',`Perspectivas usadas en la revisión de Qwen: ${message.meta.specialistConsultation.roles.map(id=>specialistNames[id]).join(', ')}.`));
   if (message.meta?.personalMemoryUsed) main.append(el('div', 'message-meta', `Memoria local relacionada recuperada: ${message.meta.personalMemoryUsed} conversación(es).`));
   if (message.meta?.reflectionMemoryUsed) main.append(el('div', 'message-meta', `Reflejos de agentes relacionados usados como contexto: ${message.meta.reflectionMemoryUsed}; no modifican los pesos de Qwen.`));
   if (message.meta?.internetRequested && message.meta.webRead === false) {
@@ -847,6 +864,8 @@ $('chat-form').addEventListener('submit', async event => {
       content: result.answer,
       meta: {
         reviewScope: result.reviewScope,
+        specialists: result.specialists,
+        specialistConsultation: result.specialistConsultation,
         modelName: result.modelName || result.model,
         sources: result.sources,
         toolRun: result.toolRun,

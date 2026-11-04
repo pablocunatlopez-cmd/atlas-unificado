@@ -1,5 +1,6 @@
 import {TinyLanguageModel, encode, validateSnapshot,random,config as modelConfig} from '../public/core/language-model.mjs';
 import {createHash} from 'node:crypto';
+import {retrievalContext,selectRetrievalDocuments,retrievalProvenance} from './retrieval-policy.mjs';
 export const hash = text => createHash('sha256').update(text).digest('hex');
 export function normalizeLearnableUrl(value){
   let u;try{u=new URL(value);}catch{throw Error('La dirección no es una URL válida.');}
@@ -37,28 +38,25 @@ export function extractText(html) {
 }
 const normalize=text=>text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const searchIndexCache=new WeakMap();
-function indexedRows(documents,includeReferences){
-  let scopes=searchIndexCache.get(documents);
-  if(!scopes){scopes=new Map();searchIndexCache.set(documents,scopes);}
-  const cached=scopes.get(includeReferences);if(cached)return cached;
-  const rows=documents.filter(d=>d.role==='train'||includeReferences&&d.role==='reference').map(doc=>{
+function indexedRows(documents,context){
+  // Re-evaluate scope, revocations and clock-dependent validity on every query.
+  // Cache only tokenization; in-place ACL/text changes cannot reuse stale access.
+  const rows=selectRetrievalDocuments(documents,context).map(doc=>{
+    const cached=searchIndexCache.get(doc);if(cached?.text===doc.text)return {...cached.row,doc};
     const tokens=normalize(doc.text).match(/[a-z0-9_]{2,}/g)||[],freq=new Map();
     for(const token of tokens)freq.set(token,(freq.get(token)||0)+1);
-    return {doc,freq,length:tokens.length};
+    const row={doc,freq,length:tokens.length};searchIndexCache.set(doc,{text:doc.text,row});return row;
   });
-  const result={rows,averageLength:Math.max(1,rows.reduce((sum,row)=>sum+row.length,0)/Math.max(rows.length,1))};
-  scopes.set(includeReferences,result);return result;
+  return {rows,averageLength:Math.max(1,rows.reduce((sum,row)=>sum+row.length,0)/Math.max(rows.length,1))};
 }
 // Lexical relevance only: scores are neither confidence nor measured truth.
 // Reference retrieval is an explicit caller choice; it never changes training.
 export function searchDocuments(documents,query,limit=5,options={}){
-  if(!options||typeof options!=='object'||Array.isArray(options)||Object.keys(options).some(key=>key!=='includeReferences'))throw new TypeError('Opciones de búsqueda no válidas.');
-  const {includeReferences=false}=options;
-  if(typeof includeReferences!=='boolean')throw new TypeError('includeReferences debe ser booleano.');
+  const context=retrievalContext(options);
   const stop=new Set('para por con sin una uno unos unas los las del que como donde cuando desde hasta sobre entre esta este esto estos estas son ser eres soy tengo tienes quiero puedes puede puedo ayuda atlas'.split(' '));
   const terms=[...new Set((normalize(query).match(/[a-z0-9_]{2,}/g)||[]).filter(t=>!stop.has(t)))].slice(0,12);
   if(!terms.length)return [];
-  const {rows,averageLength}=indexedRows(documents,includeReferences);
+  const {rows,averageLength}=indexedRows(documents,context);
   const idf=new Map(terms.map(term=>{
     const df=rows.reduce((sum,row)=>sum+(row.freq.has(term)?1:0),0);
     return [term,Math.log(1+(rows.length-df+0.5)/(df+0.5))];
@@ -78,7 +76,7 @@ export function searchDocuments(documents,query,limit=5,options={}){
     score=Math.min(1,score+phraseBoost);
     const firstPosition=Math.min(...matched.map(term=>text.indexOf(term)).filter(position=>position>=0));
     const start=Math.max(0,(Number.isFinite(firstPosition)?firstPosition:0)-180);
-    return {url:row.doc.url,fetchedAt:row.doc.fetchedAt,score,matchedTerms:matched,excerpt:row.doc.text.slice(start,start+850)};
+    return {url:row.doc.url,fetchedAt:row.doc.fetchedAt,score,matchedTerms:matched,excerpt:row.doc.text.slice(start,start+850),...retrievalProvenance(row.doc)};
   }).filter(Boolean).sort((a,b)=>b.score-a.score||a.url.localeCompare(b.url)).slice(0,limit);
 }
 export function replayIndices(length,steps,offset=0){

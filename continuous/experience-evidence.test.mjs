@@ -8,6 +8,19 @@ import {createExperienceEvidence} from './experience-evidence.mjs';
 async function fixture(t){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'atlas-evidence-'));t.after(()=>fs.rm(directory,{recursive:true,force:true}));return directory;}
 const source=(suffix='server',excerpt='The local inference server supports streamed completion responses and cancellation.')=>({url:'https://example.org/docs/'+suffix,title:'Inference server reference',excerpt,method:'Fragmento de documentación pública recuperada'});
 
+test('a transient initial read failure retries once concurrently and retains evidence without restarting',async t=>{
+ const directory=await fixture(t),file=path.join(directory,'experience-evidence.json');await createExperienceEvidence({directory}).remember({sources:[source()]});const before=await fs.readFile(file,'utf8'),memory=createExperienceEvidence({directory});
+ let reads=0;const readFile=fs.readFile.bind(fs);t.mock.method(fs,'readFile',async(target,...args)=>{if(target===file&&++reads===1)throw Object.assign(Error('temporary read refusal'),{code:'EACCES'});return readFile(target,...args);});
+ const failed=await Promise.allSettled([memory.status(),memory.status(),memory.status()]);assert.ok(failed.every(item=>item.status==='rejected'));assert.equal(reads,1);
+ const recovered=await Promise.all([memory.status(),memory.recall('server'),memory.status()]);assert.equal(reads,2);assert.equal(recovered[0].documents,1);assert.equal(recovered[1].sources.length,1);assert.equal(recovered[2].documents,1);assert.equal(await readFile(file,'utf8'),before);
+});
+
+test('corrupt evidence is never overwritten on retry and recovers only after an explicit valid replacement',async t=>{
+ const directory=await fixture(t),file=path.join(directory,'experience-evidence.json');await createExperienceEvidence({directory}).remember({sources:[source()]});const valid=await fs.readFile(file,'utf8'),invalid='{"version":1,"documents":"corrupt"}';await fs.writeFile(file,invalid);const memory=createExperienceEvidence({directory});
+ await assert.rejects(memory.remember({sources:[source('must-not-store')]}),/inválida/);assert.equal(await fs.readFile(file,'utf8'),invalid);await assert.rejects(memory.status(),/inválida/);assert.equal(await fs.readFile(file,'utf8'),invalid);
+ await fs.writeFile(file,valid);assert.equal((await memory.status()).documents,1);assert.equal((await memory.recall('server')).sources.length,1);assert.equal(await fs.readFile(file,'utf8'),valid);
+});
+
 test('retrieval survives restart with source dates and hashes, and unrelated questions return no filler',async t=>{
  const directory=await fixture(t),memory=createExperienceEvidence({directory,now:()=>1700000000000});
  await memory.remember({question:'¿Cómo medir la latencia del servidor local?',sources:[source()]});
