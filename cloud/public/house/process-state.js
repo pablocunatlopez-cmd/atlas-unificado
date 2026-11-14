@@ -45,7 +45,12 @@ export function creatureArchetype(process,room){
  if(['body','games','cinema','refutation'].includes(room))return 'robot';
  return 'human';
 }
-export function measuredChanges(value){
+export function measuredChanges(value,{now=Date.now(),maxAgeMs=75000}={}){
+ // Counters are coordinator-reported; do not keep displaying them as current
+ // after the telemetry expires or when its timestamp is invalid/future-dated.
+ const timestamp=typeof value?.at==='string'?Date.parse(value.at):NaN;
+ const age=now-timestamp;
+ if(value?.connected===false||!Number.isFinite(timestamp)||!Number.isFinite(age)||age<0||age>maxAgeMs)return null;
  const accepted=value?.processes?.find(item=>item.id==='experience')?.counters?.accepted;
  return counter(accepted)?accepted:null;
 }
