@@ -3,7 +3,8 @@ import {ROOM_IDS} from './layout.js';
 export const PROCESS_PHASES=Object.freeze(['observe','understand','connect','apply','refute','retain']);
 export const PROCESS_STATES=Object.freeze(['idle','running','passed','failed','waiting']);
 export const PHASE_LABELS=Object.freeze({observe:'Observar',understand:'Comprender',connect:'Conectar',apply:'Aplicar',refute:'Refutar',retain:'Conservar'});
-export const STATE_LABELS=Object.freeze({idle:'En reposo',running:'En ejecución',passed:'Prueba superada',failed:'Refutado',waiting:'En espera'});
+// These are coordinator-reported outcomes, not independent evidence or integration claims.
+export const STATE_LABELS=Object.freeze({idle:'En reposo',running:'En ejecución',passed:'Resultado reportado',failed:'Fallo reportado',waiting:'En espera'});
 const aliases={experience:'mind',suceso:'constellation',agents:'constellation',weights:'refutation',chat:'salon',research:'mind',library:'mind',tools:'body',review:'refutation',video:'cinema',creative:'games',core:'language',lor:'language',external:'constellation'};
 const identifier=value=>typeof value==='string'&&/^[a-z0-9_-]{1,40}$/.test(value);
 const counter=value=>Number.isSafeInteger(value)&&value>=0&&value<=1000000000;
@@ -33,6 +34,8 @@ export function processForRoom(value,room,{ageMs=0}={}){
  if(!process)return {id:room,room,state:'waiting',label:'Sin telemetría',workVerified:false};
  const fresh=value.connected!==false&&!!value.at&&Number.isFinite(ageMs)&&ageMs>=0&&ageMs<=75000;
  if(!fresh&&process.state==='running')return {...process,state:'waiting',label:value.connected===false?'Puente desconectado':'Sin señal reciente',workVerified:false};
+ // workVerified here means only that recent running telemetry was received.
+ // It does not mean the task result or an artifact was independently verified.
  return {...process,workVerified:fresh&&process.state==='running'};
 }
 export function creatureArchetype(process,room){
@@ -51,8 +54,8 @@ export function processCaption(process){
  if(process.phase)parts.push(PHASE_LABELS[process.phase]);
  parts.push(STATE_LABELS[process.state]);
  const counters=process.counters;
- if(counters&&counter(counters.accepted))parts.push((process.id==='experience'?'Cambios medidos ':'Aceptados ')+counters.accepted);
- if(counters&&counter(counters.rejected))parts.push('Refutados '+counters.rejected);
+ if(counters&&counter(counters.accepted))parts.push((process.id==='experience'?'Cambios reportados ':'Aceptados reportados ')+counters.accepted);
+ if(counters&&counter(counters.rejected))parts.push('Rechazados reportados '+counters.rejected);
  return parts.join(' · ');
 }
 export function processMotion(process,time,seed=0){
