@@ -137,6 +137,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
      if(typeof result.result?.answer!=='string')throw Error('La respuesta terminó sin contenido.');
      if(result.conversationId)await hydrate(result.conversationId,current);
      else setMessages(previous=>[...previous,{role:'assistant',content:result.result!.answer!}]);
+     if(sequence.current!==current||controller.signal.aborted||!mounted.current)return;
      setJob(null);setPolling(false);setNotice('Respuesta de '+(result.result.modelName||'Qwen en la nube')+'.');setError('');pendingText.current='';retry.current=null;void refreshArchive();return;
     }
     if(result.status==='failed'||result.status==='cancelled'){
@@ -154,17 +155,17 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
   }
  }
  async function openConversation(item:Conversation){
-  if(sending.current)return;const current=++sequence.current;pollAbort.current?.abort();setSidebarOpen(false);setLoadingThread(true);setJob(null);setPolling(false);setError('');setNotice('');setDraft('');retry.current=null;
+  if(sending.current)return;const current=++sequence.current;pollAbort.current?.abort();setSidebarOpen(false);setLoadingThread(true);setCancelling(false);setJob(null);setPolling(false);setError('');setNotice('');setDraft('');retry.current=null;
   try{const detail=await hydrate(item.id,current);if(detail?.pendingJob){pendingText.current=validMessages(detail.messages).at(-1)?.content||'';setJob(detail.pendingJob);void followJob(detail.pendingJob.id,current);}}
   catch(problem){if(sequence.current===current)setError(problem instanceof Error?problem.message:'No se pudo abrir esta conversación.');}
   finally{if(sequence.current===current)setLoadingThread(false);}
  }
  function newConversation(){
-  if(sending.current)return;sequence.current++;pollAbort.current?.abort();setConversationId(null);setTitle('Una nueva conversación');setMessages([]);setDraft('');setJob(null);setPolling(false);setSidebarOpen(false);setError('');setNotice('');retry.current=null;pendingText.current='';setVisibleLimit(80);inputRef.current?.focus();
+  if(sending.current)return;sequence.current++;pollAbort.current?.abort();setConversationId(null);setTitle('Una nueva conversación');setLoadingThread(false);setCancelling(false);setMessages([]);setDraft('');setJob(null);setPolling(false);setSidebarOpen(false);setError('');setNotice('');retry.current=null;pendingText.current='';setVisibleLimit(80);inputRef.current?.focus();
  }
  async function submit(event?:FormEvent){
   event?.preventDefault();const text=draft.trim();if(!signedIn||!text||busy||sending.current)return;
-  sending.current=true;setSubmitting(true);setError('');setNotice('');nearBottom.current=true;const previous=messages,current=sequence.current;
+  sending.current=true;setSubmitting(true);setError('');setNotice('');nearBottom.current=true;const previous=messages,current=++sequence.current;pollAbort.current?.abort();setCancelling(false);
   const sameRetry=retry.current?.message===text&&retry.current?.conversationId===conversationId;
   const requestId=sameRetry?retry.current!.requestId:crypto.randomUUID();retry.current={requestId,message:text,conversationId};pendingText.current=text;
   setMessages([...previous,{role:'user',content:text}]);
@@ -176,18 +177,19 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
   finally{sending.current=false;if(mounted.current)setSubmitting(false);}
  }
  async function cancel(){
-  if(!job||cancelling)return;setCancelling(true);
+  if(!job||cancelling)return;const current=sequence.current;const isCurrent=()=>mounted.current&&sequence.current===current;setCancelling(true);
   try{
-   const result=await readJson<JobResult>('/api/cloud/jobs/'+encodeURIComponent(job.id),{method:'DELETE',signal:AbortSignal.timeout(15000)});pollAbort.current?.abort();setJob(null);setPolling(false);retry.current=null;setError('');
+   const result=await readJson<JobResult>('/api/cloud/jobs/'+encodeURIComponent(job.id),{method:'DELETE',signal:AbortSignal.timeout(15000)});if(!isCurrent())return;pollAbort.current?.abort();setJob(null);setPolling(false);retry.current=null;setError('');
    if(result.status==='completed'){
-    if(result.conversationId)await hydrate(result.conversationId,sequence.current);
+    if(result.conversationId)await hydrate(result.conversationId,current);
     else if(result.result?.answer)setMessages(previous=>[...previous,{role:'assistant',content:result.result!.answer!}]);
+    if(!isCurrent())return;
     setNotice('La respuesta acababa de terminar y se ha conservado.');pendingText.current='';
    }else{setDraft(previous=>previous||pendingText.current);setNotice('Parada solicitada. Tu mensaje está listo para editarlo.');}
    void refreshArchive();
   }
-  catch(problem){setError(problem instanceof Error?problem.message:'No se pudo solicitar la parada.');}
-  finally{setCancelling(false);}
+  catch(problem){if(isCurrent())setError(problem instanceof Error?problem.message:'No se pudo solicitar la parada.');}
+  finally{if(isCurrent())setCancelling(false);}
  }
  function keyDown(event:KeyboardEvent<HTMLTextAreaElement>){if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void submit();}}
  function usePrompt(text:string){setDraft(text);inputRef.current?.focus();}
@@ -229,7 +231,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
       <div className={styles.methodTrail}><span>01 <b>Observar</b></span><i/><span>02 <b>Contrastar</b></span><i/><span>03 <b>Construir</b></span></div>
      </section>:null}
      {!signedIn?<section className={styles.signInCard}><span className={styles.signInMark}>◌</span><div><h2>Tu conversación, en tu espacio.</h2><p>Inicia sesión para hablar con Lía y conservar tu historial. Cada persona accede solo a sus conversaciones.</p></div><a href={signInPath} target="_top">Continuar con ChatGPT <span>↗</span></a></section>:null}
-     <div className={styles.messages} role="log" aria-label="Conversación con Lía" aria-live="polite" aria-relevant="additions">
+     <div className={styles.messages} role="log" aria-label="Conversación con Lía" aria-live={loadingThread?"off":"polite"} aria-relevant="additions" aria-atomic="false">
       {messages.length>visibleLimit?<button type="button" className={styles.earlier} onClick={()=>setVisibleLimit(previous=>previous+80)}>Ver mensajes anteriores <span>↑</span></button>:null}
       {messages.slice(-visibleLimit).map((message,index)=><article key={message.id||`${index}-${message.role}`} className={`${styles.message} ${message.role==='user'?styles.userMessage:styles.assistantMessage}`}><div className={styles.messageAvatar}>{message.role==='user'?firstName.slice(0,1).toUpperCase():<Eye/>}</div><div className={styles.messageMain}><div className={styles.messageAuthor}>{message.role==='user'?'Tú':'Lía'}{message.role==='assistant'?<span>{isCloud?'LÍA · HISTORIAL CONSERVADO':'QWEN · TU PC'}</span>:null}</div><div className={styles.messageBody}>{message.role==='assistant'?<Markdown text={message.content}/>:<p>{message.content}</p>}</div></div></article>)}
       {job?<div className={styles.pending} role="status"><span className={styles.pendingGlyph}>✳</span><div><strong>{job.status==='running'?'Conectando las ideas…':job.status==='reconnecting'?'Tu mensaje sigue guardado.':'Tu mensaje ya está en la nube.'}</strong><span>{job.status==='running'?isCloud?'Lía está respondiendo desde Groq.':'Qwen está respondiendo desde tu ordenador.':job.status==='reconnecting'?'La respuesta puede seguir en curso.':isCloud?'Preparando la respuesta en la nube.':'Esperando a que el motor de tu PC lo recoja.'}</span></div>{!polling?<button type="button" onClick={()=>{setError('');void followJob(job.id,sequence.current);}}>Comprobar respuesta</button>:<span className={styles.pulseDots} aria-hidden="true"><i/><i/><i/></span>}</div>:null}
