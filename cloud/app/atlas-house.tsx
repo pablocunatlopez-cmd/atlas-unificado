@@ -12,7 +12,7 @@ import styles from './atlas-house.module.css';
 import {RESIDENTS,WORKSTATIONS,residentById,processForResident} from '../public/house/residents.js';
 import {readCreativePreview} from './experience-creative-preview';
 
-type HouseResident={id:string;room:HouseRoom;name:string;role:string;archetype:string;processIds:string[];cosmetic:boolean;activePhases?:string[]};
+type HouseResident={id:string;room:HouseRoom;name:string;role:string;archetype:string;processIds:string[];cosmetic:boolean;activePhases?:string[];status?:string;statusTone?:'idle'|'running'|'passed'|'failed'|'waiting'};
 type Props={signedIn:boolean;displayName:string;signInPath:string};
 type Status={online:boolean;modelName?:string;lastSeen?:string|null;capabilities?:{gpuMode?:'chat'|'video'|'training';processTelemetry?:(CoreTelemetry&{experience?:{creative?:unknown}|null})|null};failed?:boolean};
 const rooms:Record<HouseRoom,{title:string;short:string;description:string;action:string;icon:LucideIcon;accent:string}>={
@@ -35,26 +35,38 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),previousFocus=useRef<HTMLElement|null>(null),lastRequested=useRef<HouseRoom|null>(null),pollBusy=useRef(false),roomNavigation=useRef<HTMLElement|null>(null);
   const active=rooms[room],ActiveIcon=active.icon;
   const triad=[{name:'Atlas',role:'mente'},{name:'Ion',role:'cuerpo'},{name:'Ícaro',role:'cielo + constelación'}];
+
   useEffect(()=>{
-   let alive=true;const controller=new AbortController();
-   async function poll(){if(pollBusy.current||document.hidden)return;pollBusy.current=true;try{const response=await fetch('/api/cloud/status',{cache:'no-store',signal:AbortSignal.any([controller.signal])});if(!response.ok)throw new Error('');const data=await response.json() as Status; if(alive){ setStatus(data); setStatusFailed(false); } }catch{ if(alive){ setStatusFailed(true);} } finally{ if(alive) pollBusy.current=false; }}
-   void poll();const timer=setInterval(()=>void poll(),10000),visibility=()=>{if(!document.hidden)void poll();};document.addEventListener('visibilitychange',visibility);
-   return()=>{alive=false;controller.abort();clearInterval(timer);document.removeEventListener('visibilitychange',visibility);};
+    let alive=true;const controller=new AbortController();
+    async function poll(){
+      if(pollBusy.current||document.hidden)return;
+      pollBusy.current=true;
+      try{
+        const response=await fetch('/api/cloud/status',{cache:'no-store',signal:controller.signal});
+        if(!response.ok)throw new Error('');
+        const data=await response.json() as Status;
+        if(alive){ setStatus(data); setStatusFailed(false); }
+      }catch{
+        if(alive){ setStatusFailed(true); }
+      }finally{
+        if(alive) pollBusy.current=false;
+      }
+    }
+    void poll();const timer=setInterval(()=>void poll(),10000),visibility=()=>{if(!document.hidden)void poll();};document.addEventListener('visibilitychange',visibility);
+    return()=>{alive=false;controller.abort();clearInterval(timer);document.removeEventListener('visibilitychange',visibility);};
   },[]);
+
   const ready=useCallback((value:HouseAPI)=>{setApi(value);setSceneError('');if(lastRequested.current)value.teleport(lastRequested.current);},[]);
-  const walk=useCallback((next:HouseRoom)=>{setRoomDetailsOpen(false);setEntered(true);setRoom(next);setSelectedResident(null);setResidentsOpen(false);setMenu(false);lastRequested.current=next;api?api.teleport(next):undefined;},[api]);
+  const walk=useCallback((next:HouseRoom)=>{setRoomDetailsOpen(false);setEntered(true);setRoom(next);setSelectedResident(null);setResidentsOpen(false);setMenu(false);lastRequested.current=next;api?.teleport(next);},[api]);
   const open=useCallback((next:HouseRoom)=>{setRoomDetailsOpen(false);setRoom(next);setEntered(true);setMenu(false);previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setWorkspace(next);},[]);
   const close=useCallback(()=>setWorkspace(null),[]);
   const deepLinkHandled=useRef(false);
   useEffect(()=>{if(deepLinkHandled.current||!api)return;deepLinkHandled.current=true;const requested=new URLSearchParams(location.search).get('room');if(requested&&Object.hasOwn(rooms,requested)){const next=requested as HouseRoom; lastRequested.current=next; api.teleport(next); setRoom(next); setEntered(true);}},[api]);
-  useEffect(()=>{
-   const current=dialog.current;if(!current)return;
-   if(workspace){if(!current.open)current.showModal();closeButton.current?.focus();}
-   else if(current.open){current.close();previousFocus.current?.focus();}
-  },[workspace]);
+  useEffect(()=>{const current=dialog.current;if(!current)return;if(workspace){if(!current.open)current.showModal();closeButton.current?.focus();}else if(current.open){current.close();previousFocus.current?.focus();}},[workspace]);
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),4000);return()=>clearTimeout(timer);},[notice]);
   useEffect(()=>{if(!menu)return;const key=(event:globalThis.KeyboardEvent)=>{if(event.key==='Escape')setMenu(false);};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[menu]);
   useEffect(()=>{const nav=roomNavigation.current,button=nav?.querySelector<HTMLButtonElement>(`[data-room="${room}"]`);if(!nav||!button)return;const left=button.offsetLeft,right=left+button.offsetWidth;nav.scrollTo({left:Math.max(0,left-((nav.clientWidth-right)/2)),behavior:'smooth'});},[room]);
+
   const share=async()=>{try{const data={title:'Atlas · Casa de ideas',text:'Un espacio para conversar, crear música y construir mundos con Atlas.',url:location.origin+'/'};if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(`${data.title}\n${data.text}\n${data.url}`);setNotice('Enlace copiado.');}}catch{setNotice('No se pudo compartir esta vista.');}};
   const overview=()=>{setRoomDetailsOpen(false);setEntered(false);setMenu(false);setSelectedResident(null);setResidentsOpen(false);lastRequested.current=null;api?.overview();};
   const initials=(displayName||'Tu espacio').slice(0,1).toUpperCase();
@@ -62,6 +74,15 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {connected:false,processes:[]};const age=telemetry.at?Date.now()-Date.parse(telemetry.at):Infinity; return {connected:age<60000,processes:telemetry.processes??[]};},[status?.capabilities?.processTelemetry]);
   const creative=useMemo(()=>readCreativePreview(status?.capabilities?.processTelemetry?.experience?.creative),[status?.capabilities?.processTelemetry?.experience?.creative]);
   const selectedPerson=selectedResident?residentById(selectedResident):null;
+  const residentRuntime=useMemo<HouseResident[]>(()=>RESIDENTS.filter((resident)=>!resident.cosmetic).map((resident)=>{
+    const result=processForResident(processState,resident,{ageMs:60000});
+    const toneMap={idle:'idle',running:'running',passed:'passed',failed:'failed',waiting:'waiting'} as const;
+    return {
+      ...resident,
+      status: result.displayState ?? 'En espera',
+      statusTone: toneMap[(result.state as keyof typeof toneMap)] ?? 'waiting'
+    };
+  }),[processState]);
   const visitResident=(id:string)=>{const resident=residentById(id);if(!resident)return;setRoomDetailsOpen(false);setResidentsOpen(false);setEntered(true);setRoom(resident.room as HouseRoom);setSelectedResident(id);setWorkspace(null);};
   const visitEvolution=()=>{setRoomDetailsOpen(false);setResidentsOpen(false);setEntered(true);setRoom('games');setSelectedResident(null);api?.focusEvolution();};
   useEffect(()=>{if(!residentsOpen)return;residentsPanel.current?.focus();const close=(event:KeyboardEvent)=>{if(event.key==='Escape'){setResidentsOpen(false);residentsToggle.current?.focus();}};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[residentsOpen]);
@@ -70,7 +91,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const acceptedChanges=typeof rawChanges==='number'&&Number.isSafeInteger(rawChanges)&&rawChanges>=0?rawChanges:null;
 
   return <main className={styles.house}>
-   <div className={styles.scene}><HouseScene creative={creative} onCreativeApplied={setInstallation} onResidentFocus={setSelectedResident} processState={processState} paused={workspace!==null&&workspace!==undefined} onPerformance={setPerformance} onSceneError={setSceneError} apiReady={ready} /></div>
+   <div className={styles.scene}><HouseScene creative={creative} onCreativeApplied={setInstallation} onResidentFocus={setSelectedResident} processState={processState} paused={workspace!==null&&workspace!==undefined} onPerformance={setPerformance} onError={setSceneError} onReady={ready} /></div>
    <div className={styles.vignette}/>
    <header className={styles.topbar}>
     <a className={styles.brand} href="/" aria-label="Lía, la casa de ideas"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="22" stroke="currentColor" opacity=".8"/><path d="M8 24h32M24 8v32" stroke="currentColor" opacity=".4"/><circle cx="24" cy="24" r="8" fill="currentColor" opacity=".12"/></svg><span>Lía</span></a>
@@ -116,7 +137,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
 
    <nav ref={roomNavigation} className={styles.roomNav} aria-label="Habitaciones de Atlas">{HOUSE_ROOMS.map(item=>{const value=rooms[item.id],Icon=value.icon;return <button type="button" key={item.id} data-room={item.id} className={room===item.id?styles.active:''} onClick={()=>walk(item.id)} style={{'--room-accent':value.accent} as React.CSSProperties}><Icon size={15}/><span>{value.short}</span></button>;})}</nav>
    {menu&&<><button className={styles.menuBackdrop} type="button" aria-label="Cerrar navegación de la casa" onClick={()=>setMenu(false)}/><nav id="atlas-house-room-menu" className={styles.menu} aria-label="Menú de la casa">{HOUSE_ROOMS.map(item=><button type="button" key={item.id} className={room===item.id?styles.active:''} onClick={()=>open(item.id)}><span>{rooms[item.id].title}</span><ArrowUpRight size={13}/></button>)}</nav></>}
-   {residentsOpen&&<aside ref={residentsPanel} tabIndex={-1} className={styles.residentsPanel} id="atlas-house-residents" aria-label="Puestos y habitantes de Lía"><header><div><span>UNA CASA PARA LÍA</span><h2>Habitantes y entornos</h2></div><button type="button" onClick={()=>setResidentsOpen(false)} aria-label="Cerrar panel de habitantes"><X size={16}/></button></header><div className={styles.residentList}>{RESIDENTS.map(resident=><button type="button" key={resident.id} className={selectedResident===resident.id?styles.selected:''} onClick={()=>visitResident(resident.id)}><span>{resident.name}</span><small>{resident.role}</small></button>)}</div><button className={styles.evolutionButton} type="button" onClick={visitEvolution}>Ver evolución</button></aside>}
+   {residentsOpen&&<aside ref={residentsPanel} tabIndex={-1} className={styles.residentsPanel} id="atlas-house-residents" aria-label="Puestos y habitantes de Lía"><header><div><span>UNA CASA PARA LÍA</span><h2>Habitantes y entornos</h2></div><button type="button" onClick={()=>setResidentsOpen(false)} aria-label="Cerrar panel de habitantes"><X size={16}/></button></header><div className={styles.residentList}>{residentRuntime.map(resident=><button type="button" key={resident.id} className={selectedResident===resident.id?styles.selected:''} onClick={()=>visitResident(resident.id)}><span>{resident.name}</span><small>{resident.role}</small><em className={styles.statusPill} data-tone={resident.statusTone}>{resident.status}</em></button>)}</div><button className={styles.evolutionButton} type="button" onClick={visitEvolution}>Ver evolución</button></aside>}
    {notice&&<div className={styles.toast} role="status">{notice}</div>}
 
    <dialog ref={dialog} className={styles.workspace} aria-labelledby="atlas-house-workspace-title" onCancel={event=>{event.preventDefault();close();}} onClick={event=>{if(event.target===event.currentTarget)close();}}>
