@@ -1,0 +1,21 @@
+{
+  "repository": "pablocunatlopez-cmd/atlas-unificado",
+  "branch": "main",
+  "commit": "069e38b9ad890f3ef58ee4f0689917372a1367e1",
+  "base_commit": "53b37e2ee371f7efde707e68e76006e7b60aaa37",
+  "path": "continuous",
+  "copy": "byte-identical",
+  "trust": "Upstream validators inspect report shape and consistency only; neither authenticates producers nor independently verifies execution.",
+  "files": {
+    "process-evidence.mjs": "0fc5f5728f2e55134db90eb04ec955b3e1621c7a871954551da93bb1d9c88666",
+    "process-evidence.test.mjs": "25dce6d4c02f9dd82785896a6627fc9db13bade752ef6daabd53bcfe129b9595",
+    "process-evidence-review.mjs": "41d4173522994a00e8968705fd3453a4f9f0321b61ef9c4f1a0bbfe6eda04b95",
+    "process-evidence-review.test.mjs": "43ce407d7dfade7c127997f87f30da6d8c8a59913d254ba590cc16f8100759c4"
+  },
+  "gitBlobSHAs": {
+    "process-evidence.mjs": "cfaef1fb6a5571ff85fef62c98cf3330c801bda4",
+    "process-evidence.test.mjs": "00f2e0c0a889d5b550ebee91745622822db84654",
+    "process-evidence-review.mjs": "85eadaeab92ba57909605b2640566dfb11fdfd56",
+    "process-evidence-review.test.mjs": "4a02c7b837df5262d56eb30dd1e9e1aaeff393fa"
+  }
+}

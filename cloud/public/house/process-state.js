@@ -1,9 +1,10 @@
+import {normalizeHouseWork} from './work-courier.js';
 import {ROOM_IDS} from './layout.js';
+import {normalizeIcarusJourneys} from './sky-journeys.js';
 
 export const PROCESS_PHASES=Object.freeze(['observe','understand','connect','apply','refute','retain']);
 export const PROCESS_STATES=Object.freeze(['idle','running','passed','failed','waiting']);
 export const PHASE_LABELS=Object.freeze({observe:'Observar',understand:'Comprender',connect:'Conectar',apply:'Aplicar',refute:'Refutar',retain:'Conservar'});
-// These are coordinator-reported outcomes, not independent evidence or integration claims.
 export const STATE_LABELS=Object.freeze({idle:'En reposo',running:'En ejecución',passed:'Resultado reportado',failed:'Fallo reportado',waiting:'En espera'});
 const aliases={experience:'mind',suceso:'constellation',agents:'constellation',weights:'refutation',chat:'salon',research:'mind',library:'mind',tools:'body',review:'refutation',video:'cinema',creative:'games',core:'language',lor:'language',external:'constellation'};
 const identifier=value=>typeof value==='string'&&/^[a-z0-9_-]{1,40}$/.test(value);
@@ -16,7 +17,7 @@ export function normalizeProcessState(value){
  if(Array.isArray(value?.processes))for(const raw of value.processes.slice(0,32)){
   if(!raw||!identifier(raw.id)||!PROCESS_STATES.includes(raw.state))continue;
   const room=ROOM_IDS.includes(raw.room)?raw.room:ROOM_IDS.includes(raw.id)?raw.id:Object.hasOwn(aliases,raw.id)?aliases[raw.id]:null;if(!room)continue;
-  const item={id:raw.id,room,state:raw.state};
+  const item={id:raw.id,room,state:raw.state};if(typeof raw.actorId==='string'&&/^[a-z0-9-]{1,64}$/.test(raw.actorId))item.actorId=raw.actorId;
   if(typeof raw.label==='string'&&raw.label.trim())item.label=raw.label.replace(/\s+/g,' ').trim().slice(0,64);
   if(PROCESS_PHASES.includes(raw.phase))item.phase=raw.phase;
   if(raw.counters&&typeof raw.counters==='object'){
@@ -26,7 +27,7 @@ export function normalizeProcessState(value){
   processes.push(item);
  }
  const at=typeof value?.at==='string'&&Number.isFinite(Date.parse(value.at))?new Date(value.at).toISOString():null;
- return {at,connected:value?.connected!==false,processes};
+ return {at,connected:value?.connected!==false,processes,...(value?.icarus?{icarus:normalizeIcarusJourneys(value.icarus)}:{}),...(value?.houseWork?{houseWork:normalizeHouseWork(value.houseWork)}:{})};
 }
 const priorities={running:5,failed:4,waiting:3,passed:2,idle:1};
 export function processForRoom(value,room,{ageMs=0}={}){
@@ -34,8 +35,6 @@ export function processForRoom(value,room,{ageMs=0}={}){
  if(!process)return {id:room,room,state:'waiting',label:'Sin telemetría',workVerified:false};
  const fresh=value.connected!==false&&!!value.at&&Number.isFinite(ageMs)&&ageMs>=0&&ageMs<=75000;
  if(!fresh&&process.state==='running')return {...process,state:'waiting',label:value.connected===false?'Puente desconectado':'Sin señal reciente',workVerified:false};
- // workVerified here means only that recent running telemetry was received.
- // It does not mean the task result or an artifact was independently verified.
  return {...process,workVerified:fresh&&process.state==='running'};
 }
 export function creatureArchetype(process,room){
@@ -46,11 +45,8 @@ export function creatureArchetype(process,room){
  return 'human';
 }
 export function measuredChanges(value,{now=Date.now(),maxAgeMs=75000}={}){
- // Counters are coordinator-reported; do not keep displaying them as current
- // after the telemetry expires or when its timestamp is invalid/future-dated.
- const timestamp=typeof value?.at==='string'?Date.parse(value.at):NaN;
- const age=now-timestamp;
- if(value?.connected===false||!Number.isFinite(timestamp)||!Number.isFinite(age)||age<0||age>maxAgeMs)return null;
+ const timestamp=typeof value?.at==='string'?Date.parse(value.at):NaN,age=now-timestamp;
+ if(!Number.isFinite(maxAgeMs)||maxAgeMs<0||value?.connected===false||!Number.isFinite(timestamp)||!Number.isFinite(age)||age<0||age>maxAgeMs)return null;
  const accepted=value?.processes?.find(item=>item.id==='experience')?.counters?.accepted;
  return counter(accepted)?accepted:null;
 }

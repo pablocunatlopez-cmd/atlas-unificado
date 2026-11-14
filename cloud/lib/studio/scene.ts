@@ -2,14 +2,14 @@ export type StudioMode='code'|'image'|'3d'|'game';
 export type Vec3=[number,number,number];
 export type Material={color:Vec3;roughness:number;metalness:number;emission:number};
 export type SceneObject={type:'sphere'|'box';position:Vec3;size:Vec3;material:number;yaw:number;tag?:'player'|'goal'|'obstacle'};
-export type Brief={mode:StudioMode;title:string;prompt:string;variant:'gallery'|'product'|'architecture'|'forest'|'neon'|'driving'|'exploration'|'tasks'|'calculator'|'notes'|'landing';palette:string;lighting:'day'|'sunset'|'night';seed:number;quality:'balanced'|'high';accent:Vec3;unsupported:string[];plan?:{objects:SceneObject[];design?:string}};
+export type Brief={meshRows?:12|18|24;mode:StudioMode;title:string;prompt:string;variant:'gallery'|'product'|'architecture'|'forest'|'neon'|'driving'|'exploration'|'tasks'|'calculator'|'notes'|'landing';palette:string;lighting:'day'|'sunset'|'night';seed:number;quality:'balanced'|'high';accent:Vec3;unsupported:string[];plan?:{objects:SceneObject[];design?:string}};
 export type Scene={brief:Brief;objects:SceneObject[];materials:Material[];camera:Vec3;target:Vec3;sky:Vec3;sun:Vec3;fog:number;exposure:number;scene:number};
 export const plain=(s:string)=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 export function seededRandom(seed:number){let n=seed>>>0;return()=>{n+=0x6D2B79F5;let t=n;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 export function parseBrief(prompt:string,mode:StudioMode,seed?:number,quality:'balanced'|'high'='balanced'):Brief{
  if(!prompt.trim()||prompt.length>4000)throw new Error('Describe el proyecto en 1–4.000 caracteres.');
  const s=plain(prompt);let variant:Brief['variant']=mode==='code'?'landing':'gallery';
- if(mode==='code')variant=/tarea|pendiente|kanban|lista/.test(s)?'tasks':/calcul/.test(s)?'calculator':/notas|bloc|diario/.test(s)?'notes':'landing';
+ if(mode==='code')variant=/tarea|pendiente|kanban|\blistas?\b/.test(s)?'tasks':/calcul/.test(s)?'calculator':/notas|bloc|diario/.test(s)?'notes':'landing';
  else if(mode==='game')variant=/carrer|coche|conduc|rally/.test(s)?'driving':'exploration';
  else variant=/bosque|naturaleza|arbol/.test(s)?'forest':/neon|futur|cyberpunk/.test(s)?'neon':/casa|arquitect|habitacion|salon|villa/.test(s)?'architecture':/galeria|museo|exposicion/.test(s)?'gallery':/esfera|producto|metal|oro|escultura/.test(s)?'product':'gallery';
  const palettes:{term:RegExp;name:string;color:Vec3}[]=[{term:/rojo|roja/,name:'Carmín',color:[.65,.055,.045]},{term:/azul/,name:'Azul cobalto',color:[.045,.18,.7]},{term:/verde/,name:'Verde pino',color:[.08,.3,.18]},{term:/rosa|magenta|lila/,name:'Magenta',color:[.65,.08,.42]},{term:/oro|dorado|dorada/,name:'Oro',color:[.83,.57,.22]},{term:/negro|negra/,name:'Grafito',color:[.055,.06,.065]},{term:/blanco|blanca/,name:'Porcelana',color:[.88,.87,.82]}];

@@ -1,4 +1,8 @@
-# Atlas · código compartible
+# Lía · Atlas, Ion e Ícaro
+
+La versión de nube actual desarrolla a **Lía**: Atlas es la mente, Ion el cuerpo e Ícaro/Dios el cielo o la constelación. Los tres tienen entornos propios y un cuarto entorno compartido para Lía. La actualización de `cloud/` sincroniza la versión Sites, conserva tus trece commits del 14 de noviembre y añade trabajo de especialistas mientras la casa está abierta.
+
+Consulta [la integración de GitHub](cloud/docs/github-sync-2026-11-14.md), [la arquitectura vigente](cloud/docs/lia-architecture.md) y [el ciclo de trabajo visible](cloud/docs/open-house-loop.md). Los apartados de ejecución local describen el laboratorio opcional del coordinador original.
 
 Asistente general local con chat Qwen, fuentes públicas, biblioteca GitHub, refutación, funciones JavaScript aisladas y prototipos. Su interfaz móvil es una casa 3D basada en ERAS, con diez salas: conversación, música, laboratorio, juegos, cine, constelación, mente, Ion, refutación y lenguaje. Esta distribución conserva el código y sus pruebas; excluye claves, conversaciones, memoria privada, pesos Qwen, checkpoints y datos de entrenamiento privados del equipo de origen. `cloud/` conserva seis semillas documentales o experimentales ya publicadas en Sites y dos fuentes JavaScript de runtime, incluido el pequeño MLP original necesario para compilar su interfaz histórica.
 
@@ -21,7 +25,7 @@ Las variables opcionales `ATLAS_LAB_PYTHON` y `ATLAS_GAMES_ROOT` seleccionan el 
 
 GitHub almacena y comparte código; no ejecuta este servidor ni ofrece una GPU para Qwen. `cloud/` contiene la interfaz Sites/Vinext y la cola D1, con inicio de sesión y conversaciones separadas por usuario. El proceso `continuous/atlas-cloud-bridge.mjs` consulta esa cola mediante HTTPS y solicita sesiones compartidas al Qwen del PC, sin enviar documentos ni memoria privada. Un navegador móvil no necesita la IP del ordenador; usa la URL publicada del Site. No se abre el puerto administrativo `8788` a Internet.
 
-El PC, su modelo y el puente deben permanecer encendidos para responder. Configura `ATLAS_BRIDGE_TOKEN` en el alojamiento y guarda el mismo valor únicamente en el archivo local ignorado `continuous/data/cloud-bridge.key`. Su compañero `cloud-bridge.json` declara el origen HTTPS del Site. `Start-Cloud-Bridge.ps1` y el supervisor inician el puente solo cuando existen esos archivos. No copies claves de la instalación original. Consulta `cloud/README.md` para compilación, migraciones y límites.
+La ruta histórica de Qwen local requiere su PC y puente encendidos. La versión Sites actual utiliza la inferencia de nube configurada en el servidor y no necesita ese PC; no se incluyen claves en el repositorio ni se activan pagos. El puente sigue siendo opcional para el laboratorio local. Configura `ATLAS_BRIDGE_TOKEN` en el alojamiento y guarda el mismo valor únicamente en el archivo local ignorado `continuous/data/cloud-bridge.key`. Su compañero `cloud-bridge.json` declara el origen HTTPS del Site. `Start-Cloud-Bridge.ps1` y el supervisor inician el puente solo cuando existen esos archivos. No copies claves de la instalación original. Consulta `cloud/README.md` para compilación, migraciones y límites.
 
 El observatorio `/actividad/` muestra los procesos, las fechas de revisión, los constructores y el catálogo público verificado. Consulta el estado cada diez segundos y deja de confirmar conexión cuando la señal caduca. Conserva el último informe con una etiqueta explícita; los contadores locales y las herramientas públicas son datos distintos. Los ejemplos del catálogo se preparan en el chat y requieren que el usuario los envíe.
 

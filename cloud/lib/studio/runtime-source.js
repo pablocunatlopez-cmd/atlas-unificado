@@ -1,9 +1,10 @@
 // Self-contained raster meshes replace the former multi-bounce ray tracer.
-function atlasRasterGeometry(kind){
+function atlasRasterGeometry(kind,rows=12){
  const position=[],normal=[],tri=(a,b,c,na,nb=na,nc=na)=>{position.push(...a,...b,...c);normal.push(...na,...nb,...nc);};
  if(kind==='sphere'){
   const p=(v,u)=>[Math.sin(v)*Math.cos(u),Math.cos(v),Math.sin(v)*Math.sin(u)];
-  for(let y=0;y<12;y++)for(let x=0;x<18;x++){const a=p(y*Math.PI/12,x*Math.PI/9),b=p((y+1)*Math.PI/12,x*Math.PI/9),c=p((y+1)*Math.PI/12,(x+1)*Math.PI/9),d=p(y*Math.PI/12,(x+1)*Math.PI/9);tri(a,c,b,a,c,b);tri(a,d,c,a,d,c);}
+  rows=[12,18,24].includes(rows)?rows:12;const columns=rows*1.5;
+  for(let y=0;y<rows;y++)for(let x=0;x<columns;x++){const a=p(y*Math.PI/rows,x*2*Math.PI/columns),b=p((y+1)*Math.PI/rows,x*2*Math.PI/columns),c=p((y+1)*Math.PI/rows,(x+1)*2*Math.PI/columns),d=p(y*Math.PI/rows,(x+1)*2*Math.PI/columns);tri(a,c,b,a,c,b);tri(a,d,c,a,d,c);}
  }else if(kind==='disc'){
   for(let i=0;i<24;i++){const a=i*Math.PI/12,b=(i+1)*Math.PI/12;tri([0,0,0],[Math.cos(b),0,Math.sin(b)],[Math.cos(a),0,Math.sin(a)],[0,1,0]);}
  }else{
@@ -44,7 +45,7 @@ function atlasRuntime(C){
   const code=atlasRasterShaders(webgl2),program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,code.vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,code.fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   const locations={};for(const name of ['viewProjection','objectPosition','objectSize','objectYaw','camera','sunDirection','skyTint','materialColor','roughness','metalness','emission','fog','exposure','opacity','groundMode'])locations[name]=gl.getUniformLocation(program,name);
   const pa=gl.getAttribLocation(program,'vertexPosition'),na=gl.getAttribLocation(program,'vertexNormal'),meshes={};
-  for(const kind of ['box','sphere','disc']){const data=atlasRasterGeometry(kind),position=gl.createBuffer(),normal=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,position);gl.bufferData(gl.ARRAY_BUFFER,data.position,gl.STATIC_DRAW);gl.bindBuffer(gl.ARRAY_BUFFER,normal);gl.bufferData(gl.ARRAY_BUFFER,data.normal,gl.STATIC_DRAW);buffers.push(position,normal);meshes[kind]={position,normal,count:data.count};}
+  for(const kind of ['box','sphere','disc']){const data=atlasRasterGeometry(kind,C.meshRows),position=gl.createBuffer(),normal=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,position);gl.bufferData(gl.ARRAY_BUFFER,data.position,gl.STATIC_DRAW);gl.bindBuffer(gl.ARRAY_BUFFER,normal);gl.bufferData(gl.ARRAY_BUFFER,data.normal,gl.STATIC_DRAW);buffers.push(position,normal);meshes[kind]={position,normal,count:data.count};}
   const base=structuredClone(C.scene),objects=structuredClone(base.objects).slice(0,40),isGame=base.brief.mode==='game',driving=base.brief.variant==='driving';
   let width=0,height=0,dirty=true,paused=false,disposed=false,contextLost=false,hasRendered=false,frameId=0,qualityScale=1,lastTime=0,frames=0,frameStarted=0;
   const initialTarget=base.target.slice(),orbitTarget=base.target.slice();let azimuth=Math.atan2(base.camera[0]-base.target[0],base.camera[2]-base.target[2]),elevation=Math.asin((base.camera[1]-base.target[1])/Math.max(.1,Math.hypot(...base.camera.map((n,i)=>n-base.target[i])))),distance=Math.hypot(...base.camera.map((n,i)=>n-base.target[i]));const initialOrbit={azimuth,elevation,distance};

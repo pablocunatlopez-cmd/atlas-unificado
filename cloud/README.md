@@ -1,3 +1,5 @@
+> Versión sincronizada del 14-11-2026: esta aplicación es la casa de Lía en Sites. Conserva el código histórico del puente, pero su inferencia configurada de nube funciona sin PC. Lee docs/lia-architecture.md, docs/open-house-loop.md y docs/github-sync-2026-11-14.md. Las instrucciones siguientes del puente corresponden a la ruta local opcional.
+
 # Atlas · Una casa para una IA que actúa
 
 La dirección principal reúne la casa virtual 3D, conversación con Qwen local, música, vídeo y el observatorio de la espiral. La interfaz y los historiales privados están en Sites; la inferencia y los experimentos autónomos se ejecutan en el PC mediante un puente HTTPS saliente. GitHub distribuye el código y no aloja la GPU.

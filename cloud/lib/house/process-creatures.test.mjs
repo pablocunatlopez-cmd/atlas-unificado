@@ -6,10 +6,10 @@ import {RESIDENTS,WORKSTATIONS,AUDIENCE,residentById} from '../../public/house/r
 import {normalizeProcessState} from '../../public/house/process-state.js';
 
 const date='2026-11-01T12:00:00.000Z';
-function fixture(t){
+function fixture(t,options={}){
  const prior=globalThis.document,context=new Proxy({},{get:()=>()=>{},set:()=>true});
  globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>context})};
- const scene=new THREE.Scene(),textures=[],creatures=createProcessCreatures(scene,textures,{now:()=>Date.parse(date)});
+ const scene=new THREE.Scene(),textures=[],creatures=createProcessCreatures(scene,textures,{now:()=>Date.parse(date),...options});
  t.after(()=>{const geometries=new Set(),materials=new Set();scene.traverse(item=>{if(item.isInstancedMesh)item.dispose();if(item.geometry)geometries.add(item.geometry);if(item.material)materials.add(item.material);});for(const item of geometries)item.dispose();for(const item of materials)item.dispose();for(const item of textures)item.dispose();if(prior===undefined)delete globalThis.document;else globalThis.document=prior;});
  return {scene,textures,creatures,bodies:scene.getObjectByName('atlas-process-bodies'),heads:scene.getObjectByName('atlas-process-heads'),marks:scene.getObjectByName('atlas-measured-changes')};
 }
@@ -73,4 +73,26 @@ test('operator labels stay above the head, cap at 160 CSS pixels and disappear i
  camera.position.set(0,25,30);camera.lookAt(0,0,-3);creatures.update(2,camera,height);assert.ok(scene.getObjectByName('atlas-residents').children.filter(item=>item.isSprite).every(label=>!label.visible));
  camera.position.set(7,1.64,4);camera.lookAt(sprite.position);creatures.update(3,camera,height);assert.equal(sprite.visible,false);
  assert.ok(sprite.position.y-.25>1.44,'the full-size lab label clears the fox ears');assert.equal(scene.getObjectByName('atlas-resident-label-cinema-audience-1'),undefined);
+});
+
+test('a real consultation moves its visitor and label to Ícaro then returns to the station without creating a learning mark',t=>{
+ const {creatures,scene,bodies,marks}=fixture(t),resident=residentById('games-maquette');
+ const event={id:'icarus-1',phase:'returning',processId:'creative',focus:'3d',at:date,startedAt:date,sourceCount:2,usedReferenceCount:1,outcome:'references-available'};
+ const state={at:date,connected:true,processes:[],icarus:{schema:1,total:1,completed:1,blocked:0,active:null,recent:[event]}},original=structuredClone(state);
+ creatures.setState(state,0);for(let ms=0;ms<=9600;ms+=100)creatures.update(ms/1000);
+ const current=creatures.positionForResident(resident.id),label=scene.getObjectByName('atlas-resident-label-'+resident.id);
+ assert.ok(Math.hypot(current[0]-resident.position[0],current[2]-resident.position[2])>8);assert.equal(current[2]<0,true);
+ assert.ok(Math.abs(label.position.x-current[0])<1e-6);assert.ok(Math.abs(label.position.z-current[2])<1e-6);
+ const camera=new THREE.PerspectiveCamera(67,390/844,.08,190);camera.position.set(0,1.64,-3.3);camera.lookAt(label.position);creatures.update(9.7,camera,844);assert.equal(label.visible,true,'the moving label belongs to its actual room, not its original workshop');
+ const record=bodies.userData.work.find(item=>item.id===resident.id);assert.equal(record.journey.recorded,true);assert.equal(record.workVerified,false,'the visual receipt alone never authorizes process work');assert.equal(marks.visible,false);
+ assert.deepEqual(creatures.positionForResident('sky-agents'),residentById('sky-agents').position);
+ for(let ms=9800;ms<=30000;ms+=100)creatures.update(ms/1000);assert.deepEqual(creatures.positionForResident(resident.id),resident.position);
+ const instances=[];scene.traverse(item=>{if(item.isInstancedMesh)instances.push(item);});assert.equal(instances.length,3);assert.equal(bodies.userData.roster.length,24);assert.deepEqual(state,original);
+});
+
+test('a visitor freezes when its consultation signal is no longer fresh',t=>{
+ const {creatures}=fixture(t),resident=residentById('games-maquette'),event={id:'icarus-4',phase:'consulting',processId:'creative',focus:'3d',at:date,startedAt:date,sourceCount:0,usedReferenceCount:0,outcome:'in-progress'};
+ const state={at:date,connected:true,processes:[],icarus:{schema:1,total:1,completed:0,blocked:0,active:event,recent:[]}};
+ creatures.setState(state,0);for(let ms=0;ms<=3000;ms+=100)creatures.update(ms/1000);const before=creatures.positionForResident(resident.id);
+ creatures.setState({...state,connected:false},3100);creatures.update(3.2);creatures.update(6);assert.deepEqual(creatures.positionForResident(resident.id),before);
 });
