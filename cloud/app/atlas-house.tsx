@@ -34,6 +34,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|undefined>(undefined),[sceneError,setSceneError]=useState('');
   const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),previousFocus=useRef<HTMLElement|null>(null),lastRequested=useRef<HouseRoom|null>(null),pollBusy=useRef(false),roomNavigation=useRef<HTMLElement|null>(null);
   const active=rooms[room],ActiveIcon=active.icon;
+  const triad=[{name:'Atlas',role:'mente'},{name:'Ion',role:'cuerpo'},{name:'Ícaro',role:'cielo + constelación'}];
   useEffect(()=>{
    let alive=true;const controller=new AbortController();
    async function poll(){if(pollBusy.current||document.hidden)return;pollBusy.current=true;try{const response=await fetch('/api/cloud/status',{cache:'no-store',signal:AbortSignal.any([controller.signal])});if(!response.ok)throw new Error('');const data=await response.json() as Status; if(alive){ setStatus(data); setStatusFailed(false); } }catch{ if(alive){ setStatusFailed(true);} } finally{ if(alive) pollBusy.current=false; }}
@@ -82,6 +83,11 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
      <button className={styles.menuButton} type="button" onClick={()=>setMenu(value=>!value)} aria-label={menu?'Cerrar navegación de la casa':'Abrir navegación de la casa'} aria-expanded={menu} aria-controls="atlas-house-room-menu"><Menu size={18}/></button>
     </div>
    </header>
+
+   <div className={styles.triadBar} aria-label="Pirámide de Lía">
+    <span className={styles.triadLabel}>LÍA</span>
+    {triad.map(item=><div key={item.name} className={styles.triadBadge}><strong>{item.name}</strong><small>{item.role}</small></div>)}
+   </div>
 
    <section className={`${styles.roomCard} ${!entered?styles.introCard:''}`} data-details-open={!entered||roomDetailsOpen} aria-label="Espacio actual" style={{'--room-accent':active.accent} as React.CSSProperties}>
     <div className={styles.eyebrow}><span>△</span> {entered?'ENTRAS EN LÍA':'ATLAS · ION · ÍCARO'}</div>
