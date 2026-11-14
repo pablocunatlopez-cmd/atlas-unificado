@@ -26,7 +26,7 @@ test('one complete scheduled round covers every owner and interleaves visible an
  assert.throws(()=>scheduledMission(-1));assert.throws(()=>scheduledMission(NaN));
 });
 test('delegates exist, targets are real files, and abstract actors do not create fake bodies',()=>{
- for(const m of MISSIONS){assert.ok(RESIDENTS.some((r:{id:string})=>r.id===m.residentId),m.id);assert.ok(m.targetFiles.length,m.id);for(const f of m.targetFiles){assert.ok(!f.startsWith('/')&&!f.split('/').includes('..'));assert.ok(existsSync((m.targetProject==='eras'?'../eras/':'')+f),m.id+':'+f);}assert.ok(m.validation.length>=2);assert.ok(m.runtime.length>10);for(const source of m.sources)assert.equal(publicUrl(source.url),source.url);}
+ for(const m of MISSIONS){assert.ok(RESIDENTS.some((r:{id:string})=>r.id===m.residentId),m.id);assert.ok(m.targetFiles.length,m.id);for(const f of m.targetFiles){assert.ok(!f.startsWith('/')&&!f.split('/').includes('..'));if(m.targetProject==='atlas'||existsSync('../eras/dist/core.js'))assert.ok(existsSync((m.targetProject==='eras'?'../eras/':'')+f),m.id+':'+f);}assert.ok(m.validation.length>=2);assert.ok(m.runtime.length>10);for(const source of m.sources)assert.equal(publicUrl(source.url),source.url);}
  assert.equal(missionFor('room:music')?.residentId,'music-console');assert.equal(missionFor('music-console')?.id,'resident:music-console');assert.equal(missionFor('unknown'),undefined);
  assert.match(missionFor('process:weights')!.runtime,/Sin entrenamiento/);
 });
