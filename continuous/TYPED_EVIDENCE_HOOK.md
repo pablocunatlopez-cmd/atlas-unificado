@@ -1,30 +1,28 @@
 # Evidencia tipada desde la auditoría local
 
-## Flujo
+## Flujo automático (recomendado)
 
-1. `reviewCapabilities` (`autonomous-review.mjs`) adjunta `typedEvidence` al informe con datos reales de checks/candidatos (`typed-evidence-from-report.mjs`). **Nunca** inventa `integratedRevision`.
-2. Tras cada auditoría, publicar con:
+1. `reviewCapabilities` adjunta `typedEvidence` al informe (`autonomous-review.mjs` + `typed-evidence-from-report.mjs`). **Nunca** inventa `integratedRevision`.
+2. El historial se guarda en `data/autonomous-review.json`.
+3. El **puente** (`atlas-cloud-bridge.mjs`), en cada tick, lee el último informe; si `report.at` es nuevo, llama a `publishReportEvidence`:
+   - escribe `data/typed-evidence.json`
+   - POST autenticado a `/api/cloud/evidence` en Sites
+4. `/actividad/` lee el almacén efímero y muestra unknown si está vacío.
+
+## CLI manual
 
 ```bash
 node continuous/publish-report-evidence.mjs
 ```
 
-Eso escribe `data/typed-evidence.json` y, si existen `data/cloud-bridge.json` + `data/cloud-bridge.key`, hace POST autenticado a `/api/cloud/evidence`.
+## Enganche opcional en `service.mjs`
 
-3. Sites: `GET /api/cloud/evidence` lista el almacén efímero; la UI en `/actividad/` muestra unknown si está vacío.
-
-## Enganche automático en `service.mjs` (una línea)
-
-Después de guardar el historial de autonomía, añadir:
+No es obligatorio si el puente está en marcha. Si quieres publicar en el mismo proceso del coordinador:
 
 ```js
 import {publishReportEvidence} from './publish-report-evidence.mjs';
-// ...
+// tras event('autonomous_review', ...)
 void publishReportEvidence(report).then(result=>{
   if(result.published)event('typed_evidence','Evidencia tipada publicada',result);
 }).catch(()=>{});
 ```
-
-junto a `event('autonomous_review','Auditoría local completada',...)`.
-
-Hasta que ese enganche esté en el servicio en ejecución, usa el CLI del paso 2 tras cada revisión.
