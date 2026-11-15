@@ -19,7 +19,7 @@ export async function auditAtlasApprovalMarkers({directory,maxMarkers=10000}={})
  if(names.length>maxMarkers)throw Error('Marker audit limit exceeded');
  const findings=[];
  for(const name of names.sort()){
-  if(!/^[a-f0-9]{64}\\.used$/.test(name)){
+  if(!/^[a-f0-9]{64}\.used$/.test(name)){
    findings.push({name,status:'unexpected_entry'});
    continue;
   }
