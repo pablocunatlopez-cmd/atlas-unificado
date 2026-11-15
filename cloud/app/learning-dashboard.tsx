@@ -4,6 +4,7 @@ import {useEffect,useState} from 'react';
 import {LEARNING_CATALOG} from '../lib/core/learning-status.mjs';
 import ExperienceCreativePreview,{readCreativePreview,type PublicCreativePreview} from './experience-creative-preview';
 import TypedEvidencePanel from './typed-evidence-panel';
+import SessionHeartbeatStatus from './session-heartbeat-status';
 import styles from './learning-dashboard.module.css';
 
 type ProcessState='idle'|'running'|'passed'|'failed'|'waiting';
@@ -145,6 +146,7 @@ export default function LearningDashboard(){
 
    <section className={styles.toolsSection} aria-labelledby="tools-heading"><div className={styles.sectionHead}><div><p className={styles.eyebrow}>03 / LO QUE YA SE PUEDE USAR</p><h2 id="tools-heading">Herramientas verificadas</h2></div><span className={styles.sectionMeta}>Catálogo público {learning?`· ${tools.length}`:''}</span></div><p className={styles.toolsIntro}>Funciones generadas por Atlas y contrastadas con casos externos. Cada ejemplo se prepara en el chat; tú decides cuándo enviarlo.</p>{tools.length?<div className={styles.toolGrid}>{tools.map((tool,index)=><article className={styles.toolCard} key={tool.taskId}><div className={styles.toolTop}><span>{String(index+1).padStart(2,'0')}</span><span className={styles.contractBadge}>✓ {tool.passed}/{tool.cases}</span></div><h3>{tool.name}</h3><p className={styles.toolDate}>Verificada <Stamp value={tool.createdAt} empty="sin fecha comunicada"/></p>{examples[tool.taskId]?<a href={'/chat/?prompt='+encodeURIComponent(examples[tool.taskId])}>Preparar ejemplo <Arrow/></a>:<span className={styles.noExample}>Disponible desde el chat</span>}</article>)}</div>:<div className={styles.catalogEmpty}><span>⟡</span><h3>{learning?'Sin herramientas públicas comunicadas':'Esperando el catálogo'}</h3><p>Este panel solo mostrará funciones aprobadas que el coordinador haya autorizado para el chat compartido.</p></div>}</section>
 
+   <SessionHeartbeatStatus bridgeOnline={connected}/>
    <TypedEvidencePanel/>
    <section className={styles.evidence} aria-labelledby="evidence-heading"><div><p className={styles.eyebrow}>CONSERVAR LO QUE RESISTE</p><h2 id="evidence-heading">Los fallos también dejan huella.</h2><p>{core?`${core.accepted} cambios de política aceptados y ${core.rejected} propuestas no aceptadas en el registro comunicado.`:'Las propuestas de política se contrastan antes de promoverse.'} Los resultados sin mejora conservan la versión anterior.</p></div><div className={styles.weights}><span className={styles.quietTag}>PESOS QWEN · SIN CAMBIO ACTIVO</span><p>{telemetry?.evolution?`${telemetry.evolution.candidatesTrained} candidatas entrenadas comunicadas. `:''}Entrenar un adaptador no basta para activarlo. La política de Atlas y los pesos del modelo tienen evaluaciones separadas.</p></div></section>
    <footer className={styles.footer}><span>Atlas observa, contrasta y conserva.</span><a href="/chat/">Hablar con Atlas <Arrow/></a></footer>
