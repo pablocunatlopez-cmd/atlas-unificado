@@ -18,7 +18,7 @@ export function rankModelCandidates(baselineRuns,candidates,options={}){
     b.candidate.passed-a.candidate.passed||
     a.regressions.length-b.regressions.length||
     a.candidate.latencyP95Ms-b.candidate.latencyP95Ms||
-    a.candidate.ttftP95Ms-b.candidate.ttftP95Ms||
+    (a.candidate.ttftP95Ms??Infinity)-(b.candidate.ttftP95Ms??Infinity)||
     a.name.localeCompare(b.name)
   );
   return {recommended:results.find(result=>result.accepted)?.name??null,results};
