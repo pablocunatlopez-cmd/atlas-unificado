@@ -10,6 +10,7 @@ import CinemaPanel from './cinema-panel';
 import ConstellationPanel from './constellation-panel';
 import CoreObservatory,{type CoreTelemetry} from './core-observatory';
 import styles from './atlas-house.module.css';
+import LiveWorkOptIn from './live-work-opt-in';
 import {RESIDENTS,WORKSTATIONS,residentById,processForResident} from '../public/house/residents.js';
 import {telemetryAge,TELEMETRY_FRESH_MS} from '../public/house/process-state.js';
 import {readCreativePreview} from './experience-creative-preview';
@@ -136,6 +137,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
      <button className={styles.viewButton} type="button" onClick={()=>void captureView()} disabled={!api||capturing} aria-label="Capturar imagen PNG de la casa 3D" title="Capturar imagen PNG de la casa 3D"><Camera size={15}/></button>
      <button className={styles.viewButton} type="button" onClick={()=>setHudHidden(true)} aria-label="Ocultar la interfaz para ver la casa (tecla H)" title="Ocultar interfaz (H)"><Eye size={15}/></button>
      <span className={`${styles.modelBadge} ${status?.online&&!statusFailed?styles.online:''}`} title={statusFailed?'No se pudo comprobar el estado del PC (red, timeout o servidor).':status?.online?status.capabilities?.gpuMode?`GPU: ${status.capabilities.gpuMode}`:'Estado del PC disponible':'Sin conexión del PC'}>{status?.online&&!statusFailed?'En línea':'Sin enlace'}</span>
+     <LiveWorkOptIn room={room} bridgeOnline={connected}/>
      <button className={styles.share} type="button" onClick={()=>void share()} aria-label="Compartir Lía"><Share2 size={15}/><span>Compartir</span></button>
      {signedIn?<div className={styles.profile} title={displayName}><span>{initials}</span><strong>{displayName.split(' ')[0]}</strong></div>:<a className={styles.signIn} href={signInPath} target="_top">Iniciar sesión</a>}
      <button className={styles.menuButton} type="button" onClick={()=>setMenu(value=>!value)} aria-label={menu?'Cerrar navegación de la casa':'Abrir navegación de la casa'} aria-expanded={menu} aria-controls="atlas-house-room-menu"><Menu size={18}/></button>
