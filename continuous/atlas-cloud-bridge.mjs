@@ -47,10 +47,14 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
   if(!page.ok||!value)throw Error('No se pudo autenticar el coordinador local.');return value;
  }
  async function localPost(route,body,jobSignal){
-  for(;;){
+  const maxBusyRetries=8;
+  for(let attempt=0;attempt<=maxBusyRetries;attempt++){
    jobSignal.throwIfAborted();const value=await localToken(jobSignal);
    const response=await request(localBase+route,{method:'POST',redirect:'error',signal:jobSignal,headers:{'Content-Type':'application/json','X-Atlas-Token':value,Origin:localBase},body:JSON.stringify(body)});
-   if(response.status===429){await sleep(3000);continue;}return response;
+   if(response.status!==429)return response;
+   if(attempt===maxBusyRetries)throw Error('El coordinador local sigue ocupado tras varios intentos.');
+   await sleep(3000);
+   jobSignal.throwIfAborted();
   }
  }
  async function chat(messages,jobSignal,{json=false,internet=false,creativeMode=null}={}){
