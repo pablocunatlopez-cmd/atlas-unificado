@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {planCreativeWorld} from './creative-plan.mjs';
 import {sanitizeProcessTelemetry} from './process-telemetry.mjs';
 import {readSessionLiveWork} from './session-live-work-gate.mjs';
+import {publishEvidence} from './evidence-publish.mjs';
 const ROOT=path.dirname(fileURLToPath(import.meta.url)),DATA=path.join(ROOT,'data');
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const VIDEO_ID=/^video-\d{13}-[a-f0-9]{8}$/;
@@ -61,8 +62,6 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
   if(!CLOUD_JOB_ID.test(job.id))throw Error('Identificador de vídeo de nube inválido.');
   const prompt=typeof job.question==='string'?job.question:[...job.messages].reverse().find(message=>message.role==='user')?.content;
   if(typeof prompt!=='string'||!prompt.trim()||prompt.length>2000)throw Error('Petición de vídeo inválida.');
-  // The cloud queue chooses a small fixed budget. Never forward arbitrary URLs,
-  // paths, nodes or model names from an incoming job to the PC.
   const supplied=job.parameters&&typeof job.parameters==='object'?job.parameters:{};
   const parameters={frames:[17,33,49,65,81].includes(supplied.frames)?supplied.frames:17,width:480,height:272,steps:Number.isInteger(supplied.steps)&&supplied.steps>=5&&supplied.steps<=30?supplied.steps:5,fps:8};
   const response=await localPost('/media/generate',{prompt,parameters},jobSignal);
@@ -126,6 +125,12 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
      if(!response.ok||review.queued!==true)throw Error('El coordinador no pudo encolar la revisión.');
      const current=await request(localBase+'/process/status',{redirect:'error',signal:jobSignal});
      const experience=current.ok?sanitizeProcessTelemetry(await current.json())?.experience:null;
+     if(review.evidence){
+      try{
+       const published=await publishEvidence(siteUrl,token,review.evidence,{request,signal:jobSignal});
+       if(published.ok)emit({status:'evidence_published',jobId:job.id,accepted:published.body?.accepted??1});
+      }catch{/* evidence publish must not fail the user-facing review acknowledgement */}
+     }
      safeResult={answer:'He pedido al coordinador una revisión real de mi programa. Atlas elige la siguiente pregunta y trabaja con los ejecutores disponibles. '+(experience?`El registro comunica ${experience.experiences} experiencias y ${experience.learningChanges} ${experience.learningChanges===1?'cambio aceptado':'cambios aceptados'}. `:'')+'[Ver actividad de Atlas](/actividad/). Poner una revisión en marcha no significa que ya haya mejorado ni que se hayan cambiado los pesos de Qwen.',model:'atlas-coordinator',modelName:'Atlas · revisión autónoma'};
     }else if(kind==='lor'){
      onProgress({stage:'critic',progress:25});const response=await localPost('/lor/experiment',{},jobSignal),lor=await response.json();if(!response.ok||lor.synthetic!==true||typeof lor.verdict!=='string')throw Error('El experimento LOR no produjo evidencia válida.');
@@ -142,8 +147,6 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
     emit({status:'online',modelName,lastCompletedJob:job.id,sessionLiveWork});return {status:'completed',jobId:job.id};
    }catch(error){
     if(!signal?.aborted)await cloud('fail',{jobId:job.id,leaseToken:job.leaseToken,error:abort.signal.aborted?'Solicitud cancelada.':'El motor del PC no pudo completar esta respuesta. Puedes volver a intentarlo.'}).catch(()=>{});
-    // This diagnostic stays in the PC's bridge-status file. The cloud receives
-    // only the generic failure above; never include provider credentials here.
     const detail=String(error?.message||'Fallo local').replace(/\bsk-[A-Za-z0-9_-]+\b|Bearer\s+\S+/gi,'[credencial oculta]').slice(0,1000);
     emit({status:'job_failed',jobId:job.id,kind,stage,error:detail,sessionLiveWork});return {status:'failed',jobId:job.id};
    }finally{clearInterval(heartbeat);}
