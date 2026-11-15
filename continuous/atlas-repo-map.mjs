@@ -64,3 +64,27 @@ export function selectAtlasRepoContext(repoMap,{targets=[],maxFiles=30,maxBytes=
  }
  return {files:selected,totalBytes:bytes,missingTargets:targets.filter(t=>!nodes.has(t))};
 }
+
+/**
+ * Select affected modules (reverse dependencies) to target regression tests.
+ * Bounded breadth-first traversal; never executes source code.
+ */
+export function selectAtlasAffectedModules(repoMap,{targets=[],maxFiles=100}={}){
+ if(!repoMap||!Array.isArray(repoMap.files)||!Array.isArray(targets)||
+    !Number.isSafeInteger(maxFiles)||maxFiles<1||maxFiles>200)
+  throw Error('Invalid affected-module request');
+ const reverse=new Map(repoMap.files.map(f=>[f.path,[]]));
+ for(const file of repoMap.files){
+  if(!Array.isArray(file.imports))throw Error('Invalid repository map');
+  for(const dependency of file.imports)if(reverse.has(dependency))reverse.get(dependency).push(file.path);
+ }
+ const missingTargets=targets.map(cleanPath).filter(p=>!reverse.has(p));
+ const queue=targets.filter(p=>reverse.has(p)),seen=new Set(),affected=[];
+ while(queue.length&&affected.length<maxFiles){
+  const path=queue.shift();
+  if(seen.has(path))continue;
+  seen.add(path);affected.push(path);
+  for(const dependent of (reverse.get(path)||[]).sort())if(!seen.has(dependent))queue.push(dependent);
+ }
+ return {affected,missingTargets,truncated:queue.length>0};
+}
