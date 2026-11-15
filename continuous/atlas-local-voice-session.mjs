@@ -1,5 +1,6 @@
 import {createAtlasVoiceUiController} from './atlas-voice-ui-controller.mjs';
 import {answerAtlasReviewedVoice} from './atlas-reviewed-voice-chat.mjs';
+import {planAtlasVoiceTurn} from './atlas-voice-turn-planner.mjs';
 /**
  * End-to-end local voice flow orchestrator.
  * Host provides microphone/recording/transcription; this module never
@@ -16,8 +17,9 @@ export function createAtlasLocalVoiceSession({startRecording,stopAndTranscribe,
    const result=await stopAndTranscribe();
    if(!result||result.status!=='completed'||result.local!==true||
     typeof result.transcript!=='string')throw Error('Invalid local transcription');
+   const planned=planAtlasVoiceTurn({transcription:result});
    lastTranscription=result;
-   return result.transcript;
+   return planned.content;
   },
   onConfirm:async text=>{
    if(!lastTranscription)throw Error('No local transcription to confirm');
@@ -28,5 +30,9 @@ export function createAtlasLocalVoiceSession({startRecording,stopAndTranscribe,
    return response.answer;
   }
  });
- return Object.freeze({ui,render:()=>ui.render(),dispatch:(action)=>ui.dispatch(action)});
+ return Object.freeze({ui,render:()=>ui.render(),dispatch:(action)=>{
+  if(action==='voice-reset')lastTranscription=null;
+  if(action==='voice-start')lastTranscription=null;
+  return ui.dispatch(action);
+ }});
 }
