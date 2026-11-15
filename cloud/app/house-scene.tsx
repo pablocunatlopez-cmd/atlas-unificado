@@ -28,6 +28,7 @@ export type HouseAPI={
  focusResident:(id:string)=>void;
  focusEvolution:()=>void;
  setCreativeState:(value:PublicCreativePreview|null)=>void;
+ setErasManifest:(manifest:unknown)=>Promise<{accepted:boolean;objects:number}>;
  capture:()=>Promise<string>;
  record:(options?:{seconds?:number})=>Promise<HouseRecording>;
  revoke:(url:string)=>void;
@@ -49,7 +50,7 @@ export function HouseScene(props:Props){
     pending.current.set(requestId,{resolve:result=>resolve(result as T),reject,timeout});send(kind,{requestId,...value});
    });
   }
-  return {teleport:room=>send('teleport',{room}),overview:()=>send('overview'),focusResident:id=>send('resident',{id}),focusEvolution:()=>send('evolution'),setCreativeState:value=>send('creative',{value}),capture:()=>request<string>('capture',{},8000),record:options=>{const seconds=Math.max(2,Math.min(16,options?.seconds||8));return request<HouseRecording>('record',{seconds},seconds*1000+10000);},revoke:url=>send('revoke',{url}),pause:value=>send('pause',{value}),setProcessState:value=>send('processes',{value})};
+  return {teleport:room=>send('teleport',{room}),overview:()=>send('overview'),focusResident:id=>send('resident',{id}),focusEvolution:()=>send('evolution'),setCreativeState:value=>send('creative',{value}),setErasManifest:manifest=>request<{accepted:boolean;objects:number}>('eras-manifest',{value:manifest},8000),capture:()=>request<string>('capture',{},8000),record:options=>{const seconds=Math.max(2,Math.min(16,options?.seconds||8));return request<HouseRecording>('record',{seconds},seconds*1000+10000);},revoke:url=>send('revoke',{url}),pause:value=>send('pause',{value}),setProcessState:value=>send('processes',{value})};
  },[]);
  useEffect(()=>{
   const requests=pending.current;

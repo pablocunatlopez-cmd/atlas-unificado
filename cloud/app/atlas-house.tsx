@@ -11,6 +11,7 @@ import ConstellationPanel from './constellation-panel';
 import CoreObservatory,{type CoreTelemetry} from './core-observatory';
 import styles from './atlas-house.module.css';
 import LiveWorkOptIn from './live-work-opt-in';
+import TypedEvidencePanel from './typed-evidence-panel';
 import {RESIDENTS,WORKSTATIONS,residentById,processForResident} from '../public/house/residents.js';
 import {telemetryAge,TELEMETRY_FRESH_MS} from '../public/house/process-state.js';
 import {readCreativePreview} from './experience-creative-preview';
@@ -38,12 +39,12 @@ const rooms:Record<HouseRoom,{title:string;short:string;description:string;actio
   constellation:{title:'Lía · Cielo e Ícaro',short:'Constelación',description:'Dios / Ícaro reúne señales, agentes y perspectivas: el horizonte de Lía.',action:'Abrir la constelación',icon:Orbit,accent:'#b9c8ff'},
   mind:{title:'Lía · Mente y archivo vivo',short:'Mente',description:'La memoria de Lía conserva lo que ha visto, pensado y corregido.',action:'Explorar la mente',icon:Brain,accent:'#a6cfea'},
   body:{title:'Lía · Cuerpo de Ion',short:'Ion',description:'El cuerpo operativo de Lía ejecuta tareas, comprueba resultados y mantiene el entorno real.',action:'Entrar en el cuerpo de Ion',icon:Wrench,accent:'#e9b0a5'},
-  refutation:{title:'Lía · Cámara de refutación',short:'Refutación',description:'Lía no acepta una mejora si no puede comprobarse ni sostenerse con evidencia.',action:'Ver pruebas y refutaciones',icon:ShieldCheck,accent:'#d5d3ac'},
+  refutation:{title:'Lía · Cámara de refutación',short:'Refutación',description:'Un espacio para consultar pruebas y decisiones reportadas, sin confundirlas con verificación independiente.',action:'Ver pruebas y refutaciones',icon:ShieldCheck,accent:'#d5d3ac'},
   language:{title:'Lía · LOR-ΩΣ',short:'LOR-ΩΣ',description:'El lenguaje de Lía conserva su estructura, límites y evolución.',action:'Abrir LOR-ΩΣ',icon:Languages,accent:'#b8d5b0'},
 };
 
 export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
-  const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false),[status,setStatus]=useState<Status|null>(null),[statusAt,setStatusAt]=useState(0),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState('');
+  const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false),[status,setStatus]=useState<Status|null>(null),[clock,setClock]=useState(0),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState('');
   const[residentMemories,setResidentMemories]=useState<ResidentMemory[]>([]),[memoryError,setMemoryError]=useState('');
   const[charterOpen,setCharterOpen]=useState(false);
   const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null),charterDialog=useRef<HTMLDialogElement>(null);
@@ -67,7 +68,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
         const response=await fetch('/api/cloud/status',{cache:'no-store',signal});
         if(!response.ok)throw new Error('status_http_'+response.status);
         const data=await response.json() as Status;
-        if(alive){ setStatus(data); setStatusAt(Date.now()); setStatusFailed(false); }
+        if(alive){ setStatus(data); setClock(Date.now()); setStatusFailed(false); }
       }catch(error){
         // Aborted by unmount must not flip the badge; timeout/network/HTTP do.
         if(alive&&!controller.signal.aborted){ setStatusFailed(true); }
@@ -79,6 +80,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
     void poll();const interval=setInterval(()=>void poll(),10000),visibility=()=>{if(!document.hidden)void poll();};document.addEventListener('visibilitychange',visibility);
     return()=>{alive=false;controller.abort();clearInterval(interval);document.removeEventListener('visibilitychange',visibility);};
   },[]);
+  useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer);},[]);
 
   const ready=useCallback((value:HouseAPI)=>{setApi(value);setSceneError('');if(lastRequested.current)value.teleport(lastRequested.current);},[]);
   const walk=useCallback((next:HouseRoom)=>{setRoomDetailsOpen(false);setEntered(true);setRoom(next);setSelectedResident(null);setResidentsOpen(false);setMenu(false);lastRequested.current=next;api?.teleport(next);},[api]);
@@ -98,7 +100,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const overview=()=>{setRoomDetailsOpen(false);setEntered(false);setMenu(false);setSelectedResident(null);setResidentsOpen(false);lastRequested.current=null;api?.overview();};
   const initials=(displayName||'Tu espacio').slice(0,1).toUpperCase();
   const connected=status?.online===true&&!statusFailed;
-  const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {connected:false,processes:[],ageMs:null,available:false};const ageMs=telemetryAge(telemetry.at,{now:statusAt});return {connected:telemetry.connected!==false&&ageMs!==null&&ageMs<=TELEMETRY_FRESH_MS,processes:telemetry.processes??[],ageMs,available:true};},[status?.capabilities?.processTelemetry,statusAt]);
+  const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {connected:false,processes:[],ageMs:null,available:false};const ageMs=telemetryAge(telemetry.at,{now:clock});return {at:telemetry.at??undefined,connected:connected&&telemetry.connected!==false,processes:telemetry.processes??[],ageMs,available:true};},[status?.capabilities?.processTelemetry,clock,connected]);
   const creative=useMemo(()=>readCreativePreview(status?.capabilities?.processTelemetry?.experience?.creative),[status?.capabilities?.processTelemetry?.experience?.creative]);
   const selectedPerson=selectedResident?residentById(selectedResident):null;
   useEffect(()=>{
@@ -121,10 +123,11 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const visitResident=(id:string)=>{const resident=residentById(id);if(!resident)return;setRoomDetailsOpen(false);setResidentsOpen(false);setEntered(true);setRoom(resident.room as HouseRoom);setSelectedResident(id);setWorkspace(null);api?.focusResident(id);};
   const visitEvolution=()=>{setRoomDetailsOpen(false);setResidentsOpen(false);setEntered(true);setRoom('games');setSelectedResident(null);api?.focusEvolution();};
   useEffect(()=>{if(!residentsOpen)return;residentsPanel.current?.focus();const close=(event:KeyboardEvent)=>{if(event.key==='Escape'){setResidentsOpen(false);residentsToggle.current?.focus();}};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[residentsOpen]);
-  const activeProcesses=processState.connected?processState.processes.filter(process=>process.state==='running').length:0;
-  const rawChanges=processState.connected?processState.processes.find(process=>process.id==='experience')?.counters?.accepted:undefined;
+  const signalFresh=processState.connected&&processState.ageMs!==null&&processState.ageMs<=TELEMETRY_FRESH_MS;
+  const activeProcesses=signalFresh?processState.processes.filter(process=>process.state==='running').length:0;
+  const rawChanges=signalFresh?processState.processes.find(process=>process.id==='experience')?.counters?.accepted:undefined;
   const acceptedChanges=typeof rawChanges==='number'&&Number.isSafeInteger(rawChanges)&&rawChanges>=0?rawChanges:null;
-  const signalLabel=!processState.available?'Sin señal reciente':processState.connected?`${activeProcesses} en acción · ${ageLabel(processState.ageMs)}`:processState.ageMs===null?'Señal con hora no válida':`Sin señal reciente · ${ageLabel(processState.ageMs)}`;
+  const signalLabel=!processState.available?'Sin telemetría':!processState.connected?'Puente desconectado':signalFresh?`${activeProcesses} en ejecución reportados · ${ageLabel(processState.ageMs)}`:processState.ageMs===null?'Señal con hora no válida':`Sin señal reciente · ${ageLabel(processState.ageMs)}`;
 
   return <main className={`${styles.house} ${hudHidden?styles.cleanView:''}`}>
    <div className={styles.scene}><HouseScene creative={creative} onCreativeApplied={setInstallation} onResidentFocus={setSelectedResident} processState={processState} paused={workspace!==null&&workspace!==undefined} onPerformance={setPerformance} onError={setSceneError} onReady={ready} /></div>
@@ -152,7 +155,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
    <section className={`${styles.roomCard} ${!entered?styles.introCard:''}`} data-details-open={!entered||roomDetailsOpen} aria-label="Espacio actual" style={{'--room-accent':active.accent} as React.CSSProperties}>
     <div className={styles.eyebrow}><span>△</span> {entered?'ENTRAS EN LÍA':'ATLAS · ION · ÍCARO'}</div>
     <h1>{entered?(selectedPerson?.name||active.title):<>La pirámide vive<br/>en Lía.</>}</h1>
-    <p>{entered?(selectedPerson?.role||active.description):'Atlas aporta la mente, Ion el cuerpo, Ícaro el cielo y la constelación; Lía es el objetivo del entorno y la casa que se mejora a sí misma.'}</p>
+    <p>{entered?(selectedPerson?.role||active.description):'Atlas aporta la mente, Ion el cuerpo e Ícaro el cielo y la constelación; Lía es el objetivo del entorno.'}</p>
     {entered&&selectedPerson&&<div className={styles.residentMemory} aria-live="polite"><span>MEMORIA OBSERVADA</span>{memoryError?<p>{memoryError}</p>:selectedPerson.processIds.length===0?<p>Este puesto no tiene un proceso asignado; no se inventan recuerdos.</p>:residentMemories.length===0?<p>Sin resultados terminales registrados todavía.</p>:<ul>{residentMemories.slice(0,3).map(memory=><li key={memory.id}><p>{memory.text}</p><small>{new Date(memory.at).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short',timeZone:'UTC'})} UTC</small></li>)}</ul>}<small>Observaciones automáticas desde telemetría fresca del coordinador. No acreditan aprendizaje, verificación independiente ni consciencia.</small></div>}
     {!entered?<button className={styles.enter} type="button" onClick={()=>walk('salon')}>Entrar en la casa <ArrowUpRight size={15}/></button>:<button className={styles.overview} type="button" onClick={overview}>Volver a la visión general</button>}
     {entered&&<button className={styles.detailsToggle} type="button" aria-expanded={roomDetailsOpen} aria-controls="atlas-house-room-details" onClick={()=>setRoomDetailsOpen(value=>!value)}>{roomDetailsOpen?'Cerrar detalles':'Ver detalles'}</button>}
@@ -161,9 +164,10 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
      <p className={styles.compactChanges}>Cambios reportados: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</p>
      <details className={styles.mirrorLegend} open>
       <summary>Espejo de procesos <span>{signalLabel}</span></summary>
-      <p>{WORKSTATIONS.length} puestos con habitantes y 6 espectadores. La casa de Lía solo mejora cuando las tareas reales se ejecutan y se verifican.</p>
+      <p>{WORKSTATIONS.length} puestos con habitantes y 6 espectadores. Los estados y contadores son telemetría reportada, no pruebas de mejora, verificación o integración.</p>
       <p>Mientras el juego está abierto, cada vértice cumple su función: Atlas observa, Ion actúa, Ícaro conecta el horizonte.</p>
      </details>
+     {entered&&roomDetailsOpen&&<TypedEvidencePanel/>}
     </div>
    </section>
 

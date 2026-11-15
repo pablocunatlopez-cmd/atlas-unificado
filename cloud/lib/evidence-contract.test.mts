@@ -36,7 +36,7 @@ test('parseEvidenceRecord rejects wrong version, empty tests, and missing fields
   assert.equal(parseEvidenceRecord({...base, verdict: 'verified'}), null);
 });
 
-test('evidenceDisplayState never claims integration without integratedRevision', () => {
+test('a reported result or revision never establishes verification or integration', () => {
   assert.deepEqual(evidenceDisplayState(null), {
     state: 'unknown',
     label: 'Sin evidencia tipada',
@@ -47,12 +47,13 @@ test('evidenceDisplayState never claims integration without integratedRevision',
   const display = evidenceDisplayState(passed);
   assert.equal(display.state, 'passed_reported');
   assert.equal(display.mayClaimIntegrated, false);
-  assert.match(display.label, /sin integración/i);
+  assert.match(display.label, /reportadas/i);
 
-  const integrated = parseEvidenceRecord({...base, integratedRevision: 'main@deadbeef'});
-  const integratedDisplay = evidenceDisplayState(integrated);
-  assert.equal(integratedDisplay.mayClaimIntegrated, true);
-  assert.match(integratedDisplay.label, /Integrada/);
+  const cited = parseEvidenceRecord({...base, integratedRevision: 'main/deadbeef', verified: true});
+  assert.equal(cited?.integratedRevision, 'main/deadbeef');
+  const citedDisplay = evidenceDisplayState(cited);
+  assert.equal(citedDisplay.mayClaimIntegrated, false);
+  assert.match(citedDisplay.label, /reportadas/i);
 });
 
 test('failed and rejected verdicts stay non-integrated', () => {
@@ -63,4 +64,6 @@ test('failed and rejected verdicts stay non-integrated', () => {
   const rejected = parseEvidenceRecord({...base, verdict: 'rejected'});
   assert.equal(evidenceDisplayState(rejected).state, 'rejected');
   assert.equal(evidenceDisplayState(rejected).mayClaimIntegrated, false);
+  assert.match(evidenceDisplayState(rejected).label, /reportado/i);
+  assert.equal(evidenceDisplayState(parseEvidenceRecord({...base, verdict:'unknown', integratedRevision:'main/abc'})).state, 'unknown');
 });

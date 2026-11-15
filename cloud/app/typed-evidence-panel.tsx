@@ -15,22 +15,22 @@ type PanelState =
   | {
       kind: 'items';
       contractVersion: number;
-      rows: {record: EvidenceRecord; label: string; mayClaimIntegrated: boolean}[];
+      rows: {record: EvidenceRecord; label: string}[];
     };
 
 const REQUEST_MS = 8000;
 const POLL_MS = 15000;
 
 function readRows(data: {contractVersion?: number; evidence?: unknown[]}) {
-  const version =
-    data.contractVersion === EVIDENCE_CONTRACT_VERSION ? data.contractVersion : EVIDENCE_CONTRACT_VERSION;
+  if (data.contractVersion !== EVIDENCE_CONTRACT_VERSION) return {version: EVIDENCE_CONTRACT_VERSION, rows: []};
+  const version = data.contractVersion;
   const raw = Array.isArray(data.evidence) ? data.evidence.slice(0, 32) : [];
   const rows = raw
     .map((item) => {
       const record = parseEvidenceRecord(item);
       if (!record) return null;
       const display = evidenceDisplayState(record);
-      return {record, label: display.label, mayClaimIntegrated: display.mayClaimIntegrated};
+      return {record, label: display.label};
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
   return {version, rows};
@@ -102,11 +102,11 @@ export default function TypedEvidencePanel() {
     >
       <p style={{fontSize: 9, letterSpacing: '1.8px', color: '#8ca38f', margin: 0}}>04 / CONTRATO DE EVIDENCIA</p>
       <h2 id="typed-evidence-heading" style={{font: '28px/1.15 Georgia, serif', letterSpacing: '-0.6px', margin: '10px 0'}}>
-        Mejoras de Lía con prueba tipada
+        Evidencia de cambios reportada
       </h2>
       <p style={{fontSize: 13, lineHeight: 1.8, color: '#9cafa0', maxWidth: 640}}>
-        Solo el coordinador (vía puente) puede publicar registros. Lista vacía = <strong>desconocido</strong>, no éxito.
-        Superar pruebas no equivale a integración sin una revisión citada. Actualización cada 15 s.
+        Los registros son declaraciones del puente, no verificaciones independientes. Lista vacía = <strong>desconocido</strong>, no éxito.
+        Una revisión de integración citada no confirma que se haya integrado. Actualización cada 15 s.
       </p>
 
       {state.kind === 'loading' && (
@@ -135,7 +135,7 @@ export default function TypedEvidencePanel() {
 
       {state.kind === 'items' && (
         <ul style={{listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'grid', gap: 12}}>
-          {state.rows.map(({record, label, mayClaimIntegrated}) => (
+          {state.rows.map(({record, label}) => (
             <li
               key={record.taskId + ':' + record.artifactId + ':' + record.completedAt}
               style={{
@@ -148,9 +148,12 @@ export default function TypedEvidencePanel() {
               <strong style={{fontSize: 13}}>{label}</strong>
               <span style={{display: 'block', marginTop: 6, fontSize: 11, color: '#9cafa0'}}>
                 {record.verdict} · tarea {record.taskId} · proceso {record.processId} · artefacto {record.artifactId}
-                {mayClaimIntegrated && record.integratedRevision
-                  ? ` · integración ${record.integratedRevision}`
+                {record.integratedRevision
+                  ? ` · revisión de integración reportada ${record.integratedRevision}`
                   : ' · sin integración citada'}
+              </span>
+              <span style={{display: 'block', marginTop: 4, fontSize: 11, color: '#9cafa0'}}>
+                Revisión de origen {record.sourceRevision} · finalización reportada {record.completedAt} · pruebas {record.testIds.join(', ')}
               </span>
               {record.criteria?.length > 0 && (
                 <span style={{display: 'block', marginTop: 4, fontSize: 11, color: '#8ca38f'}}>

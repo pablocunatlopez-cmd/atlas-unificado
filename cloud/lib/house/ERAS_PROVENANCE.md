@@ -10,6 +10,13 @@ Base recuperada del proyecto ERAS · Crónicas de la Humanidad del usuario, revi
 
 El plano y las colisiones se prueban en `lib/house/layout.test.mjs`. La apariencia, los FPS y la grabación requieren comprobación en un navegador con contexto gráfico; las pruebas de geometría no sustituyen esa comprobación.
 
+La casa admite opcionalmente un manifiesto de mundo procedural ERAS mediante
+`HouseAPI.setErasManifest`, con primitivas instanciadas de árboles y rocas en
+el jardín distante. Filtra objetos interiores o fuera del límite; datos inválidos
+o un resultado vacío conservan la última escena aceptada y el paisaje habitual.
+El runtime normal no suministra ese manifiesto. La adaptación no carga activos,
+no crea colisiones ni cambia la navegación; no equivale al mundo original de ERAS.
+
 ## Ampliación de procesos y lenguaje
 
 La casa añade una nueva ala con Mente/Archivo, Animal/Cuerpo de Ion, Refutación y LOR-ΩΣ, conectada al plano anterior por cuatro puertas transitables. El observatorio representa Cielo/Constelación: información y agentes con procedencia. Dios/Suceso conserva la apertura a lo que exceda el entendimiento del sistema y las incógnitas, sin reducirse a ese catálogo ni a un revisor omnisciente. Un triángulo tridimensional alrededor del centro de observación conserva el marco de organización; no afirma conciencia ni reconstruye un organigrama visual que todavía no se ha podido observar.

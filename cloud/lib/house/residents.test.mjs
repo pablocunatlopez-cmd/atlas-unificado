@@ -11,6 +11,18 @@ test('the fixed roster covers eighteen real capability stations and all six cine
  assert.ok(AUDIENCE.every(resident=>resident.room==='cinema'&&resident.seated&&resident.cosmetic&&resident.processIds.length===0));
 });
 
+test('terminal outcomes become unknown when the signal is stale or disconnected',()=>{
+ for(const state of ['passed','failed','idle','waiting']){
+  const data={at:'2026-11-01T12:00:00Z',connected:true,processes:[{id:'tools',room:'body',state,counters:{accepted:4}}]};
+  for(const [value,ageMs,reason] of [[data,76000,'stale'],[{...data,connected:false},0,'disconnected'],[data,Infinity,'invalid_time']]){
+   const result=processForResident(value,residentById('body-console'),{ageMs});
+   assert.equal(result.state,'waiting');
+   assert.equal(result.reason,reason);
+   assert.equal(result.counters,undefined);
+  }
+ }
+});
+
 test('desk residents match existing seat centres, and other figures belong to the furnished work surfaces',()=>{
  for(const [id,position] of [['music-console',[-8.9,0,4]],['lab-desk',[-8.8,0,-4]],['games-desk',[8.8,0,4]],['sky-sources',[-2.3,0,-5.5]],['sky-agents',[2.3,0,-5.5]],['mind-desk',[-10,0,-13.6]]]){const resident=residentById(id);assert.deepEqual(resident.position,position);assert.equal(resident.seated,true);}
  for(const id of ['lab-bench','games-maquette','body-arm','refutation-candidate','refutation-control','language-object','language-symbol','language-meaning'])assert.equal(residentById(id).seated,false);

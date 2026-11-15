@@ -78,7 +78,7 @@ export function parseEvidenceRecord(input: unknown): EvidenceRecord | null {
   return record;
 }
 
-/** UI-facing label. Only `passed` with a valid record may say verified-capable text later. */
+/** Shape validation does not authenticate execution, verification, or integration. */
 export function evidenceDisplayState(record: EvidenceRecord | null): {
   state: 'unknown' | 'failed' | 'rejected' | 'passed_reported';
   label: string;
@@ -91,15 +91,13 @@ export function evidenceDisplayState(record: EvidenceRecord | null): {
     return {state: 'failed', label: 'Prueba fallida (reportada)', mayClaimIntegrated: false};
   }
   if (record.verdict === 'rejected') {
-    return {state: 'rejected', label: 'Candidata rechazada', mayClaimIntegrated: false};
+    return {state: 'rejected', label: 'Rechazo reportado', mayClaimIntegrated: false};
   }
   if (record.verdict === 'passed') {
-    // Passed tests alone are not integration. integratedRevision is required to claim it.
-    const integrated = typeof record.integratedRevision === 'string' && record.integratedRevision.length > 0;
     return {
       state: 'passed_reported',
-      label: integrated ? 'Integrada (revisión citada)' : 'Pruebas superadas (sin integración citada)',
-      mayClaimIntegrated: integrated,
+      label: 'Pruebas superadas (reportadas)',
+      mayClaimIntegrated: false,
     };
   }
   return {state: 'unknown', label: 'Evidencia desconocida', mayClaimIntegrated: false};
