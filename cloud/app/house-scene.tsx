@@ -53,10 +53,15 @@ export function HouseScene(props:Props){
  },[]);
  useEffect(()=>{
   const requests=pending.current;
+  // The iframe can finish loading before this effect attaches its listener, so
+  // retry the handshake until the runtime answers instead of relying on onLoad.
+  const ping=()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin);
+  let attempts=0,helloTimer:ReturnType<typeof setInterval>|undefined;
+  function stopHello(){if(helloTimer){clearInterval(helloTimer);helloTimer=undefined;}}
   function receive(event:MessageEvent){
    if(event.origin!==location.origin||event.source!==frame.current?.contentWindow||!event.data||typeof event.data!=='object')return;
    const data=event.data;
-   if(data.type==='atlas:house:ready'){setReady(true);setError(null);api.pause(latest.current.paused===true);latest.current.onReady?.(api);}
+   if(data.type==='atlas:house:ready'){stopHello();setReady(true);setError(null);api.pause(latest.current.paused===true);latest.current.onReady?.(api);}
    if(data.type==='atlas:house:room'&&validRoom(data.room)){currentRoom.current=data.room;latest.current.onRoomChange?.(data.room);}
    if(data.type==='atlas:house:interact'&&validRoom(data.room))latest.current.onInteract?.(data.room);
    if(data.type==='atlas:house:performance'&&[data.fps,data.frames,data.drawCalls,data.triangles].every(value=>typeof value==='number'&&Number.isFinite(value)))latest.current.onPerformance?.({fps:data.fps,frames:data.frames,drawCalls:data.drawCalls,triangles:data.triangles,backend:String(data.backend)});
@@ -70,8 +75,8 @@ export function HouseScene(props:Props){
    }
   }
   window.addEventListener('message',receive);
-  frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin);
-  return()=>{window.removeEventListener('message',receive);frame.current?.contentWindow?.postMessage({type:'atlas:house:destroy'},location.origin);for(const task of requests.values()){clearTimeout(task.timeout);task.reject(Error('El entorno se cerró.'));}requests.clear();};
+  ping();helloTimer=setInterval(()=>{if(++attempts>=40){stopHello();return;}ping();},500);
+  return()=>{stopHello();window.removeEventListener('message',receive);frame.current?.contentWindow?.postMessage({type:'atlas:house:destroy'},location.origin);for(const task of requests.values()){clearTimeout(task.timeout);task.reject(Error('El entorno se cerró.'));}requests.clear();};
  },[api]);
  useEffect(()=>{if(ready&&props.activeRoom&&props.activeRoom!==currentRoom.current)api.teleport(props.activeRoom);},[api,props.activeRoom,ready]);
  useEffect(()=>{if(ready)api.pause(props.paused===true);},[api,props.paused,ready]);

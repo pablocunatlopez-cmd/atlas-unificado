@@ -122,7 +122,7 @@ export function createProcessCreatures(scene,textures,{now=Date.now}={}){
  return {
   setState(value,at=performance.now()){telemetry=normalizeProcessState(value);receivedAt=Number.isFinite(at)?at:-Infinity;sourceAge=telemetry.at?now()-Date.parse(telemetry.at):Infinity;},
   update(time,camera,viewportHeight){
-   const elapsed=time*1000-receivedAt,ageMs=sourceAge<0||elapsed<0||elapsed>75000?Infinity:sourceAge+elapsed,accepted=measuredChanges(telemetry),work=[];
+   const elapsed=time*1000-receivedAt,ageMs=sourceAge<0||elapsed<0||elapsed>75000?Infinity:sourceAge+elapsed,accepted=measuredChanges(telemetry,{now:now()}),work=[];
    for(let index=0;index<RESIDENTS.length;index++){
     actor=RESIDENTS[index];actorIndex=index;actorOrigin.fromArray(actor.position);const process=processForResident(telemetry,actor,{ageMs});motion=processMotion(process,time,index*.73);yawRotation.setFromAxisAngle(axis,-actor.yaw);
     for(let part=0;part<BOX_PARTS;part++)hide(bodies,index*BOX_PARTS+part);for(let part=0;part<ROUND_PARTS;part++)hide(rounds,index*ROUND_PARTS+part);

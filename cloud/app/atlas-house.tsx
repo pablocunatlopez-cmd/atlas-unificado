@@ -1,7 +1,7 @@
 'use client';
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowUpRight,AudioLines,Brain,Clapperboard,FlaskConical,Gamepad2,Home,Languages,Menu,MessageCircle,Orbit,Share2,ShieldCheck,Wrench,X,type LucideIcon} from 'lucide-react';
+import {ArrowUpRight,AudioLines,Brain,Camera,Clapperboard,Eye,FlaskConical,Gamepad2,Home,Languages,Menu,MessageCircle,Orbit,Share2,ShieldCheck,Wrench,X,type LucideIcon} from 'lucide-react';
 import HouseScene,{HOUSE_ROOMS,type HouseAPI,type HousePerformance,type HouseRoom,type HouseInstallation} from './house-scene';
 import MusicStudio from './music-studio';
 import WorldWorkshop from './world-workshop';
@@ -12,7 +12,8 @@ import styles from './atlas-house.module.css';
 import {RESIDENTS,WORKSTATIONS,residentById,processForResident} from '../public/house/residents.js';
 import {readCreativePreview} from './experience-creative-preview';
 
-type HouseResident={id:string;room:HouseRoom;name:string;role:string;archetype:string;processIds:string[];cosmetic:boolean;activePhases?:string[];status?:string;statusTone?:'idle'|'running'|'passed'|'failed'|'waiting'};
+type ResidentRecord={id:string;room:HouseRoom;name:string;role:string;archetype:string;processIds:string[];cosmetic:boolean;activePhases?:string[]};
+type HouseResident=ResidentRecord&{status?:string;statusTone?:'idle'|'running'|'passed'|'failed'|'waiting'};
 type Props={signedIn:boolean;displayName:string;signInPath:string};
 type Status={online:boolean;modelName?:string;lastSeen?:string|null;capabilities?:{gpuMode?:'chat'|'video'|'training';processTelemetry?:(CoreTelemetry&{experience?:{creative?:unknown}|null})|null};failed?:boolean};
 const rooms:Record<HouseRoom,{title:string;short:string;description:string;action:string;icon:LucideIcon;accent:string}>={
@@ -31,7 +32,7 @@ const rooms:Record<HouseRoom,{title:string;short:string;description:string;actio
 export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false),[status,setStatus]=useState<Status|null>(null),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState('');
   const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null);
-  const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|undefined>(undefined),[sceneError,setSceneError]=useState('');
+  const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|undefined>(undefined),[sceneError,setSceneError]=useState(''),[capturing,setCapturing]=useState(false),[hudHidden,setHudHidden]=useState(false);
   const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),previousFocus=useRef<HTMLElement|null>(null),lastRequested=useRef<HouseRoom|null>(null),pollBusy=useRef(false),roomNavigation=useRef<HTMLElement|null>(null);
   const active=rooms[room],ActiveIcon=active.icon;
   const triad=[{name:'Atlas',role:'mente'},{name:'Ion',role:'cuerpo'},{name:'Ícaro',role:'cielo + constelación'}];
@@ -65,16 +66,18 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   useEffect(()=>{const current=dialog.current;if(!current)return;if(workspace){if(!current.open)current.showModal();closeButton.current?.focus();}else if(current.open){current.close();previousFocus.current?.focus();}},[workspace]);
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),4000);return()=>clearTimeout(timer);},[notice]);
   useEffect(()=>{if(!menu)return;const key=(event:globalThis.KeyboardEvent)=>{if(event.key==='Escape')setMenu(false);};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[menu]);
+  useEffect(()=>{const key=(event:globalThis.KeyboardEvent)=>{if(event.key.toLowerCase()!=='h'||event.metaKey||event.ctrlKey||event.altKey||workspace)return;const target=event.target as HTMLElement|null;if(target&&['INPUT','TEXTAREA','SELECT'].includes(target.tagName))return;setHudHidden(value=>!value);};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[workspace]);
   useEffect(()=>{const nav=roomNavigation.current,button=nav?.querySelector<HTMLButtonElement>(`[data-room="${room}"]`);if(!nav||!button)return;const left=button.offsetLeft,right=left+button.offsetWidth;nav.scrollTo({left:Math.max(0,left-((nav.clientWidth-right)/2)),behavior:'smooth'});},[room]);
 
   const share=async()=>{try{const data={title:'Atlas · Casa de ideas',text:'Un espacio para conversar, crear música y construir mundos con Atlas.',url:location.origin+'/'};if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(`${data.title}\n${data.text}\n${data.url}`);setNotice('Enlace copiado.');}}catch{setNotice('No se pudo compartir esta vista.');}};
+  const captureView=async()=>{if(!api||capturing)return;setCapturing(true);try{const url=await api.capture();const link=document.createElement('a');link.href=url;link.download='atlas-casa-3d.png';link.click();setNotice('Imagen PNG de la casa capturada.');}catch(problem){setNotice(problem instanceof Error?problem.message:'No se pudo capturar la imagen.');}finally{setCapturing(false);}};
   const overview=()=>{setRoomDetailsOpen(false);setEntered(false);setMenu(false);setSelectedResident(null);setResidentsOpen(false);lastRequested.current=null;api?.overview();};
   const initials=(displayName||'Tu espacio').slice(0,1).toUpperCase();
   const connected=status?.online===true&&!statusFailed;
   const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {connected:false,processes:[]};const age=telemetry.at?Date.now()-Date.parse(telemetry.at):Infinity; return {connected:age<60000,processes:telemetry.processes??[]};},[status?.capabilities?.processTelemetry]);
   const creative=useMemo(()=>readCreativePreview(status?.capabilities?.processTelemetry?.experience?.creative),[status?.capabilities?.processTelemetry?.experience?.creative]);
   const selectedPerson=selectedResident?residentById(selectedResident):null;
-  const residentRuntime=useMemo<HouseResident[]>(()=>RESIDENTS.filter((resident)=>!resident.cosmetic).map((resident)=>{
+  const residentRuntime=useMemo<HouseResident[]>(()=>RESIDENTS.filter((resident:ResidentRecord)=>!resident.cosmetic).map((resident:ResidentRecord)=>{
     const result=processForResident(processState,resident,{ageMs:60000});
     const toneMap={idle:'idle',running:'running',passed:'passed',failed:'failed',waiting:'waiting'} as const;
     return {
@@ -90,7 +93,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const rawChanges=processState.processes.find(process=>process.id==='experience')?.counters?.accepted;
   const acceptedChanges=typeof rawChanges==='number'&&Number.isSafeInteger(rawChanges)&&rawChanges>=0?rawChanges:null;
 
-  return <main className={styles.house}>
+  return <main className={`${styles.house} ${hudHidden?styles.cleanView:''}`}>
    <div className={styles.scene}><HouseScene creative={creative} onCreativeApplied={setInstallation} onResidentFocus={setSelectedResident} processState={processState} paused={workspace!==null&&workspace!==undefined} onPerformance={setPerformance} onError={setSceneError} onReady={ready} /></div>
    <div className={styles.vignette}/>
    <header className={styles.topbar}>
@@ -98,6 +101,8 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
     <div className={styles.topActions}>
      <button ref={residentsToggle} className={styles.residentToggle} type="button" aria-expanded={residentsOpen} aria-controls="atlas-house-residents" aria-label="Ver los habitantes y visitar cada entorno de Lía"><Home size={15}/><span>Habitantes</span></button>
      <a className={styles.activityLink} href="/actividad/" aria-label="Ver actividad y herramientas de Atlas"><Brain size={16}/><span>Actividad</span></a>
+     <button className={styles.viewButton} type="button" onClick={()=>void captureView()} disabled={!api||capturing} aria-label="Capturar imagen PNG de la casa 3D" title="Capturar imagen PNG de la casa 3D"><Camera size={15}/></button>
+     <button className={styles.viewButton} type="button" onClick={()=>setHudHidden(true)} aria-label="Ocultar la interfaz para ver la casa (tecla H)" title="Ocultar interfaz (H)"><Eye size={15}/></button>
      <span className={`${styles.modelBadge} ${status?.online&&!statusFailed?styles.online:''}`} title={statusFailed?'No se pudo comprobar el estado del PC.':status?.online?status.capabilities?.gpuMode?`GPU: ${status.capabilities.gpuMode}`:'Estado del PC disponible':'Sin conexión del PC'}>{status?.online&&!statusFailed?'En línea':'Sin enlace'}</span>
      <button className={styles.share} type="button" onClick={()=>void share()} aria-label="Compartir Lía"><Share2 size={15}/><span>Compartir</span></button>
      {signedIn?<div className={styles.profile} title={displayName}><span>{initials}</span><strong>{displayName.split(' ')[0]}</strong></div>:<a className={styles.signIn} href={signInPath} target="_top">Iniciar sesión</a>}
@@ -118,12 +123,12 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
     {entered&&<button className={styles.detailsToggle} type="button" aria-expanded={roomDetailsOpen} aria-controls="atlas-house-room-details" onClick={()=>setRoomDetailsOpen(value=>!value)}>{roomDetailsOpen?'Cerrar detalles':'Ver detalles'}</button>}
     <div className={styles.roomDetails} id="atlas-house-room-details" data-expanded={roomDetailsOpen}>
      <div className={styles.roomFoot}><i/>{sceneError?'3D no disponible en este navegador':api?'Entorno 3D en tiempo real':'Preparando el entorno…'}{performance&&performance.fps>0&&<span>{Math.round(performance.fps)} FPS</span>}</div>
-     <p className={styles.compactChanges}>Cambios medidos: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</p>
+     <p className={styles.compactChanges}>Cambios reportados: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</p>
      <details className={styles.mirrorLegend} open>
       <summary>Espejo de procesos <span>{processState.connected?`${activeProcesses} en acción`:'Sin señal reciente'}</span></summary>
       <p>{WORKSTATIONS.length} puestos con habitantes y 6 espectadores. La casa de Lía solo mejora cuando las tareas reales se ejecutan y se verifican.</p>
       <p>Mientras el juego está abierto, cada vértice cumple su función: Atlas observa, Ion ejecuta, Ícaro conecta y Lía se vuelve mejor.</p>
-      <strong>Cambios medidos en la espiral: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</strong>
+      <strong>Cambios reportados en la espiral: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</strong>
       <p>Las marcas junto a Ion vigilan la mejora real; la animación no sustituye ni crea proyectos por sí sola.</p>
       <small title="ERAS · revisión 8a0fea077ccf84bed54d0b5c384dfc37b6aa4a86">Lía, Atlas, Ion e Ícaro · entorno vivo de la casa</small>
      </details>
@@ -138,6 +143,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
    <nav ref={roomNavigation} className={styles.roomNav} aria-label="Habitaciones de Atlas">{HOUSE_ROOMS.map(item=>{const value=rooms[item.id],Icon=value.icon;return <button type="button" key={item.id} data-room={item.id} className={room===item.id?styles.active:''} onClick={()=>walk(item.id)} style={{'--room-accent':value.accent} as React.CSSProperties}><Icon size={15}/><span>{value.short}</span></button>;})}</nav>
    {menu&&<><button className={styles.menuBackdrop} type="button" aria-label="Cerrar navegación de la casa" onClick={()=>setMenu(false)}/><nav id="atlas-house-room-menu" className={styles.menu} aria-label="Menú de la casa">{HOUSE_ROOMS.map(item=><button type="button" key={item.id} className={room===item.id?styles.active:''} onClick={()=>open(item.id)}><span>{rooms[item.id].title}</span><ArrowUpRight size={13}/></button>)}</nav></>}
    {residentsOpen&&<aside ref={residentsPanel} tabIndex={-1} className={styles.residentsPanel} id="atlas-house-residents" aria-label="Puestos y habitantes de Lía"><header><div><span>UNA CASA PARA LÍA</span><h2>Habitantes y entornos</h2></div><button type="button" onClick={()=>setResidentsOpen(false)} aria-label="Cerrar panel de habitantes"><X size={16}/></button></header><div className={styles.residentList}>{residentRuntime.map(resident=><button type="button" key={resident.id} className={selectedResident===resident.id?styles.selected:''} onClick={()=>visitResident(resident.id)}><span>{resident.name}</span><small>{resident.role}</small><em className={styles.statusPill} data-tone={resident.statusTone}>{resident.status}</em></button>)}</div><button className={styles.evolutionButton} type="button" onClick={visitEvolution}>Ver evolución</button></aside>}
+   {hudHidden&&<button className={styles.showHud} type="button" onClick={()=>setHudHidden(false)} aria-label="Mostrar la interfaz (tecla H)"><Eye size={16}/><span>Mostrar interfaz</span></button>}
    {notice&&<div className={styles.toast} role="status">{notice}</div>}
 
    <dialog ref={dialog} className={styles.workspace} aria-labelledby="atlas-house-workspace-title" onCancel={event=>{event.preventDefault();close();}} onClick={event=>{if(event.target===event.currentTarget)close();}}>
@@ -147,7 +153,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
      {(workspace==='lab'||workspace==='games')&&<WorldWorkshop mode={workspace==='lab'?'3d':'game'} ready={signedIn}/>} 
      {workspace==='cinema'&&<CinemaPanel houseApi={api} ready={signedIn}/>} 
      {workspace==='constellation'&&<ConstellationPanel/>}
-     {(workspace==='mind'||workspace==='body'||workspace==='refutation'||workspace==='language')&&<CoreObservatory mode={workspace} telemetry={status?.capabilities?.processTelemetry} connected={connected}/>} 
+     {(workspace==='mind'||workspace==='body'||workspace==='refutation'||workspace==='language')&&<CoreObservatory mode={workspace} telemetry={status?.capabilities?.processTelemetry} connected={connected} ready={signedIn} gpuMode={status?.capabilities?.gpuMode}/>}
     </>}
    </dialog>
   </main>;

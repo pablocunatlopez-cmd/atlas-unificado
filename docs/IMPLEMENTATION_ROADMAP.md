@@ -86,4 +86,18 @@ Acceptance: a release report reproduces exact model/repository revisions, datase
 
 ## Current execution status
 
-This roadmap is a plan. The Lía identity documents have been added to the repository, but the live job loop is not thereby implemented. The frontend baseline recovery and the recent house component type/build validation remain the immediate blockers. No test or build result should be claimed until it has actually been run.
+This roadmap is a plan. The Lía identity documents are in the repository, but the live job loop described in P3 is not implemented.
+
+P0 was completed and verified in this checkout on 2026-11-15:
+
+- `cloud/app/globals.css` was restored from commit `94f20f6` (the complete ~97 KB stylesheet). Only the `.sr-only` utility was appended.
+- `cloud/app/atlas-house.tsx` now type-checks: the JavaScript resident records used by the roster have explicit types, and `CoreObservatory` receives the `ready` prop it requires.
+- A stray `.` before a `@media` query in `cloud/app/atlas-house.module.css` was removed; it generated an invalid scoped selector and failed the production build.
+- The legacy `nav` element rules restored with the stylesheet were scoped to `.sidebar nav`. Unscoped, they forced `flex-direction: column` on the house room dock and on every other CSS-module navigation bar; the dock now lays out horizontally.
+- `cloud/public/house/process-creatures.js` now passes the injected clock to `measuredChanges`, so retained construction marks obey the same telemetry freshness as the residents.
+- `HouseScene` retries the iframe handshake until the runtime answers. A fast iframe load could previously leave the React shell disconnected, disabling teleport, pause, capture and recording while the 3D scene still rendered.
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false` passes in `cloud/`.
+- `npm run build` completes in `cloud/`.
+- The house, core, music, creative, research, cloud and studio tests pass (137 tests), including the updated coordinator-reported labels and the telemetry-expiry checks.
+
+Browser QA was run locally on `/` and `/origen` at 1024×768: the house scene renders, the room dock lays out horizontally, the iframe handshake reports ready, PNG capture downloads a real image and the clean view hides/restores the interface. The legacy workspace loads its restored global styles and collapsed sidebar. The live Qwen bridge was not connected (local status/autonomy calls answered 502/503 and the signed-out state API answered 401), and nothing was deployed. Full interaction QA, the WebGL scene under load and the cloud deployment remain unverified.
