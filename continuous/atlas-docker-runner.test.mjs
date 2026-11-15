@@ -31,4 +31,22 @@ test('fails closed on nonzero exit and oversized output',async()=>{
  const overflow=await runAtlasDockerPlan({plan,image,workspacePath,hostVerified:true,spawn:fakeSpawn(0,'x'.repeat(2000))});
  assert.equal(overflow.passed,false);
  assert.equal(overflow.outputOverflow,true);
+ assert.equal(overflow.outputSha256,null);
+ assert.equal(overflow.promotionAuthorized,false);
+});
+
+test('returns bounded failure when process does not confirm termination',async()=>{
+ let killed=false;
+ const spawn=()=>{
+  const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();
+  child.kill=()=>{killed=true;return false;};
+  return child;
+ };
+ const report=await runAtlasDockerPlan({plan,image,workspacePath,hostVerified:true,spawn});
+ assert.equal(killed,true);
+ assert.equal(report.passed,false);
+ assert.equal(report.timedOut,true);
+ assert.equal(report.terminationUnconfirmed,true);
+ assert.equal(report.status,'termination_unconfirmed');
+ assert.equal(report.promotionAuthorized,false);
 });
