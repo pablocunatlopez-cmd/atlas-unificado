@@ -28,3 +28,11 @@ test('untrusted origin and network failure fail closed',async()=>{
   assert.equal(calls,1);
   assert.equal((await readSessionLiveWork('https://atlas.example/',{request:async()=>{throw Error('offline');}})).mayStartLiveWork,false);
 });
+
+test('a stale timestamp cannot be revived by a forged fresh ageMs',()=>{
+  const now=Date.parse('2026-11-15T19:00:00Z');
+  const stale=new Date(now-600000).toISOString();
+  const result=evaluateSessionLiveWork({liveCycleEnabled:true,activeSessions:1,recent:[{allowsWork:true,ageMs:0,at:stale}]},{now});
+  assert.equal(result.mayStartLiveWork,false);
+  assert.equal(result.reason,'no_fresh_opt_in');
+});
