@@ -101,3 +101,12 @@ P0 was completed and verified in this checkout on 2026-11-15:
 - The house, core, music, creative, research, cloud and studio tests pass (137 tests), including the updated coordinator-reported labels and the telemetry-expiry checks.
 
 Browser QA was run locally on `/` and `/origen` at 1024×768: the house scene renders, the room dock lays out horizontally, the iframe handshake reports ready, PNG capture downloads a real image and the clean view hides/restores the interface. The legacy workspace loads its restored global styles and collapsed sidebar. The live Qwen bridge was not connected (local status/autonomy calls answered 502/503 and the signed-out state API answered 401), and nothing was deployed. Full interaction QA, the WebGL scene under load and the cloud deployment remain unverified.
+
+P2 has partial, verified progress as of 2026-11-15:
+
+- `telemetryAge` in `cloud/public/house/process-state.js` rejects missing, malformed and future-dated timestamps instead of accepting a negative age. The house now uses it for connection, resident poses and the reported change counter, so a future timestamp cannot authorize activity or keep stale counters on screen.
+- The 75-second freshness window is shared by the house, the resident poses and the retained construction marks instead of being repeated as separate constants.
+- The process summary now shows the age of the last signal, or “Señal con hora no válida” when the timestamp cannot be trusted. The accepted counter is hidden when the signal is not fresh.
+- Tests cover fresh, expired, future, malformed and missing timestamps. TypeScript, the production build and the 138-test suite pass in this checkout.
+
+P2 is not complete: the typed task/evidence contract, explicit failed/stale reasons in every surface, a hard request timeout and the session-bound work heartbeat described in P3 remain unimplemented.

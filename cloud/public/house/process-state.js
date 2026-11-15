@@ -2,6 +2,7 @@ import {ROOM_IDS} from './layout.js';
 
 export const PROCESS_PHASES=Object.freeze(['observe','understand','connect','apply','refute','retain']);
 export const PROCESS_STATES=Object.freeze(['idle','running','passed','failed','waiting']);
+export const TELEMETRY_FRESH_MS=75000;
 export const PHASE_LABELS=Object.freeze({observe:'Observar',understand:'Comprender',connect:'Conectar',apply:'Aplicar',refute:'Refutar',retain:'Conservar'});
 // These are coordinator-reported outcomes, not independent evidence or integration claims.
 export const STATE_LABELS=Object.freeze({idle:'En reposo',running:'En ejecución',passed:'Resultado reportado',failed:'Fallo reportado',waiting:'En espera'});
@@ -28,11 +29,21 @@ export function normalizeProcessState(value){
  const at=typeof value?.at==='string'&&Number.isFinite(Date.parse(value.at))?new Date(value.at).toISOString():null;
  return {at,connected:value?.connected!==false,processes};
 }
+// A future-dated or malformed timestamp is not evidence of a fresh signal.
+// Callers that need freshness must fail closed instead of accepting a negative age.
+export function telemetryAge(at,{now=Date.now()}={}){
+ if(typeof at!=='string'||!Number.isFinite(now))return null;
+ const timestamp=Date.parse(at);
+ if(!Number.isFinite(timestamp))return null;
+ const age=now-timestamp;
+ if(!Number.isFinite(age)||age<0)return null;
+ return age;
+}
 const priorities={running:5,failed:4,waiting:3,passed:2,idle:1};
 export function processForRoom(value,room,{ageMs=0}={}){
  const process=value.processes.filter(item=>item.room===room).sort((a,b)=>priorities[b.state]-priorities[a.state])[0];
  if(!process)return {id:room,room,state:'waiting',label:'Sin telemetría',workVerified:false};
- const fresh=value.connected!==false&&!!value.at&&Number.isFinite(ageMs)&&ageMs>=0&&ageMs<=75000;
+ const fresh=value.connected!==false&&!!value.at&&Number.isFinite(ageMs)&&ageMs>=0&&ageMs<=TELEMETRY_FRESH_MS;
  if(!fresh&&process.state==='running')return {...process,state:'waiting',label:value.connected===false?'Puente desconectado':'Sin señal reciente',workVerified:false};
  // workVerified here means only that recent running telemetry was received.
  // It does not mean the task result or an artifact was independently verified.
@@ -45,12 +56,11 @@ export function creatureArchetype(process,room){
  if(['body','games','cinema','refutation'].includes(room))return 'robot';
  return 'human';
 }
-export function measuredChanges(value,{now=Date.now(),maxAgeMs=75000}={}){
+export function measuredChanges(value,{now=Date.now(),maxAgeMs=TELEMETRY_FRESH_MS}={}){
  // Counters are coordinator-reported; do not keep displaying them as current
  // after the telemetry expires or when its timestamp is invalid/future-dated.
- const timestamp=typeof value?.at==='string'?Date.parse(value.at):NaN;
- const age=now-timestamp;
- if(value?.connected===false||!Number.isFinite(timestamp)||!Number.isFinite(age)||age<0||age>maxAgeMs)return null;
+ const age=telemetryAge(value?.at,{now});
+ if(value?.connected===false||age===null||age>maxAgeMs)return null;
  const accepted=value?.processes?.find(item=>item.id==='experience')?.counters?.accepted;
  return counter(accepted)?accepted:null;
 }

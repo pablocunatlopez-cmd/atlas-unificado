@@ -10,12 +10,22 @@ import ConstellationPanel from './constellation-panel';
 import CoreObservatory,{type CoreTelemetry} from './core-observatory';
 import styles from './atlas-house.module.css';
 import {RESIDENTS,WORKSTATIONS,residentById,processForResident} from '../public/house/residents.js';
+import {telemetryAge,TELEMETRY_FRESH_MS} from '../public/house/process-state.js';
 import {readCreativePreview} from './experience-creative-preview';
 
 type ResidentRecord={id:string;room:HouseRoom;name:string;role:string;archetype:string;processIds:string[];cosmetic:boolean;activePhases?:string[]};
 type HouseResident=ResidentRecord&{status?:string;statusTone?:'idle'|'running'|'passed'|'failed'|'waiting'};
 type Props={signedIn:boolean;displayName:string;signInPath:string};
 type Status={online:boolean;modelName?:string;lastSeen?:string|null;capabilities?:{gpuMode?:'chat'|'video'|'training';processTelemetry?:(CoreTelemetry&{experience?:{creative?:unknown}|null})|null};failed?:boolean};
+function ageLabel(ageMs:number|null){
+ if(ageMs===null)return 'sin hora válida';
+ const seconds=Math.max(0,Math.round(ageMs/1000));
+ if(seconds<5)return 'ahora';
+ if(seconds<60)return `hace ${seconds} s`;
+ const minutes=Math.round(seconds/60);
+ if(minutes<60)return `hace ${minutes} min`;
+ return `hace ${Math.round(minutes/60)} h`;
+}
 const rooms:Record<HouseRoom,{title:string;short:string;description:string;action:string;icon:LucideIcon;accent:string}>={
   salon:{title:'Lía · Salón de Atlas',short:'Salón',description:'Atlas piensa, conecta y formula la identidad de Lía desde la mente.',action:'Hablar con Atlas',icon:MessageCircle,accent:'#a8e5ce'},
   music:{title:'Lía · Estudio de música',short:'Música',description:'El sonido da forma al alma de Lía y ayuda a que la casa respire.',action:'Hacer música',icon:AudioLines,accent:'#e7be7c'},
@@ -30,7 +40,7 @@ const rooms:Record<HouseRoom,{title:string;short:string;description:string;actio
 };
 
 export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
-  const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false),[status,setStatus]=useState<Status|null>(null),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState('');
+  const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false),[status,setStatus]=useState<Status|null>(null),[statusAt,setStatusAt]=useState(0),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState('');
   const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null);
   const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|undefined>(undefined),[sceneError,setSceneError]=useState(''),[capturing,setCapturing]=useState(false),[hudHidden,setHudHidden]=useState(false);
   const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),previousFocus=useRef<HTMLElement|null>(null),lastRequested=useRef<HouseRoom|null>(null),pollBusy=useRef(false),roomNavigation=useRef<HTMLElement|null>(null);
@@ -46,7 +56,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
         const response=await fetch('/api/cloud/status',{cache:'no-store',signal:controller.signal});
         if(!response.ok)throw new Error('');
         const data=await response.json() as Status;
-        if(alive){ setStatus(data); setStatusFailed(false); }
+        if(alive){ setStatus(data); setStatusAt(Date.now()); setStatusFailed(false); }
       }catch{
         if(alive){ setStatusFailed(true); }
       }finally{
@@ -74,11 +84,11 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const overview=()=>{setRoomDetailsOpen(false);setEntered(false);setMenu(false);setSelectedResident(null);setResidentsOpen(false);lastRequested.current=null;api?.overview();};
   const initials=(displayName||'Tu espacio').slice(0,1).toUpperCase();
   const connected=status?.online===true&&!statusFailed;
-  const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {connected:false,processes:[]};const age=telemetry.at?Date.now()-Date.parse(telemetry.at):Infinity; return {connected:age<60000,processes:telemetry.processes??[]};},[status?.capabilities?.processTelemetry]);
+  const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {connected:false,processes:[],ageMs:null,available:false};const ageMs=telemetryAge(telemetry.at,{now:statusAt});return {connected:telemetry.connected!==false&&ageMs!==null&&ageMs<=TELEMETRY_FRESH_MS,processes:telemetry.processes??[],ageMs,available:true};},[status?.capabilities?.processTelemetry,statusAt]);
   const creative=useMemo(()=>readCreativePreview(status?.capabilities?.processTelemetry?.experience?.creative),[status?.capabilities?.processTelemetry?.experience?.creative]);
   const selectedPerson=selectedResident?residentById(selectedResident):null;
   const residentRuntime=useMemo<HouseResident[]>(()=>RESIDENTS.filter((resident:ResidentRecord)=>!resident.cosmetic).map((resident:ResidentRecord)=>{
-    const result=processForResident(processState,resident,{ageMs:60000});
+    const result=processForResident(processState,resident,{ageMs:processState.ageMs??Infinity});
     const toneMap={idle:'idle',running:'running',passed:'passed',failed:'failed',waiting:'waiting'} as const;
     return {
       ...resident,
@@ -90,8 +100,9 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const visitEvolution=()=>{setRoomDetailsOpen(false);setResidentsOpen(false);setEntered(true);setRoom('games');setSelectedResident(null);api?.focusEvolution();};
   useEffect(()=>{if(!residentsOpen)return;residentsPanel.current?.focus();const close=(event:KeyboardEvent)=>{if(event.key==='Escape'){setResidentsOpen(false);residentsToggle.current?.focus();}};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[residentsOpen]);
   const activeProcesses=processState.connected?processState.processes.filter(process=>process.state==='running').length:0;
-  const rawChanges=processState.processes.find(process=>process.id==='experience')?.counters?.accepted;
+  const rawChanges=processState.connected?processState.processes.find(process=>process.id==='experience')?.counters?.accepted:undefined;
   const acceptedChanges=typeof rawChanges==='number'&&Number.isSafeInteger(rawChanges)&&rawChanges>=0?rawChanges:null;
+  const signalLabel=!processState.available?'Sin señal reciente':processState.connected?`${activeProcesses} en acción · ${ageLabel(processState.ageMs)}`:processState.ageMs===null?'Señal con hora no válida':`Sin señal reciente · ${ageLabel(processState.ageMs)}`;
 
   return <main className={`${styles.house} ${hudHidden?styles.cleanView:''}`}>
    <div className={styles.scene}><HouseScene creative={creative} onCreativeApplied={setInstallation} onResidentFocus={setSelectedResident} processState={processState} paused={workspace!==null&&workspace!==undefined} onPerformance={setPerformance} onError={setSceneError} onReady={ready} /></div>
@@ -125,7 +136,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
      <div className={styles.roomFoot}><i/>{sceneError?'3D no disponible en este navegador':api?'Entorno 3D en tiempo real':'Preparando el entorno…'}{performance&&performance.fps>0&&<span>{Math.round(performance.fps)} FPS</span>}</div>
      <p className={styles.compactChanges}>Cambios reportados: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</p>
      <details className={styles.mirrorLegend} open>
-      <summary>Espejo de procesos <span>{processState.connected?`${activeProcesses} en acción`:'Sin señal reciente'}</span></summary>
+      <summary>Espejo de procesos <span>{signalLabel}</span></summary>
       <p>{WORKSTATIONS.length} puestos con habitantes y 6 espectadores. La casa de Lía solo mejora cuando las tareas reales se ejecutan y se verifican.</p>
       <p>Mientras el juego está abierto, cada vértice cumple su función: Atlas observa, Ion ejecuta, Ícaro conecta y Lía se vuelve mejor.</p>
       <strong>Cambios reportados en la espiral: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</strong>

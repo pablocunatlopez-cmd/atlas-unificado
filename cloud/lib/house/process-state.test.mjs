@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeProcessState,processForRoom,processCaption,processMotion,creatureArchetype,measuredChanges} from '../../public/house/process-state.js';
+import {normalizeProcessState,processForRoom,processCaption,processMotion,creatureArchetype,measuredChanges,telemetryAge} from '../../public/house/process-state.js';
 
 test('process display accepts bounded evidence and rejects unknown states, counters and executable fields',()=>{
  const value=normalizeProcessState({at:'2026-10-31T12:00:00Z',secret:'ignored',processes:[{id:'library',state:'running',phase:'observe',label:'Repositorios\n públicos',counters:{observations:14,accepted:0,rejected:-1,trials:1e30},script:'run()'},{id:'__proto__',state:'running'},{id:'bad',room:'missing',state:'passed'},{id:'core',state:'superintelligent'},{id:'custom',room:'language',state:'passed',counters:{accepted:2}}]});
@@ -13,6 +13,13 @@ test('fresh running state drives work, stale or absent telemetry becomes waiting
  assert.equal(processForRoom(data,'mind',{ageMs:74000}).state,'running');const stale=processForRoom(data,'mind',{ageMs:76000});assert.equal(stale.state,'waiting');assert.equal(stale.counters.observations,8);assert.equal(stale.counters.accepted,undefined);assert.match(stale.label,/Sin señal/);
  const missing=processForRoom(data,'body');assert.equal(missing.state,'waiting');assert.equal(missing.counters,undefined);assert.match(missing.label,/Sin telemetría/);
  const poses=Array.from({length:10},(_,i)=>processMotion(stale,i/2));assert.ok(poses.every(pose=>pose.travel===0&&pose.limb===0&&pose.bob===0));assert.ok(Array.from({length:10},(_,i)=>processMotion({...processForRoom(data,'mind'),phase:'connect'},i/2)).some(pose=>Math.abs(pose.travel)>.1));
+});
+test('future, malformed or missing timestamps have no valid age and cannot keep reported changes current',()=>{
+ const now=Date.parse('2026-11-01T12:00:00Z');
+ assert.equal(telemetryAge('2026-11-01T11:59:59Z',{now}),1000);
+ for(const at of ['2026-11-01T12:00:01Z','not-a-date',null,undefined])assert.equal(telemetryAge(at,{now}),null);
+ assert.equal(measuredChanges({at:'2026-11-01T12:00:01Z',processes:[{id:'experience',counters:{accepted:2}}]},{now}),null);
+ assert.equal(measuredChanges({at:'2026-11-01T12:00:00Z',processes:[{id:'experience',counters:{accepted:2}}]},{now:now+76000}),null);
 });
 test('missing, future or offline evidence cannot authorize work, and phases produce distinct verified poses',()=>{
  const data=normalizeProcessState({at:'2026-11-01T12:00:00Z',processes:[{id:'experience',state:'running',phase:'apply',counters:{accepted:2}}]});
