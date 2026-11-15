@@ -4,7 +4,7 @@ import {planAtlasIsolatedChecks} from './atlas-isolated-check-policy.mjs';
  * Never starts a container. Requires a pre-provisioned, pinned local image.
  * No shell interpolation, network, capabilities, writable root or host secrets.
  */
-const SHA=/^sha256:[a-f0-9]{64}$/;
+const IMAGE=/^[a-z0-9][a-z0-9._/-]{0,180}@sha256:[a-f0-9]{64}$/;
 const SAFE_PATH=/^\/[a-zA-Z0-9_.\/-]{1,240}$/;
 export function planAtlasContainerChecks({
  workspacePath,imageDigest,checks=['node --test'],
@@ -13,8 +13,8 @@ export function planAtlasContainerChecks({
  const policy=planAtlasIsolatedChecks({checks,cpuSeconds,memoryMb});
  if(!['podman','docker'].includes(runtime)||
   typeof workspacePath!=='string'||!SAFE_PATH.test(workspacePath)||
-  workspacePath.split('/').some(x=>x==='..'||x==='.')||
-  typeof imageDigest!=='string'||!SHA.test(imageDigest))
+  workspacePath.split('/').some(x=>x==='..'||x==='.')||workspacePath.includes('//')||
+  typeof imageDigest!=='string'||!IMAGE.test(imageDigest))
   throw Error('Invalid isolated container inputs');
  const command=checks[0]==='node --check'
   ?['node','--check','/workspace/entry.mjs']
