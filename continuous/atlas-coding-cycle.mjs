@@ -22,7 +22,8 @@ export function planAtlasCodingCycle({proposalId,repositoryFiles,targets,changes
  return Object.freeze({
   schemaVersion:2,proposalId,context,impact,patch,review,unresolved,
   status:'planned_not_executed',
-  nextStep:unresolved.length?'resolve_missing_or_conflicting_files':review.failedChecks.length?'run_tests_in_trusted_executor':
-    !review.readyForReview?'obtain_host_verified_approval':'human_review',
+  // Legacy review flags are caller-provided, not authenticated evidence.
+  verifiedReady:false,
+  nextStep:unresolved.length?'resolve_missing_or_conflicting_files':'verify_commit_bound_evidence',
  });
 }
