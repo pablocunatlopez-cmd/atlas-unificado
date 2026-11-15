@@ -13,11 +13,13 @@ Cada vértice requiere su propio espacio virtual de trabajo y sus contratos. La 
 
 ## Nombres de habitantes: no inferir más de lo que acredita el código
 
-En `cloud/public/house/residents.js` el inventario actual registra:
+En `cloud/public/house/residents.js` el inventario actual tiene 24 entradas: 18 puestos y 6 espectadores decorativos. El [catálogo de personajes](CHARACTER_CATALOG.md) documenta los 24, los 13 nombres recuperados y las familias simbólicas. Entre los puestos:
 
 - `sky-agents`: **Ícaro · agentes**, con el rol descrito como colaboradores programadores y ubicado en la sala Constelación.
 - `sky-sources`: **Alba · referencias**, con el rol de fuentes de la Constelación y ubicada en esa sala.
 - No aparece un habitante llamado **Saggy/Siggy** en ese inventario. Por tanto, no se debe inventar ni reasignar su función a partir del nombre. Su rol necesita evidencia procedente de la identidad/configuración real de Atlas.
+
+Los 13 nombres recuperados aparecen en el roster actual, aunque algunos roles difieren de la descripción histórica; el catálogo conserva esas diferencias en lugar de reescribirlas.
 
 La ubicación estática de un residente no implementa un viaje. El inventario define puestos, función declarada y procesos que pueden reflejar trabajo real; no demuestra que Ícaro o Alba recorran el cielo, consulten agentes, vuelvan a la casa o se comuniquen por sí solos.
 

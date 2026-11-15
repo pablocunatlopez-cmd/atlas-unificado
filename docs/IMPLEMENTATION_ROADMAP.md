@@ -41,6 +41,8 @@ Do not assign Saggy/Siggy a role until Atlas's canonical identity/configuration 
 
 Acceptance: every resident and route has a documented canonical purpose; no page claims capability not supported by its backing API; navigation to historical tools remains stable.
 
+P1 progress (partial, 2026-11-15): [CHARACTER_CATALOG.md](CHARACTER_CATALOG.md) inventories the 24 current residents, maps the 13 recovered names, records the 11 additional current names without claiming they are the missing ones, and separates symbolic/technical functions. The residents panel now lists all 24 entries and focuses the selected resident. Route inventory and per-resident operational status are still pending.
+
 ### P2 — Truthful runtime visibility
 
 1. Define a typed, versioned process event/status contract with task ID, owner scope, specialist ID, phase, timestamp, expiry, status, evidence/artefact reference, and bounded counters.
