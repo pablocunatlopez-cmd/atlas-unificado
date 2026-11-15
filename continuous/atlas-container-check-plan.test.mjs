@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {planAtlasContainerChecks} from './atlas-container-check-plan.mjs';
-const base={workspacePath:'/tmp/atlas-workspace',imageDigest:'sha256:'+'a'.repeat(64)};
+const base={workspacePath:'/tmp/atlas-workspace',imageDigest:'node@sha256:'+'a'.repeat(64)};
 test('plans no-network read-only restricted container without execution',()=>{
  const plan=planAtlasContainerChecks(base);
  assert.equal(plan.executed,false);
