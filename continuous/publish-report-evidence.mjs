@@ -57,3 +57,23 @@ export async function publishReportEvidence(report, {dataDir = DATA, request = f
     return {ok: false, published: 0, saved: records.length, reason: String(error?.message || error).slice(0, 200)};
   }
 }
+
+async function main() {
+  const autonomy = JSON.parse(await fs.readFile(path.join(DATA, 'autonomous-review.json'), 'utf8'));
+  const report = autonomy.history?.at(-1);
+  if (!report) {
+    console.error('No autonomy history to publish.');
+    process.exitCode = 1;
+    return;
+  }
+  const result = await publishReportEvidence(report);
+  console.log(JSON.stringify(result));
+  if (!result.ok) process.exitCode = 1;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
