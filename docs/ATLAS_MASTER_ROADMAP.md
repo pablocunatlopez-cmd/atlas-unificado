@@ -23,7 +23,8 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 - [x] Add a Docker invocation builder with pinned image, no network, read-only workspace, dropped capabilities and resource caps (does not execute).
 - [x] Add a bounded Docker child-process supervisor with output hashing, timeout, output cap and fail-closed reports; execution requires a host-verification flag.
 - [ ] Implement an independent trusted host that verifies checkout digest, canonical mount path, Docker daemon isolation and process-tree termination (a boolean flag is not proof).
-- [ ] Execute real isolated runs and verify CI-backed results; current Docker builder is not proof of sandbox security.
+- [x] Make supervisor fail closed on unconfirmed termination and oversized output; add regression coverage.
+- [ ] Execute real isolated runs and verify CI-backed results; Docker invocation builder and injected host flag are not proof of sandbox security.
 **Done when:** an adversarial patch cannot escape a sandbox and no unverified check can authorize publishing.
 
 ## Milestone 2 — working coding agent (P0)
