@@ -1,4 +1,5 @@
 import {open,mkdir,lstat} from 'node:fs/promises';
+import {constants} from 'node:fs';
 import {resolve} from 'node:path';
 /**
  * Cooperative local one-time approval marker. Exclusive 'wx' creation is
@@ -41,8 +42,11 @@ export async function consumeAtlasApprovalOnce({
  }
  // Sync directory entry as well as marker contents where supported.
  // On platforms without directory fsync, fail closed; marker remains used.
- const dirHandle=await open(root,'r');
+ const dirHandle=await open(root,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_DIRECTORY);
  try{
+  const opened=await dirHandle.stat();
+  if(!opened.isDirectory()||opened.dev!==info.dev||opened.ino!==info.ino)
+   throw Error('Approval directory changed during write');
   await dirHandle.sync();
  }finally{
   await dirHandle.close();
