@@ -22,7 +22,7 @@ export function selectErasProfile({mobile=false,webgpu=false,deviceMemoryGB=null
 export function adaptErasQuality(currentName,averageFrameMs){
  if(!Object.hasOwn(ERAS_PROFILES,currentName)||!Number.isFinite(averageFrameMs)||averageFrameMs<=0)
    throw Error('Invalid profile or frame time');
- const tiers=['mobile_low','mobile_high','desktop_high','desktop_ultra'];
+ const tiers=currentName.startsWith('mobile')?['mobile_low','mobile_high']:['desktop_high','desktop_ultra'];
  const i=tiers.indexOf(currentName);
  const target=ERAS_PROFILES[currentName].targetFPS;
  const next=averageFrameMs>1000/target*1.35?Math.max(0,i-1):
