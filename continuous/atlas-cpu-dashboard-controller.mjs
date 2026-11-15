@@ -14,7 +14,7 @@ export function createAtlasCpuDashboardController({
  return Object.freeze({
   get state(){return state;},
   render(){return renderAtlasCommandCenter({project,
-   localDiagnostics:state.diagnostics});},
+   localDiagnostics:state.diagnostics,diagnosticsAction:true});},
   async runDiagnostics(){
    if(running)throw Error('Diagnostics already running');
    running=true;state=Object.freeze({phase:'running',diagnostics:null,error:null});
