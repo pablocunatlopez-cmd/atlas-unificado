@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import {buildEvidenceRecord} from './evidence-publish.mjs';
 import {recordsFromAutonomyReport} from './typed-evidence-from-report.mjs';
-import {readSessionLiveWork, SESSION_HEARTBEAT_VERSION} from './session-live-work-gate.mjs';
+import {evaluateSessionLiveWork, readSessionLiveWork} from './session-live-work-gate.mjs';
 
 const record = buildEvidenceRecord({
   taskId: 'smoke-task',
@@ -29,16 +29,25 @@ const fromReport = recordsFromAutonomyReport({
 assert.ok(fromReport.length >= 2);
 assert.ok(fromReport.every((item) => !item.integratedRevision));
 
-// Gate must fail closed when the public GET reports the cycle off.
+const closed = evaluateSessionLiveWork({
+  liveCycleEnabled: false,
+  activeSessions: 3,
+  recent: [{at: new Date().toISOString(), allowsWork: true}],
+});
+assert.equal(closed.mayStartLiveWork, false);
+assert.equal(closed.reason, 'live_cycle_disabled');
+
+const open = evaluateSessionLiveWork({
+  liveCycleEnabled: true,
+  activeSessions: 1,
+  recent: [{at: new Date().toISOString(), allowsWork: true}],
+});
+assert.equal(open.mayStartLiveWork, true);
+
 const gate = await readSessionLiveWork('https://example.test', {
   request: async () => ({
     ok: true,
-    json: async () => ({
-      contractVersion: SESSION_HEARTBEAT_VERSION,
-      liveCycleEnabled: false,
-      activeSessions: 0,
-      recent: [],
-    }),
+    json: async () => ({liveCycleEnabled: false, activeSessions: 0, recent: []}),
   }),
 });
 assert.equal(gate.mayStartLiveWork, false);
@@ -48,6 +57,7 @@ console.log(
     ok: true,
     evidenceRecord: true,
     reportMapping: fromReport.length,
-    mayStartLiveWork: gate.mayStartLiveWork,
+    gateClosed: closed.mayStartLiveWork,
+    gateOpen: open.mayStartLiveWork,
   }),
 );
