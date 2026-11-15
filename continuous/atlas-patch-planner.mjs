@@ -16,9 +16,9 @@ export function planAtlasPatch({proposalId,files=[],checks=['syntax','unit','sec
  const seen=new Set();let bytes=0;
  const changes=files.map(f=>{
    if(!f||!OPERATIONS.has(f.operation)||typeof f.path!=='string'||
-      !PATH.test(f.path)||f.path.split('/').some(x=>x===''||x==='.'||x==='..')||
-      seen.has(f.path)||f.path.startsWith('.git/')||
-      f.path.startsWith('node_modules/')||
+      !PATH.test(f.path)||f.path.startsWith('/')||f.path.split('/').some(x=>x===''||x==='.'||x==='..')||
+      seen.has(f.path)||(f.path==='.git'||f.path.startsWith('.git/'))||
+      (f.path==='node_modules'||f.path.startsWith('node_modules/'))||
       (f.operation!=='delete'&&typeof f.content!=='string')||
       (f.operation==='delete'&&f.content!==undefined))
      throw Error('Invalid patch operation');
