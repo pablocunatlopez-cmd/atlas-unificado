@@ -1,3 +1,5 @@
+import {TELEMETRY_FRESH_MS,telemetryFreshness,STATE_LABELS,REASON_LABELS} from './process-state.js';
+
 const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for(const item of Object.values(value))freeze(item);}return value;};
 
 // A resident belongs to a physical station, not to an invented background job.
@@ -37,8 +39,6 @@ export const WORKSTATIONS=freeze(RESIDENTS.filter(resident=>!resident.cosmetic))
 export const AUDIENCE=freeze(RESIDENTS.filter(resident=>resident.cosmetic));
 export const residentById=id=>RESIDENTS.find(resident=>resident.id===id)||null;
 export const residentsForRoom=room=>RESIDENTS.filter(resident=>resident.room===room);
-
-import {TELEMETRY_FRESH_MS,telemetryFreshness,STATE_LABELS,REASON_LABELS} from './process-state.js';
 
 const processPriorities={running:5,failed:4,waiting:3,passed:2,idle:1};
 // Shared by the 3D poses and the roster: one process may visit several stations,
