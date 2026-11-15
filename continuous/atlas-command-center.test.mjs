@@ -14,3 +14,19 @@ test('rejects malformed status and task data',()=>{
  assert.throws(()=>renderAtlasCommandCenter({status:'unknown'}));
  assert.throws(()=>renderAtlasCommandCenter({tasks:[{title:'x'}]}));
 });
+
+test('renders CPU diagnostics without claiming real inference',()=>{
+ const html=renderAtlasCommandCenter({localDiagnostics:{
+  status:'candidate_ready',llama:{ready:true},
+  memory:{freeRamMb:4096}
+ }});
+ assert.match(html,/Diagnóstico local/);
+ assert.match(html,/4096 MB/);
+ assert.match(html,/Inferencia real: no verificada/);
+});
+test('rejects malformed local diagnostics',()=>{
+ assert.throws(()=>renderAtlasCommandCenter({localDiagnostics:{
+  status:'candidate_ready',llama:{ready:true},
+  memory:{freeRamMb:NaN}
+ }}));
+});
