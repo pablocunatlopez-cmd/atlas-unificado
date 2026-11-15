@@ -14,6 +14,7 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 - [x] Block missing update targets and conflicting create targets.
 - [x] Identify reverse dependencies for regression impact.
 - [x] Introduce injected trusted evidence verification interface.
+- [x] Stop the legacy coding-cycle planner from treating caller-supplied check/approval flags as verified permission.
 - [ ] Implement canonical-path/symlink checks in a trusted host.
 - [ ] Bind approvals, checks, diff digest and commit SHA to an authenticated principal.
 - [ ] Isolate untrusted code execution and enforce budgets.
