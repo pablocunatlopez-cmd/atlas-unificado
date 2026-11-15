@@ -90,18 +90,18 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
   // Enforce the size cap while streaming: Content-Length may be absent or false.
   const maxArtifactBytes=10*1024*1024;
   if(!artifact.body?.getReader)throw Error('El vídeo no permite lectura controlada.');
-  const reader=artifact.body.getReader(),chunks=[];let total=0;
+  const artifactReader=artifact.body.getReader(),chunks=[];let total=0;
   try{
    for(;;){
     jobSignal.throwIfAborted();
-    const {done,value}=await reader.read();
+    const {done,value}=await artifactReader.read();
     if(done)break;
     total+=value.byteLength;
     if(total>maxArtifactBytes)throw Error('El archivo de vídeo supera el límite permitido.');
     chunks.push(value);
    }
-  }catch(error){await reader.cancel().catch(()=>{});throw error;}
-  finally{reader.releaseLock();}
+  }catch(error){await artifactReader.cancel().catch(()=>{});throw error;}
+  finally{artifactReader.releaseLock();}
   const bytes=new Uint8Array(total);let offset=0;
   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
   if(bytes.length<32||String.fromCharCode(...bytes.subarray(4,8))!=='ftyp')throw Error('El resultado no es un MP4 permitido.');
