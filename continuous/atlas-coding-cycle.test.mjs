@@ -15,13 +15,14 @@ test('connects context selection and patch plan without execution',()=>{
  assert.equal(result.status,'planned_not_executed');
  assert.deepEqual(result.context.files.map(f=>f.path),['src/main.mjs','src/dep.mjs']);
  assert.equal(result.patch.changes.length,1);
- assert.equal(result.nextStep,'run_tests_in_trusted_executor');
+ assert.equal(result.nextStep,'verify_commit_bound_evidence');
 });
 test('requires verified approval and all declared checks for review',()=>{
  const result=planAtlasCodingCycle({...base,checks:{syntax:true,unit:true,security:true},
  approval:{verifiedByHost:true,principal:'reviewer',proposalId:'atlas-task-1'}});
  assert.equal(result.review.readyForReview,true);
- assert.equal(result.nextStep,'human_review');
+ assert.equal(result.nextStep,'verify_commit_bound_evidence');
+ assert.equal(result.verifiedReady,false);
  assert.equal(result.status,'planned_not_executed');
 });
 test('rejects unsafe patch targets',()=>{
