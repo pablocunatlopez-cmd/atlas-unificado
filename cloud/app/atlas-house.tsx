@@ -9,6 +9,7 @@ import WorldWorkshop from './world-workshop';
 import CinemaPanel from './cinema-panel';
 import ConstellationPanel from './constellation-panel';
 import CoreObservatory,{type CoreTelemetry} from './core-observatory';
+import TypedEvidencePanel from './typed-evidence-panel';
 import styles from './atlas-house.module.css';
 import LiveWorkOptIn from './live-work-opt-in';
 import {RESIDENTS,WORKSTATIONS,residentById,processForResident} from '../public/house/residents.js';
@@ -189,6 +190,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
      {workspace==='cinema'&&<CinemaPanel houseApi={api} ready={signedIn}/>} 
      {workspace==='constellation'&&<ConstellationPanel/>}
      {(workspace==='mind'||workspace==='body'||workspace==='refutation'||workspace==='language')&&<CoreObservatory mode={workspace} telemetry={status?.capabilities?.processTelemetry} connected={connected} ready={signedIn} gpuMode={status?.capabilities?.gpuMode}/>}
+     {workspace==='refutation'&&<TypedEvidencePanel/>}
     </>}
    </dialog>
    <dialog ref={charterDialog} className={styles.charterDialog} aria-labelledby="lia-charter-title" onCancel={event=>{event.preventDefault();setCharterOpen(false);}} onClick={event=>{if(event.target===event.currentTarget)setCharterOpen(false);}}>

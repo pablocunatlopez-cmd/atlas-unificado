@@ -5,7 +5,7 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 
 ## Milestone 0 — establish reality and test baseline (P0)
 - [x] Inventory existing planning, scene, renderer, and evidence modules.
-- [x] Confirm package scripts and CI trigger; inspected GitHub Actions on a pinned SHA (syntax passed; 802 tests: 791 passed, 1 failed, 1 cancelled, 9 skipped).
+- [x] Recorded a historical CI snapshot (802 tests: 791 passed, 1 failed, 1 cancelled, 9 skipped); this is not the current branch baseline.
 - [x] Correct identified Three.js parent attachment failure and non-cooperative workflow timeout cancellation.
 - [ ] Re-run full suite on latest exact SHA and verify all required checks pass.
 - [ ] Fix failing tests; publish reproducible test report.
@@ -74,3 +74,10 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 4. Each iteration should leave code, tests, or verified findings in GitHub.
 5. Sites publishing needs an actual authorized Sites integration; GitHub alone cannot deploy there.
 6. Prefer free/open-source components and measure resource use.
+
+## Current implementation status (2026-11-15)
+- **P0 evidence boundary:** coding-cycle proposals can be reviewed by the commit-bound gate; execution remains disabled pending a production CI verifier.
+- **P0 trusted host:** canonical-path and proposal/diff/commit checks, one-use approval, branch preconditions and rollback callbacks are implemented as an injected policy wrapper; GitHub/authentication adapters and durable proposal storage remain prototypes.
+- **ERAS house:** a bounded manifest adapter is connected to the same-origin house runtime message path; no production manifest source or browser visual audit has been verified.
+- **House evidence UI:** typed evidence appears in Refutation; `reported` and `failed` are distinct, and `integrated` requires `integratedRevision`. No `verified` claim is emitted without an independent verifier contract.
+- **Test baseline:** record the actual current-SHA run and coverage status after the code commit; the historical 802-test result above must not be used as evidence for this branch.

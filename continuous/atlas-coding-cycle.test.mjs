@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {planAtlasCodingCycle} from './atlas-coding-cycle.mjs';
+import {planAtlasCodingCycle,verifyAtlasCodingCycleEvidence} from './atlas-coding-cycle.mjs';
 const base={
  proposalId:'atlas-task-1',
  repositoryFiles:[
@@ -17,13 +17,36 @@ test('connects context selection and patch plan without execution',()=>{
  assert.equal(result.patch.changes.length,1);
  assert.equal(result.nextStep,'verify_commit_bound_evidence');
 });
-test('requires verified approval and all declared checks for review',()=>{
+test('legacy caller flags never mark the plan verified or ready to execute',()=>{
  const result=planAtlasCodingCycle({...base,checks:{syntax:true,unit:true,security:true},
  approval:{verifiedByHost:true,principal:'reviewer',proposalId:'atlas-task-1'}});
- assert.equal(result.review.readyForReview,true);
+ assert.equal(result.review.readyForReview,false);
+ assert.deepEqual(result.review.failedChecks,['syntax','unit','security']);
  assert.equal(result.nextStep,'verify_commit_bound_evidence');
  assert.equal(result.verifiedReady,false);
  assert.equal(result.status,'planned_not_executed');
+});
+test('binds trusted evidence review to the planned proposal, actions and commit',async()=>{
+ const cycle=planAtlasCodingCycle(base),commitSha='a'.repeat(40);
+ const evidence=['syntax','unit','security','approval'].map(kind=>({kind}));
+ const contexts=[];
+ const result=await verifyAtlasCodingCycleEvidence({
+ cycle,commitSha,evidence,
+ verifyEvidence:async(item,context)=>{contexts.push(context);return true;}
+ });
+ assert.equal(result.proposalId,cycle.proposalId);
+ assert.equal(result.commitSha,commitSha);
+ assert.equal(result.readyForHumanReview,true);
+ assert.equal(result.executionAuthorized,false);
+ assert.deepEqual(contexts[0].actions,[
+ {kind:'write',target:'src/main.mjs'}
+ ]);
+});
+test('does not verify a cycle with unresolved paths',async()=>{
+ const cycle=planAtlasCodingCycle({...base,changes:[{operation:'update',path:'src/missing.mjs',content:'x'}]});
+ await assert.rejects(verifyAtlasCodingCycleEvidence({
+ cycle,commitSha:'a'.repeat(40),evidence:[],verifyEvidence:async()=>true
+ }),/unresolved/);
 });
 test('rejects unsafe patch targets',()=>{
  assert.throws(()=>planAtlasCodingCycle({...base,changes:[{operation:'delete',path:'../secret'}]}));
