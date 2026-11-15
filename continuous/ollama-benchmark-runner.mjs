@@ -18,10 +18,9 @@ export async function evaluateOllamaCases({model,cases,origin,request,signal,opt
  for(const item of cases){
    signal?.throwIfAborted();
    const output=await runOllamaPrompt({model,prompt:item.prompt,origin,request,signal,options});
-   // Non-streaming API cannot measure time to first token. Use total time as
-   // a conservative upper bound, never label it as measured TTFT.
+   // Non-streaming inference has no observed first-token timestamp.
    runs.push({id:item.id,passed:output.response.trim()===item.expected.trim(),
-     durationMs:output.durationMs,ttftMs:output.durationMs});
+     durationMs:output.durationMs,ttftMs:null});
  }
  return runs;
 }
