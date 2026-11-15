@@ -4,10 +4,10 @@ import {queryAtlasLocalLlama} from './atlas-local-llama-client.mjs';
  * Human-reviewed voice-to-local-model bridge.
  * Explicit confirmation is mandatory before invoking local inference.
  */
-export async function answerAtlasReviewedVoice({transcription,approvedText,endpoint,
+export async function answerAtlasReviewedVoice({transcription,approvedText,confirmed=false,endpoint,
  model='local',fetchImpl}={}){
  const plan=planAtlasVoiceTurn({transcription});
- if(typeof approvedText!=='string'||!approvedText.trim()||
+ if(confirmed!==true||typeof approvedText!=='string'||!approvedText.trim()||
   approvedText.trim().length>8000||approvedText.trim()!==plan.content)
   throw Error('Voice transcript must be explicitly reviewed and confirmed');
  const response=await queryAtlasLocalLlama({
