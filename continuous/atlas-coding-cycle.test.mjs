@@ -27,3 +27,17 @@ test('requires verified approval and all declared checks for review',()=>{
 test('rejects unsafe patch targets',()=>{
  assert.throws(()=>planAtlasCodingCycle({...base,changes:[{operation:'delete',path:'../secret'}]}));
 });
+
+test('blocks updates to files absent from repository snapshot',()=>{
+ const result=planAtlasCodingCycle({...base,changes:[{operation:'update',path:'src/missing.mjs',content:'x'}]});
+ assert.equal(result.nextStep,'resolve_missing_or_conflicting_files');
+ assert.deepEqual(result.unresolved,['src/missing.mjs']);
+});
+test('blocks create when file already exists',()=>{
+ const result=planAtlasCodingCycle({...base,changes:[{operation:'create',path:'src/main.mjs',content:'x'}]});
+ assert.equal(result.nextStep,'resolve_missing_or_conflicting_files');
+});
+test('reports affected reverse dependencies for regression targeting',()=>{
+ const result=planAtlasCodingCycle({...base,changes:[{operation:'update',path:'src/dep.mjs',content:'export const x=2;'}]});
+ assert.deepEqual(result.impact.affected,['src/dep.mjs','src/main.mjs']);
+});
