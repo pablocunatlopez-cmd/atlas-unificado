@@ -38,3 +38,8 @@
 
 /* Visually hidden but available to screen readers and keyboard users. */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Scoped personal memory: a visible namespace choice, not an autonomous agent. */
+.memory-scope-filter{display:flex;align-items:center;gap:7px;color:#a6b096;font-size:10px;white-space:nowrap}
+.memory-scope-filter select{border:1px solid #e4e8db;background:#fdfef9;border-radius:7px;padding:8px 9px;color:#7d8d67;font-size:10px;max-width:220px}
+@media(max-width:680px){.memory-scope-filter{width:100%}.memory-scope-filter select{flex:1;max-width:none}}

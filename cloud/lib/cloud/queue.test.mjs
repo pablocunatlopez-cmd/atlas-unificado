@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createCloudQueue} from './queue.mjs';
+import {RESIDENT_MEMORY_RETENTION_MS} from '../core/resident-memory.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 function fixture(t,options={}){
  const sqlite=new DatabaseSync(':memory:');t.after(()=>sqlite.close());
@@ -57,6 +58,24 @@ test('actual migrations support isolated conversations, atomic claim and exactly
  const history=await queue.conversation('pablo',accepted.conversationId);assert.equal(history.messages.length,2);assert.equal(history.messages[1].content,result.answer);assert.equal(history.pendingJob,undefined);
  assert.equal((await queue.enqueue('pablo',input)).status,'completed');await assert.rejects(queue.enqueue('pablo',{...input,message:'Pregunta diferente'}),error=>error.status===409);assert.equal((await queue.conversations('otro')).conversations.length,0);
 });
+test('autonomous resident observations are idempotent, attributed and closed to known stations',async t=>{
+ const {queue,sqlite,advance,now}=fixture(t);
+ sqlite.prepare('INSERT INTO resident_memories(id,resident_id,process_id,state,phase,event_key,text,at,created_at) VALUES(?,?,?,?,?,?,?,?,?)').run('old','lab-bench','experience','passed',null,'old','Vieja','2026-01-01T00:00:00.000Z',now()-RESIDENT_MEMORY_RETENTION_MS-1);
+ const telemetry={at:new Date(now()).toISOString(),connected:true,processes:[{id:'experience',state:'passed',phase:'apply',label:'Contraste'},{id:'tools',state:'failed',phase:'apply',label:'Herramientas'}]};
+ assert.equal((await queue.observeResidentEvents(telemetry)).observed,3);
+ assert.equal(sqlite.prepare("SELECT count(*) AS total FROM resident_memories WHERE id='old'").get().total,0);
+ assert.equal((await queue.observeResidentEvents(telemetry)).observed,0);
+ const nilo=await queue.residentMemories('lab-bench');assert.equal(nilo.memories.length,1);assert.equal(nilo.memories[0].state,'passed');assert.match(nilo.memories[0].text,/Nilo · experimentos/);
+ assert.equal((await queue.residentMemories('body-console')).memories.length,1);assert.equal((await queue.residentMemories('mind-desk')).memories.length,0);
+ await assert.rejects(queue.residentMemories('unknown'),error=>error.status===404);
+ await assert.rejects(queue.residentMemories('cinema-audience-1'),error=>error.status===404);
+ assert.doesNotMatch(JSON.stringify(nilo),/private|prompt|token/);
+ assert.equal((await queue.observeResidentEvents({...telemetry,at:new Date(now()-75001).toISOString()})).observed,0);
+ advance(30*60*1000+1);
+ assert.equal((await queue.observeResidentEvents({...telemetry,at:new Date(now()).toISOString()})).observed,3);
+ assert.equal((await queue.residentMemories('lab-bench')).memories.length,2);
+});
+
 test('only one pending turn per conversation, cancellation invalidates the lease',async t=>{
  const {queue}=fixture(t);const accepted=await queue.enqueue('pablo',next());await assert.rejects(queue.enqueue('pablo',next('Otra pregunta',{conversationId:accepted.conversationId})),error=>error.status===409);
  const {job}=await queue.claim(bridge);assert.equal((await queue.conversation('pablo',accepted.conversationId)).pendingJob.id,job.id);

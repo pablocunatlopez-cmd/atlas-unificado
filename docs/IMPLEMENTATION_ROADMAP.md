@@ -112,3 +112,5 @@ P2 has partial, verified progress as of 2026-11-15:
 - Tests cover fresh, expired, future, malformed and missing timestamps. TypeScript, the production build and the 138-test suite pass in this checkout.
 
 P2 is not complete: the typed task/evidence contract, explicit failed/stale reasons in every surface, a hard request timeout and the session-bound work heartbeat described in P3 remain unimplemented.
+
+Memory progress (partial, 2026-11-15): manual personal notes now carry a closed scope (`global`, `resident:<id>`, `room:<id>`, `module:<id>`) and the general chat retrieves only `global` unless another scope is requested. Separately, the house records autonomous observations for the 18 workstations when `/api/cloud/status` receives fresh terminal telemetry: only `passed`/`failed`, deduplicated per 30-minute window, retained for 30 days and shown in the selected resident's card. The table is global and contains no user data; clients cannot write it. It is not learning, independent verification, personality or a background daemon. See [MEMORY_SCOPES.md](MEMORY_SCOPES.md).

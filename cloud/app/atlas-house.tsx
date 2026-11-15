@@ -17,6 +17,7 @@ type ResidentRecord={id:string;room:HouseRoom;name:string;role:string;archetype:
 type HouseResident=ResidentRecord&{status?:string;statusTone?:'idle'|'running'|'passed'|'failed'|'waiting'};
 type Props={signedIn:boolean;displayName:string;signInPath:string};
 type Status={online:boolean;modelName?:string;lastSeen?:string|null;capabilities?:{gpuMode?:'chat'|'video'|'training';processTelemetry?:(CoreTelemetry&{experience?:{creative?:unknown}|null})|null};failed?:boolean};
+type ResidentMemory={id:string;processId:string;state:string;phase:string|null;text:string;at:string;observedAt:string};
 function ageLabel(ageMs:number|null){
  if(ageMs===null)return 'sin hora válida';
  const seconds=Math.max(0,Math.round(ageMs/1000));
@@ -41,6 +42,7 @@ const rooms:Record<HouseRoom,{title:string;short:string;description:string;actio
 
 export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false),[status,setStatus]=useState<Status|null>(null),[statusAt,setStatusAt]=useState(0),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState('');
+  const[residentMemories,setResidentMemories]=useState<ResidentMemory[]>([]),[memoryError,setMemoryError]=useState('');
   const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null);
   const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|undefined>(undefined),[sceneError,setSceneError]=useState(''),[capturing,setCapturing]=useState(false),[hudHidden,setHudHidden]=useState(false);
   const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),previousFocus=useRef<HTMLElement|null>(null),lastRequested=useRef<HouseRoom|null>(null),pollBusy=useRef(false),roomNavigation=useRef<HTMLElement|null>(null);
@@ -87,6 +89,14 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const processState=useMemo(()=>{const telemetry=status?.capabilities?.processTelemetry;if(!telemetry)return {connected:false,processes:[],ageMs:null,available:false};const ageMs=telemetryAge(telemetry.at,{now:statusAt});return {connected:telemetry.connected!==false&&ageMs!==null&&ageMs<=TELEMETRY_FRESH_MS,processes:telemetry.processes??[],ageMs,available:true};},[status?.capabilities?.processTelemetry,statusAt]);
   const creative=useMemo(()=>readCreativePreview(status?.capabilities?.processTelemetry?.experience?.creative),[status?.capabilities?.processTelemetry?.experience?.creative]);
   const selectedPerson=selectedResident?residentById(selectedResident):null;
+  useEffect(()=>{
+    if(!selectedResident){setResidentMemories([]);setMemoryError('');return;}
+    let alive=true;const controller=new AbortController();setResidentMemories([]);setMemoryError('');
+    fetch('/api/house/memory?resident='+encodeURIComponent(selectedResident),{cache:'no-store',signal:controller.signal})
+      .then(async response=>{if(!response.ok)throw new Error('');const data=await response.json() as {memories?:ResidentMemory[]};if(alive)setResidentMemories(Array.isArray(data.memories)?data.memories:[]);})
+      .catch(()=>{if(alive&&!controller.signal.aborted)setMemoryError('No se pudo leer la memoria de este habitante.');});
+    return()=>{alive=false;controller.abort();};
+  },[selectedResident]);
   const residentRuntime=useMemo<HouseResident[]>(()=>RESIDENTS.map((resident:ResidentRecord)=>{
     const result=processForResident(processState,resident,{ageMs:processState.ageMs??Infinity});
     const toneMap={idle:'idle',running:'running',passed:'passed',failed:'failed',waiting:'waiting'} as const;
@@ -130,6 +140,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
     <div className={styles.eyebrow}><span>△</span> {entered?'ENTRAS EN LÍA':'ATLAS · ION · ÍCARO'}</div>
     <h1>{entered?(selectedPerson?.name||active.title):<>La pirámide vive<br/>en Lía.</>}</h1>
     <p>{entered?(selectedPerson?.role||active.description):'Atlas aporta la mente, Ion el cuerpo, Ícaro el cielo y la constelación; Lía es el objetivo del entorno y la casa que se mejora a sí misma.'}</p>
+    {entered&&selectedPerson&&<div className={styles.residentMemory} aria-live="polite"><span>MEMORIA OBSERVADA</span>{memoryError?<p>{memoryError}</p>:selectedPerson.processIds.length===0?<p>Este puesto no tiene un proceso asignado; no se inventan recuerdos.</p>:residentMemories.length===0?<p>Sin resultados terminales registrados todavía.</p>:<ul>{residentMemories.slice(0,3).map(memory=><li key={memory.id}><p>{memory.text}</p><small>{new Date(memory.at).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short',timeZone:'UTC'})} UTC</small></li>)}</ul>}<small>Observaciones automáticas desde telemetría fresca del coordinador. No acreditan aprendizaje, verificación independiente ni consciencia.</small></div>}
     {!entered?<button className={styles.enter} type="button" onClick={()=>walk('salon')}>Entrar en la casa <ArrowUpRight size={15}/></button>:<button className={styles.overview} type="button" onClick={overview}>Volver a la visión general</button>}
     {entered&&<button className={styles.detailsToggle} type="button" aria-expanded={roomDetailsOpen} aria-controls="atlas-house-room-details" onClick={()=>setRoomDetailsOpen(value=>!value)}>{roomDetailsOpen?'Cerrar detalles':'Ver detalles'}</button>}
     <div className={styles.roomDetails} id="atlas-house-room-details" data-expanded={roomDetailsOpen}>

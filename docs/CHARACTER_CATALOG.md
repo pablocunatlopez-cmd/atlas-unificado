@@ -9,7 +9,7 @@ Este catálogo conserva la lista aportada por el propietario y la contrasta con 
 - **Conceptual:** representa una operación del razonamiento. No es un avatar, un proceso independiente ni una consciencia.
 - **No confirmado:** el nombre aparece en una etapa del diseño, pero no hay evidencia suficiente para asignarle un rol actual.
 
-No se rellenan los 11 nombres que la lista histórica no recuperó. Tampoco se afirma que todos los personajes convivan como avatares ni que cada uno tenga memoria propia.
+No se rellenan los 11 nombres que la lista histórica no recuperó. Tampoco se afirma que todos los personajes convivan como avatares ni que cada uno tenga una memoria autobiográfica. Los puestos con proceso pueden acumular observaciones autónomas acotadas; se explican en [MEMORY_SCOPES.md](MEMORY_SCOPES.md).
 
 ## 1. Los 24 habitantes actuales del mundo 3D
 
@@ -175,12 +175,14 @@ El código actual expone cuatro superficies principales —`/` (casa), `/chat/`,
 - 10 salas con geometría, colisiones y navegación.
 - Roles declarados, procesos vinculados y estados visuales basados en telemetría reciente.
 - Los 13 nombres recuperados aparecen en el roster.
-- Pruebas del roster, las poses, las etiquetas y la frescura de la telemetría.
+- Observaciones autónomas por puesto: solo resultados terminales (`passed`/`failed`) de telemetría fresca, atribuidos al proceso y la fase correctos, deduplicados por ventana de 30 minutos y visibles al seleccionar al habitante. No son aprendizaje ni verificación independiente.
+- Pruebas del roster, las poses, las etiquetas, la frescura de la telemetría y la memoria observada.
 
 **No implementado o no demostrado:**
 
 - Los 11 nombres que faltaban en la lista histórica; no se inventan.
-- Personalidad individual, memoria separada por personaje, sala o módulo y aprendizaje autónomo de cada habitante.
+- Personalidad individual, memoria autobiográfica o subjetiva y aprendizaje autónomo de cada habitante. La memoria observada es una lista de resultados reportados, no una mente separada.
+- Memoria autónoma para Noa, Ritmo o los espectadores: no tienen un proceso asignado y no se inventan recuerdos.
 - Las figuras simbólicas como avatares o procesos independientes.
 - La equivalencia entre los cuatro módulos históricos y las superficies actuales.
 - Que los 24 habitantes sean 24 agentes o 24 modelos. Comparten el mismo coordinador y el mismo Qwen local cuando hay trabajo real.
@@ -193,4 +195,4 @@ El código actual expone cuatro superficies principales —`/` (casa), `/chat/`,
 4. No asignar una función histórica dudosa sin evidencia.
 5. No añadir memorias privadas, conversaciones, rutas personales ni credenciales.
 
-Véase también [la identidad y el ciclo de Lía](LIA_TRIAD_RUNTIME.md), [el contrato de telemetría](PROCESS_TELEMETRY_CONTRACT.md) y [el roadmap](IMPLEMENTATION_ROADMAP.md).
+Véase también [la identidad y el ciclo de Lía](LIA_TRIAD_RUNTIME.md), [la memoria y sus ámbitos](MEMORY_SCOPES.md), [el contrato de telemetría](PROCESS_TELEMETRY_CONTRACT.md) y [el roadmap](IMPLEMENTATION_ROADMAP.md).

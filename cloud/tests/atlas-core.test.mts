@@ -31,6 +31,18 @@ test('withdrawn memories and corrected claims are not silently reused',()=>{
  state.memories[0].status='Aportado';state.corrections=[{id:'c',before:'Mi ciudad es Mercurio.',after:'Mi ciudad es Azahar.',reason:'Corrección explícita',date:'2026-10-19'}];
  assert.equal(memoryKnowledge(state).length,1);assert.match(memoryKnowledge(state)[0].text,/Azahar/);
 });
+test('scoped memories do not leak into the global chat or another scope',()=>{
+ const state=initialState();const base={kind:'Contexto' as const,domain:'general' as const,status:'Aportado' as const,date:'2026-01-01',versions:[]};
+ state.memories=[
+  {id:'global',title:'General',text:'global-only',scope:'global',...base},
+  {id:'resident',title:'Habitante',text:'resident-only',scope:'resident:salon-centre',...base},
+  {id:'room',title:'Sala',text:'room-only',scope:'room:music',...base},
+ ];
+ assert.deepEqual(memoryKnowledge(state).map(item=>item.id),['memory:global']);
+ assert.deepEqual(memoryKnowledge(state,'resident:salon-centre').map(item=>item.id),['memory:resident']);
+ assert.deepEqual(memoryKnowledge(state,'room:music').map(item=>item.id),['memory:room']);
+ assert.doesNotMatch(JSON.stringify(memoryKnowledge(state)),/resident-only|room-only/);
+});
 test('protected capability checks actually pass',()=>{assert.ok(capabilityTests().length>=7);for(const c of capabilityTests())assert.equal(c.passed,true,c.name);});
 test('own model: deterministic initialization, normalized distribution and checkpoint round trip',()=>{
  const a=new TinyLanguageModel(undefined,101),b=new TinyLanguageModel(undefined,101);

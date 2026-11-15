@@ -1,6 +1,7 @@
 /** D1-backed, user-isolated handoff to the owner's local inference worker. */
 import {validateCreativePlan} from '../creative/plan.mjs';
 import {sanitizeProcessTelemetry} from '../core/process-telemetry.mjs';
+import {RESIDENT_MEMORY_LIMIT,RESIDENT_MEMORY_RETENTION_MS,buildResidentMemoryEvents,isResidentId} from '../core/resident-memory.mjs';
 export class CloudQueueError extends Error {
  constructor(message,status=400){super(message);this.status=status;}
 }
@@ -184,5 +185,26 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   await statement("UPDATE cloud_jobs SET status='failed',error='El motor local no pudo completar la respuesta. Puedes intentarlo de nuevo.',lease_until=0,updated_at=? WHERE id=? AND lease_token=? AND status='running'",now(),input.jobId,input.leaseToken).run();
   return {ok:true,status:'failed'};
  }
- return {enqueue,status,conversations,conversation,getJob,cancel,heartbeat,claim,complete,fail:failJob};
+ async function observeResidentEvents(telemetry){
+  const events=buildResidentMemoryEvents(telemetry,{now:now()});
+  if(!events.length)return {observed:0};
+  // One read avoids twelve no-op writes on every ten-second house poll.
+  const existing=await all('SELECT event_key FROM resident_memories WHERE event_key IN ('+events.map(()=>'?').join(',')+')',...events.map(event=>event.eventKey));
+  const seen=new Set(existing.map(row=>row.event_key));
+  const fresh=events.filter(event=>!seen.has(event.eventKey));
+  if(!fresh.length)return {observed:0};
+  await statement('DELETE FROM resident_memories WHERE created_at<?',now()-RESIDENT_MEMORY_RETENTION_MS).run();
+  let written=0;
+  for(const event of fresh){
+   const result=await statement('INSERT OR IGNORE INTO resident_memories(id,resident_id,process_id,state,phase,event_key,text,at,created_at) VALUES(?,?,?,?,?,?,?,?,?)',event.id,event.residentId,event.processId,event.state,event.phase,event.eventKey,event.text,event.at,now()).run();
+   written+=Number(result?.meta?.changes)||0;
+  }
+  return {observed:written};
+ }
+ async function residentMemories(residentId){
+  if(!isResidentId(residentId))fail('Habitante no válido.',404);
+  const rows=await all('SELECT id,process_id,state,phase,text,at,created_at FROM resident_memories WHERE resident_id=? ORDER BY created_at DESC,id LIMIT ?',residentId,RESIDENT_MEMORY_LIMIT);
+  return {residentId,memories:rows.map(row=>({id:row.id,processId:row.process_id,state:row.state,phase:row.phase||null,text:row.text,at:row.at,observedAt:new Date(row.created_at).toISOString()}))};
+ }
+ return {enqueue,status,conversations,conversation,getJob,cancel,heartbeat,claim,complete,fail:failJob,observeResidentEvents,residentMemories};
 }

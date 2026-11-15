@@ -10,4 +10,6 @@ export function createCloudQueue(db:D1Database,options?:{now?:()=>number;uuid?:(
  claim(input:Record<string,unknown>):Promise<Record<string,unknown>>;
  complete(input:Record<string,unknown>):Promise<Record<string,unknown>>;
  fail(input:Record<string,unknown>):Promise<Record<string,unknown>>;
+ observeResidentEvents(telemetry:unknown):Promise<{observed:number}>;
+ residentMemories(residentId:string):Promise<{residentId:string;memories:Array<{id:string;processId:string;state:string;phase:string|null;text:string;at:string;observedAt:string}>}>;
 };

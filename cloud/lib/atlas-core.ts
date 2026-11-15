@@ -1,4 +1,4 @@
-import type { AtlasReply, AtlasState, Domain } from './atlas-types';
+import type { AtlasReply, AtlasState, Domain, MemoryScope } from './atlas-types';
 
 export type Knowledge = { id: string; title: string; text: string; kind: string; date?: string; url?: string };
 export type SearchHit = Knowledge & { score: number; coverage: number };
@@ -31,11 +31,13 @@ export function retrieve(query: string, docs: Knowledge[], limit = 4, profile:Re
     return { ...doc, score: score * coverage+titlePhrase, coverage };
   }).filter(d => d.score > 0 && d.coverage >= Math.min(.4, 1 / q.length)).sort((a, b) => b.score - a.score).slice(0, limit);
 }
-export function memoryKnowledge(state: AtlasState): Knowledge[] {
+// Scoped notes are not silently reused by the general chat: the default scope
+// is global, and a resident/room/module note must be requested explicitly.
+export function memoryKnowledge(state: AtlasState, scope: MemoryScope = 'global'): Knowledge[] {
   const invalid = state.corrections.map(c => normalize(c.before.trim()));
   return [
     ...state.corrections.map(c => ({ id: 'correction:' + c.id, title: 'Corrección vigente', text: c.after + '\nMotivo: ' + c.reason, kind: 'Corrección aportada', date: c.date })),
-    ...state.memories.filter(m => m.status !== 'Retirado' && !invalid.some(x => x && normalize(m.text).includes(x))).map(m => ({ id: 'memory:' + m.id, title: m.title, text: m.text, kind: 'Memoria · ' + m.status, date: m.date })),
+    ...state.memories.filter(m => m.status !== 'Retirado' && (m.scope ?? 'global') === scope && !invalid.some(x => x && normalize(m.text).includes(x))).map(m => ({ id: 'memory:' + m.id, title: m.title, text: m.text, kind: 'Memoria · ' + m.status, date: m.date })),
     ...state.decisions.map(d => ({ id: 'decision:' + d.id, title: d.title, text: [d.known, d.action, d.outcome].filter(Boolean).join('\n'), kind: 'Decisión · ' + d.status, date: d.date }))
   ];
 }
