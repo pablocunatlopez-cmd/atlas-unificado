@@ -6,6 +6,7 @@ import {buildMixer,stopSources,type Mixer} from '@/lib/music/audio';
 import {validatePattern,type Pattern} from '@/lib/music/pattern.mjs';
 import {encodeWav} from '@/lib/music/wav.mjs';
 import {masterChannels,audioFeatures} from '@/lib/evolution/signals';
+import CreationLibrary from './creation-library';
 import styles from './music-ai-composer.module.css';
 
 type SavedComposition={id:string;model:string;content:Composition};
@@ -40,6 +41,7 @@ export default function MusicAIComposer({ready,signInPath,onLoadPattern,readPatt
  return <section className={styles.composer} aria-label="Componer música con Noa">
   <div className={styles.heading}><div><span>NOA + RITMO / COMPOSICIÓN CON IA</span><h2>De tu idea a una pieza.</h2></div><span className={styles.badge}>NOTAS · ARMONÍA · ARREGLO</span></div>
   <form onSubmit={event=>{event.preventDefault();void generate();}}><label htmlFor="atlas-music-ai-prompt">¿Qué quieres escuchar?</label><textarea id="atlas-music-ai-prompt" maxLength={4000} value={prompt} onChange={event=>setPrompt(event.target.value)} rows={3} placeholder="Estilo, emoción, instrumentos, tempo y cómo evoluciona la pieza…"/><div className={styles.promptActions}><p>El modelo escribe una partitura original. La síntesis instrumental suena en tu navegador; no genera voz cantada ni audio neuronal. {!ready&&<a href={signInPath} target="_top">Inicia sesión para componer con IA.</a>}</p><button type="submit" disabled={!ready||busy||!prompt.trim()}>{busy?'Componiendo…':'✦ Componer con IA'}</button></div></form>
+  <CreationLibrary kind="music" ready={ready} signInPath={signInPath} disabled={busy||exporting} onOpen={saved=>{const content=validateComposition(saved.content);accept({id:saved.id,model:saved.model,content},'Partitura recuperada de la nube. Tu patrón de la mesa se conserva; puedes deshacer el cambio de composición.');setPrompt(saved.prompt);retry.current=null;}}/>
   {creation&&<div className={styles.result}>
    <div className={styles.heading}><div><h3>{creation.content.title}</h3><p>{creation.content.style} · {creation.content.key} · {creation.content.bpm} BPM · {Math.round(compositionDuration(creation.content))} s</p><small>Modelo: {creation.model}</small></div><button type="button" onClick={()=>void play()} disabled={exporting}>{playing?'■ Detener':'▶ Escuchar pieza completa'}</button></div>
    <ol className={styles.arrangement} aria-label="Secciones del arreglo">{compositionTimeline(creation.content).map((s,i)=><li key={`${i}-${s.sectionId}`}><strong>{s.label}</strong><span>{s.section.bars} {s.section.bars===1?'compás':'compases'}</span></li>)}</ol>

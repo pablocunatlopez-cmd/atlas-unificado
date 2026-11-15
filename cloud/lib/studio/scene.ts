@@ -2,7 +2,7 @@ export type StudioMode='code'|'image'|'3d'|'game';
 export type Vec3=[number,number,number];
 export type Material={color:Vec3;roughness:number;metalness:number;emission:number};
 export type SceneObject={type:'sphere'|'box'|'cylinder'|'cone';position:Vec3;size:Vec3;material:number;yaw:number;name?:string;collision?:boolean;tag?:'player'|'goal'|'obstacle'};
-export type Brief={meshRows?:12|18|24;mode:StudioMode;title:string;prompt:string;variant:'gallery'|'product'|'architecture'|'forest'|'neon'|'driving'|'exploration'|'tasks'|'calculator'|'notes'|'landing';palette:string;lighting:'day'|'sunset'|'night';seed:number;quality:'balanced'|'high';accent:Vec3;unsupported:string[];plan?:{version?:1|2;objects:SceneObject[];design?:string;materials?:Material[];camera?:Vec3;target?:Vec3}};
+export type Brief={preview?:'eras'|'html';meshRows?:12|18|24;mode:StudioMode;title:string;prompt:string;variant:'gallery'|'product'|'architecture'|'forest'|'neon'|'driving'|'exploration'|'tasks'|'calculator'|'notes'|'landing';palette:string;lighting:'day'|'sunset'|'night';seed:number;quality:'balanced'|'high';accent:Vec3;unsupported:string[];plan?:{version?:1|2;objects:SceneObject[];design?:string;materials?:Material[];camera?:Vec3;target?:Vec3}};
 export type Scene={brief:Brief;objects:SceneObject[];materials:Material[];camera:Vec3;target:Vec3;sky:Vec3;sun:Vec3;fog:number;exposure:number;scene:number};
 export const plain=(s:string)=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 export function seededRandom(seed:number){let n=seed>>>0;return()=>{n+=0x6D2B79F5;let t=n;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}

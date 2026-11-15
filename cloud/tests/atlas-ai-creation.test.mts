@@ -66,7 +66,7 @@ async function fixture(){
   const keys=Object.keys(exports),dependency=new vm.SyntheticModule(keys,function(){for(const key of keys)this.setExport(key,exports[key]);},{context});linked.set(specifier,dependency);return dependency;
  });
  await module.evaluate();
- const api=module.namespace as unknown as {createAI:(userId:string,input:Input)=>Promise<AICreation>;listAICreations:(userId:string)=>Promise<AICreation[]>};
+ const api=module.namespace as unknown as {createAI:(userId:string,input:Input)=>Promise<AICreation>;listAICreations:(userId:string,kind?:CreationKind)=>Promise<AICreation[]>};
  const row=(userId:string,requestId:string)=>db.raw.prepare('SELECT * FROM ai_creations WHERE user_id=? AND request_id=?').get(userId,requestId)!;
  return{db,clock,calls,api,row};
 }
@@ -202,4 +202,26 @@ test('a failed inference releases its lease and can be retried without storing p
 test('quota failures do not consume a validation-repair inference',async t=>{
  const f=await fixture();t.after(()=>f.db.close());const quota=Object.assign(Error('private quota response'),{code:'quota'});f.calls.responses.push(quota,composition());const input:Input={kind:'music',prompt:'Una pieza breve para el estudio de Lía.',requestId:'quota-no-repair'};
  await assert.rejects(f.api.createAI('alice',input),error=>(error as {code?:string}).code==='quota');assert.equal(f.calls.inferences.length,1);assert.equal(f.calls.responses.length,1);assert.equal(f.row('alice',input.requestId).status,'failed');assert.equal(f.row('alice',input.requestId).lease_until,0);assert.deepEqual(plain(await f.api.listAICreations('alice')),[]);
+});
+
+test('each creation kind is filtered before the twenty-item limit while preserving ownership and completed state',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());
+ const original=await f.api.createAI('alice',{kind:'music',prompt:'Una composición antigua que no debe desaparecer detrás de los vídeos.',requestId:'original-music'});
+ const insert=f.db.raw.prepare('INSERT INTO ai_creations(user_id,request_id,id,kind,prompt,model,status,content,lease_until,created_at) VALUES(?,?,?,?,?,?,?,?,0,?)');
+ function seed(user:string,kind:CreationKind,index:number,hour:number,status='completed'){
+  const id=`${user}-${kind}-${index}`,at=`2026-11-15T${hour}:00:${String(index).padStart(2,'0')}.000Z`,creation:AICreation={...original,id,kind,at,content:kind==='music'?music.validateComposition(composition()):cinema.validateVideoPlan(video())};
+  insert.run(user,id,id,kind,creation.prompt,creation.model,status,JSON.stringify(creation),at);
+ }
+ for(let i=0;i<23;i++)seed('alice','music',i,10);
+ for(let i=0;i<25;i++)seed('alice','video',i,11);
+ seed('bob','music',0,12);seed('alice','music',59,13,'failed');
+ const mixed=await f.api.listAICreations('alice'),scores=await f.api.listAICreations('alice','music'),films=await f.api.listAICreations('alice','video');
+ assert.equal(mixed.length,20);assert.ok(mixed.every(item=>item.kind==='video'));
+ assert.equal(scores.length,20);assert.ok(scores.every(item=>item.kind==='music'&&item.id.startsWith('alice-music-')));
+ assert.equal(scores[0].id,'alice-music-22');assert.equal(scores.at(-1)!.id,'alice-music-3');
+ assert.equal(films.length,20);assert.equal(films[0].id,'alice-video-24');assert.equal(films.at(-1)!.id,'alice-video-5');
+ assert.deepEqual((await f.api.listAICreations('bob','music')).map(item=>item.id),['bob-music-0']);
+ assert.deepEqual(plain(await f.api.listAICreations('bob','video')),[]);
+ await assert.rejects(f.api.listAICreations('alice',"music' OR 1=1 --" as CreationKind),/INPUT/);
+ assert.equal(f.calls.inferences.length,1,'Listing persisted artifacts never invokes inference.');
 });

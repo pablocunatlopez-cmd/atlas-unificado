@@ -44,4 +44,8 @@ export async function createAI(userId:string,input:{kind:CreationKind;prompt:str
   const saved=await db.prepare("UPDATE ai_creations SET status='completed',content=?,model=?,lease_until=0 WHERE user_id=? AND request_id=? AND id=? AND status='generating' RETURNING id").bind(JSON.stringify(creation),model,userId,input.requestId,id).first();if(!saved)throw Error('CONFLICT');return creation;
  }catch(error){await db.prepare("UPDATE ai_creations SET status='failed',lease_until=0 WHERE user_id=? AND request_id=? AND id=?").bind(userId,input.requestId,id).run();throw error;}
 }
-export async function listAICreations(userId:string){const db=await database(),rows=await db.prepare("SELECT content FROM ai_creations WHERE user_id=? AND status='completed' ORDER BY created_at DESC LIMIT 20").bind(userId).all<{content:string}>();return rows.results.map(r=>JSON.parse(r.content) as AICreation);}
+export async function listAICreations(userId:string,kind?:CreationKind){
+ if(kind!==undefined&&kind!=='music'&&kind!=='video')throw Error('INPUT');
+ const db=await database(),statement=kind?db.prepare("SELECT content FROM ai_creations WHERE user_id=? AND kind=? AND status='completed' ORDER BY created_at DESC LIMIT 20").bind(userId,kind):db.prepare("SELECT content FROM ai_creations WHERE user_id=? AND status='completed' ORDER BY created_at DESC LIMIT 20").bind(userId);
+ const rows=await statement.all<{content:string}>();return rows.results.map(r=>JSON.parse(r.content) as AICreation);
+}
