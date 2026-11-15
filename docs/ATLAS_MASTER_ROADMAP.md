@@ -19,7 +19,8 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 - [x] Stop the legacy coding-cycle planner from treating caller-supplied check/approval flags as verified permission.
 - [ ] Implement canonical-path/symlink checks in a trusted host.
 - [ ] Bind approvals, checks, diff digest and commit SHA to an authenticated principal.
-- [ ] Isolate untrusted code execution and enforce budgets.
+- [x] Define a fail-closed, bounded isolated-run contract and regression tests (planning only).
+- [ ] Implement actual trusted sandbox execution, OS-enforced isolation and resource limits.
 **Done when:** an adversarial patch cannot escape a sandbox and no unverified check can authorize publishing.
 
 ## Milestone 2 — working coding agent (P0)
