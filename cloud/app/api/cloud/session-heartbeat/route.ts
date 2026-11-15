@@ -4,15 +4,19 @@ import {
   heartbeatAllowsWork,
   parseSessionHeartbeat,
 } from '../../../../lib/session-heartbeat';
+import {listRecentHeartbeats, rememberHeartbeat} from '../../../../lib/session-heartbeat-store';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const recent = listRecentHeartbeats();
   return NextResponse.json({
     ok: true,
     contractVersion: SESSION_HEARTBEAT_VERSION,
     liveCycleEnabled: false,
-    note: 'Session heartbeats are accepted for contract validation only. They do not start autonomous improvement (P3 not enabled).',
+    activeSessions: recent.filter((row) => row.allowsWork).length,
+    recent,
+    note: 'Ephemeral in-memory beats for contract checks. They do not start autonomous improvement (P3 not enabled).',
   });
 }
 
@@ -35,6 +39,7 @@ export async function POST(request: Request) {
       {status: 400},
     );
   }
+  rememberHeartbeat(beat);
   const allows = heartbeatAllowsWork(beat);
   return NextResponse.json({
     ok: true,
@@ -44,6 +49,7 @@ export async function POST(request: Request) {
     contractVersion: SESSION_HEARTBEAT_VERSION,
     sessionId: beat.sessionId,
     room: beat.room ?? null,
+    activeSessions: listRecentHeartbeats().filter((row) => row.allowsWork).length,
     note: 'Beat recorded for contract checks only. No task was claimed or started.',
   });
 }
