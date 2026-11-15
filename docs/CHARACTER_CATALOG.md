@@ -51,6 +51,25 @@ El inventario ejecutable contiene **24 entradas**: **18 puestos** y **6 espectad
 
 Los seis espectadores están sentados en butacas reales del cine. Su presencia es visual; no se les asigna un proceso, una tarea ni una memoria.
 
+### 1.3 Estado operativo en vivo (cómo leerlo)
+
+La UI **no** inventa actividad. `processForResident` en `residents.js` clasifica cada habitante así:
+
+| Clase | Criterio | `workVerified` | Ejemplo de etiqueta |
+| --- | --- | --- | --- |
+| **Decorativo** | `cosmetic: true` (audiencia del cine) | siempre false | En espera / idle reportado |
+| **Solo local** | puesto sin `processIds` (Noa, Ritmo) | false | Solo local (sin telemetría del PC) |
+| **Vinculado** | tiene `processIds` y telemetría **fresca** del proceso | true solo si el proceso está `running` (y la fase coincide si hay `activePhases`) | En ejecución / resultado reportado |
+| **Desconectado / rancio** | puente offline o telemetría > 75 s | false | Puente desconectado / Sin señal reciente |
+| **Sin proceso** | telemetría sin el id esperado | false | Sin telemetría |
+
+Reglas honestas:
+
+1. Un puesto “en acción” en la casa requiere señal fresca del coordinador, no solo el nombre del personaje.
+2. `passed` / `failed` son **reportes**, no prueba de mejora integrada (hace falta evidencia tipada con `integratedRevision`).
+3. Los espectadores del cine nunca activan trabajo.
+4. La documentación de este catálogo es estática; el estado en pantalla es el de `/api/cloud/status` en el momento de la consulta.
+
 ## 2. Los 13 nombres recuperados de la lista histórica
 
 Los 13 nombres aportados por el propietario aparecen en el roster actual:
