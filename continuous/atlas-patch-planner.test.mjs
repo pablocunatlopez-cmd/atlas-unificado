@@ -19,3 +19,11 @@ test('rejects oversize and invalid delete payload',()=>{
  assert.throws(()=>planAtlasPatch({proposalId:'x',files:[{operation:'create',path:'a.mjs',content:'x'.repeat(250001)}]}));
  assert.throws(()=>planAtlasPatch({proposalId:'x',files:[{operation:'delete',path:'a.mjs',content:'oops'}]}));
 });
+
+test('accepts valid nested source paths and rejects absolute/internal paths',()=>{
+ const plan=planAtlasPatch({proposalId:'nested',files:[{operation:'create',path:'src/components/widget.mjs',content:'export default 1;'}]});
+ assert.equal(plan.changes[0].path,'src/components/widget.mjs');
+ for(const path of ['/tmp/file','.git','node_modules','a//b','a/./b']){
+  assert.throws(()=>planAtlasPatch({proposalId:'nested',files:[{operation:'create',path,content:'x'}]}));
+ }
+});
