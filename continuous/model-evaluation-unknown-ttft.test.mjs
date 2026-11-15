@@ -17,3 +17,9 @@ test('measured TTFT regression is still rejected',()=>{
  const candidate=summarizeRuns([{id:'one',passed:true,durationMs:190,ttftMs:100}]);
  assert.ok(evaluateCandidate(baseline,candidate).reasons.includes('first_token_regression'));
 });
+
+test('candidate cannot hide a measured TTFT regression by omitting timing',()=>{
+ const baseline=summarizeRuns([{id:'one',passed:true,durationMs:200,ttftMs:40}]);
+ const candidate=summarizeRuns([{id:'one',passed:true,durationMs:190,ttftMs:null}]);
+ assert.ok(evaluateCandidate(baseline,candidate).reasons.includes('missing_first_token_measurement'));
+});
