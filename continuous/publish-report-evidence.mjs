@@ -7,9 +7,13 @@ import {publishEvidence} from './evidence-publish.mjs';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.join(ROOT, 'data');
 
+function fingerprint(record) {
+  return `${record.artifactId}::${record.completedAt}::${record.verdict}`;
+}
+
 /**
  * Persist typed evidence from an autonomy report and, when the outbound
- * bridge is configured, POST it to Sites. Failures are returned, not thrown.
+ * bridge is configured, POST only *new* records to Sites.
  */
 export async function publishReportEvidence(report, {dataDir = DATA, request = fetch, signal} = {}) {
   const records =
@@ -19,17 +23,26 @@ export async function publishReportEvidence(report, {dataDir = DATA, request = f
   if (!records.length) return {ok: true, published: 0, reason: 'no_records'};
 
   const ledgerPath = path.join(dataDir, 'typed-evidence.json');
-  let ledger = {records: []};
+  let ledger = {records: [], publishedFingerprints: []};
   try {
     ledger = JSON.parse(await fs.readFile(ledgerPath, 'utf8'));
     if (!Array.isArray(ledger.records)) ledger.records = [];
+    if (!Array.isArray(ledger.publishedFingerprints)) ledger.publishedFingerprints = [];
   } catch {
-    ledger = {records: []};
+    ledger = {records: [], publishedFingerprints: []};
   }
+
+  const known = new Set(ledger.publishedFingerprints);
+  const fresh = records.filter((record) => record && !known.has(fingerprint(record)));
+
   ledger.records = [...records, ...ledger.records].slice(0, 64);
   ledger.updatedAt = new Date().toISOString();
   await fs.mkdir(dataDir, {recursive: true});
   await fs.writeFile(ledgerPath, JSON.stringify(ledger, null, 2));
+
+  if (!fresh.length) {
+    return {ok: true, published: 0, saved: records.length, reason: 'already_published'};
+  }
 
   let siteUrl;
   let token;
@@ -45,11 +58,17 @@ export async function publishReportEvidence(report, {dataDir = DATA, request = f
   }
 
   try {
-    const result = await publishEvidence(siteUrl, token, records, {request, signal});
+    const result = await publishEvidence(siteUrl, token, fresh, {request, signal});
+    if (result.ok) {
+      for (const record of fresh) known.add(fingerprint(record));
+      ledger.publishedFingerprints = [...known].slice(-256);
+      await fs.writeFile(ledgerPath, JSON.stringify(ledger, null, 2));
+    }
     return {
       ok: result.ok,
-      published: result.ok ? records.length : 0,
+      published: result.ok ? fresh.length : 0,
       saved: records.length,
+      skipped: records.length - fresh.length,
       status: result.status,
       reason: result.ok ? 'published' : 'publish_failed',
     };
