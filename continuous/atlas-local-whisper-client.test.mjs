@@ -21,3 +21,21 @@ test('rejects invalid paths and returns null for failed transcriptions',async()=
  assert.equal(r.transcript,null);
  assert.equal(r.status,'failed');
 });
+
+test('discards transcript if process exceeds output limit',async()=>{
+ const r=await transcribeAtlasLocalAudio({...base,spawn:fakeSpawn(0,'x'.repeat(100001))});
+ assert.equal(r.status,'output_limit');
+ assert.equal(r.transcript,null);
+});
+test('reports unconfirmed termination rather than waiting indefinitely',async()=>{
+ let killed=false;
+ const spawn=()=>{
+  const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();
+  child.kill=()=>{killed=true;return false;};
+  return child;
+ };
+ const r=await transcribeAtlasLocalAudio({...base,timeoutMs:1000,spawn});
+ assert.equal(killed,true);
+ assert.equal(r.status,'termination_unconfirmed');
+ assert.equal(r.transcript,null);
+});
