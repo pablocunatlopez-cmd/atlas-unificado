@@ -14,7 +14,7 @@ const dark='#243d43',cream='#e9dfc8',wood='#936d47';
 // Eighteen furnished stations and six quiet cinema seats share two actor draws.
 // Their existence is independent of connectivity; work gestures require a fresh
 // report from an explicitly assigned real process. Presence never adds learning.
-export function createProcessCreatures(scene,textures,{now=Date.now}={}){
+export function createProcessCreatures(scene,textures,{now=Date.now,interactive=[]}={}){
  const group=new THREE.Group();group.name='atlas-residents';group.userData.roster=RESIDENTS;scene.add(group);
  const box=new THREE.BoxGeometry(1,1,1),sphere=new THREE.SphereGeometry(1,10,6);
  const bodies=new THREE.InstancedMesh(box,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.72,metalness:.08}),RESIDENTS.length*BOX_PARTS);
@@ -22,6 +22,7 @@ export function createProcessCreatures(scene,textures,{now=Date.now}={}){
  const marks=new THREE.InstancedMesh(box,new THREE.MeshStandardMaterial({color:'#c9ddb1',roughness:.5,metalness:.2}),3);
  bodies.name='atlas-process-bodies';rounds.name='atlas-process-heads';marks.name='atlas-measured-changes';
  bodies.userData.roster=RESIDENTS;bodies.userData.parts=BOX_PARTS;rounds.userData.parts=ROUND_PARTS;
+ for(const mesh of [bodies,rounds]){mesh.userData.residentRoster=RESIDENTS;mesh.userData.residentPartCount=mesh===bodies?BOX_PARTS:ROUND_PARTS;interactive.push(mesh);}
  bodies.userData.archetypes=RESIDENTS.map(resident=>resident.archetype);bodies.userData.work=[];
  marks.userData.basis='experience.counters.accepted';marks.visible=false;
  for(const mesh of [bodies,rounds,marks]){mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;group.add(mesh);}
@@ -34,7 +35,7 @@ export function createProcessCreatures(scene,textures,{now=Date.now}={}){
   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map,transparent:true,depthWrite:false}));
   const height=resident.archetype==='animal'?1.70:resident.archetype==='bird'?1.93:resident.seated?1.94:2.02;
   sprite.position.set(resident.position[0],resident.position[1]+height,resident.position[2]);sprite.scale.set(LABEL_WIDTH,LABEL_HEIGHT,1);
-  sprite.name='atlas-resident-label-'+resident.id;sprite.visible=false;group.add(sprite);return {resident,context,map,sprite,caption:''};
+  sprite.name='atlas-resident-label-'+resident.id;sprite.userData.residentId=resident.id;sprite.visible=false;interactive.push(sprite);group.add(sprite);return {resident,context,map,sprite,caption:''};
  });
  function hide(mesh,index){dummy.position.set(0,-30,0);dummy.scale.set(.00001,.00001,.00001);dummy.quaternion.identity();dummy.updateMatrix();mesh.setMatrixAt(index,dummy.matrix);}
  function put(mesh,index,tint,x,y,z,sx,sy,sz,rx=0,ry=0,rz=0){

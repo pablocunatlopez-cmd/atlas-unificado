@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RESIDENTS,WORKSTATIONS,AUDIENCE,residentById,residentsForRoom,processForResident} from '../../public/house/residents.js';
+import {RESIDENTS,WORKSTATIONS,AUDIENCE,residentById,residentIdFromHit,residentsForRoom,processForResident} from '../../public/house/residents.js';
 import {ROOM_IDS,roomAt} from '../../public/house/layout.js';
 
 test('the fixed roster covers eighteen real capability stations and all six cinema chairs',()=>{
@@ -15,6 +15,20 @@ test('desk residents match existing seat centres, and other figures belong to th
  for(const [id,position] of [['music-console',[-8.9,0,4]],['lab-desk',[-8.8,0,-4]],['games-desk',[8.8,0,4]],['sky-sources',[-2.3,0,-5.5]],['sky-agents',[2.3,0,-5.5]],['mind-desk',[-10,0,-13.6]]]){const resident=residentById(id);assert.deepEqual(resident.position,position);assert.equal(resident.seated,true);}
  for(const id of ['lab-bench','games-maquette','body-arm','refutation-candidate','refutation-control','language-object','language-symbol','language-meaning'])assert.equal(residentById(id).seated,false);
  assert.equal(residentById('missing'),null);assert.deepEqual(residentsForRoom('missing'),[]);
+});
+
+test('resident ray hits resolve actor instances and labels to the roster without accepting unknown targets',()=>{
+ for(const resident of RESIDENTS){
+  for(const [residentPartCount,instanceOffset] of [[18,17],[6,5]]){
+   const object={userData:{residentRoster:RESIDENTS,residentPartCount}};
+   assert.equal(residentIdFromHit({object,instanceId:RESIDENTS.indexOf(resident)*residentPartCount+instanceOffset}),resident.id);
+  }
+  assert.equal(residentIdFromHit({object:{userData:{residentId:resident.id}}}),resident.id);
+ }
+ assert.equal(residentIdFromHit({object:{userData:{residentId:'not-a-resident'}}}),null);
+ assert.equal(residentIdFromHit({object:{userData:{residentRoster:RESIDENTS,residentPartCount:18}},instanceId:RESIDENTS.length*18}),null);
+ assert.equal(residentIdFromHit({object:{userData:{residentRoster:RESIDENTS,residentPartCount:0}},instanceId:0}),null);
+ assert.equal(residentIdFromHit({object:{userData:{residentRoster:RESIDENTS,residentPartCount:18}},instanceId:-1}),null);
 });
 
 test('work assignments are explicit, local music does not invent a PC job, and decorative audiences have no sources',()=>{

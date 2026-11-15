@@ -39,6 +39,14 @@ export const WORKSTATIONS=freeze(RESIDENTS.filter(resident=>!resident.cosmetic))
 export const AUDIENCE=freeze(RESIDENTS.filter(resident=>resident.cosmetic));
 export const residentById=id=>RESIDENTS.find(resident=>resident.id===id)||null;
 export const residentsForRoom=room=>RESIDENTS.filter(resident=>resident.room===room);
+export function residentIdFromHit(hit){
+ const object=hit?.object,userData=object?.userData||{};
+ if(typeof userData.residentId==='string')return residentById(userData.residentId)?.id||null;
+ const {residentRoster,residentPartCount}=userData;
+ if(!Array.isArray(residentRoster)||!Number.isSafeInteger(residentPartCount)||residentPartCount<1||!Number.isSafeInteger(hit?.instanceId))return null;
+ const resident=residentRoster[Math.floor(hit.instanceId/residentPartCount)];
+ return resident&&residentById(resident.id)===resident?resident.id:null;
+}
 
 const processPriorities={running:5,failed:4,waiting:3,passed:2,idle:1};
 // Shared by the 3D poses and the roster: one process may visit several stations,
