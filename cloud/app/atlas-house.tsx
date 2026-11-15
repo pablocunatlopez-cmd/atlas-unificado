@@ -161,7 +161,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   <dialog ref={dialog} className={styles.workspace} aria-labelledby="atlas-house-workspace-title" onCancel={event=>{event.preventDefault();close();}} onClick={event=>{if(event.target===event.currentTarget)close();}}>
    {workspace&&<><div className={styles.workspaceHeader}><div><span>ATLAS / {rooms[workspace].short.toUpperCase()}</span><h2 id="atlas-house-workspace-title">{rooms[workspace].title}</h2></div><div>{workspace==='salon'&&<a href="/chat/" target="_blank" rel="noopener noreferrer" aria-label="Abrir chat en otra pestaña"><ArrowUpRight size={17}/></a>}<button ref={closeButton} type="button" onClick={close} aria-label="Cerrar espacio y volver a la casa"><X size={20}/><span>Volver a la casa</span></button></div></div><div className={styles.workspaceBody} data-room={workspace}>
     {workspace==='salon'&&<iframe className={styles.chatFrame} title="Conversar con Lía" src="/chat/" allow="clipboard-write"/>}
-    {workspace==='music'&&<MusicStudio/>}
+    {workspace==='music'&&<MusicStudio ready={signedIn} signInPath={signInPath}/>}
     {(workspace==='lab'||workspace==='games')&&<WorldWorkshop mode={workspace==='lab'?'3d':'game'} ready={signedIn}/>}
     {workspace==='cinema'&&<CinemaPanel houseApi={api} ready={signedIn}/>}
     {workspace==='constellation'&&<ConstellationPanel ready={signedIn} onFollow={id=>{setWorkspace(null);visitResident(id);}}/>}

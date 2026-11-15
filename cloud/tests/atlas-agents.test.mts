@@ -18,6 +18,13 @@ test('a model with known failures in a domain cannot review that domain',()=>{
  const logic=agentPlan('Razona con lógica',evaluations);assert.equal(logic.primary,'openai/gpt-oss-120b');assert.equal(logic.reviewer,undefined);
  assert.equal(agentPlan('Implementa código',evaluations).reviewer,'qwen/qwen3.8-27b');
 });
+test('conversation selects the strongest qualified observed score instead of forcing Qwen',()=>{
+ const qwenSix=gradeCoaching(cases,{answers:cases.filter(c=>c.domain!=='programming').map(c=>({id:c.id,value:c.expected}))});
+ assert.equal(qualifiedScore(qwenSix),true);
+ const plan=agentPlan('Recuerda lo que acordamos y ayúdame a decidir',[{...roster[0],score:qwenSix},roster[1]]);
+ assert.equal(plan.role,'conversation');assert.equal(plan.primary,'openai/gpt-oss-120b');assert.equal(plan.reviewer,undefined);
+ assert.match(plan.scope,/ocho casos sintéticos/);
+});
 test('specialist and reviewer make distinct calls and store actual completion rather than a role fiction',async()=>{
  const models:string[]=[];
  const result=await runSpecialists({question:'Implementa código JavaScript',messages:[{role:'user',content:'Implementa código JavaScript'}],system:'Contexto',evaluations:roster,generate:async(model,_messages,options)=>{models.push(model);return options.json?{decision:'revise',answer:'Código corregido propuesto.',issues:['Entrada inválida no controlada.']}:'Borrador';}});
@@ -34,4 +41,24 @@ test('a reviewer cannot introduce a new external citation or empty invented corr
 test('review is skipped when the background deadline has insufficient time remaining',async()=>{
  let calls=0;const result=await runSpecialists({question:'Depura código',messages:[],system:'Contexto',evaluations:roster,deadline:2000,now:()=>0,generate:async()=>{calls++;return 'Borrador';}});
  assert.equal(calls,1);assert.equal(result.trace.at(-1)?.status,'skipped');
+});
+test('primary has room for a useful answer and reviewer receives actual prior constraints under the transport limit',async()=>{
+ const question='Implementa código JavaScript respetando los acuerdos. '+ 'Detalle. '.repeat(600);
+ const preference={role:'user',content:'Prefiero JavaScript sin dependencias externas y sin coste. Mantén los nombres en español.'};
+ const messages=[preference,{role:'assistant',content:'De acuerdo, usaré JavaScript sin paquetes.'},...Array.from({length:10},(_,i)=>({role:i%2?'assistant':'user',content:'Turno '+i})),{role:'user',content:question}];
+ let reviewSeen=false;
+ const result=await runSpecialists({question,messages,system:'Identidad y datos revisables. '+ 'Contexto largo. '.repeat(480),evaluations:roster,generate:async(_model,input,options)=>{
+  if(!options.json){assert.equal(options.maxTokens,3500);assert.equal(options.timeoutMs,22000);assert.ok(input.reduce((n,m)=>n+m.content.length,0)<=16000);return 'function propuesta() { return 42; }';}
+  reviewSeen=true;assert.ok(input.reduce((n,m)=>n+m.content.length,0)<=16000);
+  const report=JSON.parse(input[1].content);assert.equal(report.question,question);assert.equal(report.draft,'function propuesta() { return 42; }');
+  assert.ok(report.history.some((message:{role:string;content:string})=>message.role==='user'&&message.content===preference.content));
+  assert.equal(report.history.at(-1).content,'Turno 9');assert.equal(report.contextPartial,true);
+  return {decision:'keep',answer:'',issues:[]};
+ }});
+ assert.equal(reviewSeen,true);assert.equal(result.trace.at(-1)?.status,'completed');
+});
+test('a complete long draft survives instead of sending the reviewer a clipped prefix',async()=>{
+ const draft='Respuesta completa. '+ 'x'.repeat(18000);let calls=0;
+ const result=await runSpecialists({question:'Implementa código',messages:[{role:'user',content:'Implementa código'}],system:'Contexto',evaluations:roster,generate:async()=>{calls++;return draft;}});
+ assert.equal(calls,1);assert.ok(result.answer.startsWith(draft));assert.equal(result.trace.at(-1)?.status,'skipped');assert.ok(result.answer.length<=26000);
 });

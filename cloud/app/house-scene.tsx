@@ -22,6 +22,7 @@ export type HouseIcarusEvent={residentId?:string;id:string;phase:'seeking'|'cons
 export type HouseIcarusStatus={schema:1;active:HouseIcarusEvent|null;recent:HouseIcarusEvent[];total:number;completed:number;blocked:number};
 export type HouseProcessState={houseWork?:import('./house-work-loop').HouseWorkVisual|null;at?:string;connected?:boolean;processes:HouseProcess[];icarus?:HouseIcarusStatus|null};
 export type HouseInstallation={applied:true;artifactId:string;at:string;objects:number;cases:6;passed:6;renderVerified:false;source:'coordinator'|'retained'};
+export type HouseFilmShot={room:string;seconds:number;framing:'wide'|'medium'|'detail';movement:'orbit'|'push'|'still'};
 export type HouseRecording={url:string;mime:string;filename:string;bytes:number;method:string};
 export type HousePerformance={fps:number;frames:number;drawCalls:number;triangles:number;backend:string};
 export type HousePeopleStatus={enabled:boolean;active:number;loading:boolean;failed:boolean;limit:number};
@@ -34,7 +35,7 @@ export type HouseAPI={
  activateWork:(room:HouseRoom)=>void;
  setCreativeState:(value:PublicCreativePreview|null)=>void;
  capture:()=>Promise<string>;
- record:(options?:{seconds?:number;rooms?:string[]})=>Promise<HouseRecording>;
+ record:(options?:{seconds?:number;rooms?:string[];shots?:HouseFilmShot[]})=>Promise<HouseRecording>;
  revoke:(url:string)=>void;
  pause:(value:boolean)=>void;
  setProcessState:(value:HouseProcessState)=>void;
@@ -54,7 +55,7 @@ export function HouseScene(props:Props){
     pending.current.set(requestId,{resolve:result=>resolve(result as T),reject,timeout});send(kind,{requestId,...value});
    });
   }
-  return {setPeopleDetail:value=>send('people',{value}),teleport:room=>send('teleport',{room}),overview:()=>send('overview'),focusResident:id=>send('resident',{id}),focusEvolution:()=>send('evolution'),activateWork:room=>send('work',{room}),setCreativeState:value=>send('creative',{value}),capture:()=>request<string>('capture',{},8000),record:options=>{const seconds=Math.max(2,Math.min(16,options?.seconds||8));return request<HouseRecording>('record',{seconds,rooms:options?.rooms},seconds*1000+10000);},revoke:url=>send('revoke',{url}),pause:value=>send('pause',{value}),setProcessState:value=>send('processes',{value})};
+  return {setPeopleDetail:value=>send('people',{value}),teleport:room=>send('teleport',{room}),overview:()=>send('overview'),focusResident:id=>send('resident',{id}),focusEvolution:()=>send('evolution'),activateWork:room=>send('work',{room}),setCreativeState:value=>send('creative',{value}),capture:()=>request<string>('capture',{},8000),record:options=>{const seconds=Math.max(2,Math.min(16,options?.seconds||8));return request<HouseRecording>('record',{seconds,rooms:options?.rooms,shots:options?.shots},seconds*1000+10000);},revoke:url=>send('revoke',{url}),pause:value=>send('pause',{value}),setProcessState:value=>send('processes',{value})};
  },[]);
  useEffect(()=>{
   const requests=pending.current;
@@ -84,7 +85,7 @@ export function HouseScene(props:Props){
  useEffect(()=>{if(ready&&props.processState)api.setProcessState(props.processState);},[api,props.processState,ready]);
  useEffect(()=>{if(ready)api.setCreativeState(props.creative||null);},[api,props.creative,ready]);
  return <div className={[styles.scene,props.className||''].join(' ')} data-house-ready={ready} aria-busy={!ready&&!error}>
-  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=housework1'+(props.embedded===false?'':'&embedded=1')} allow="fullscreen; autoplay" className={styles.frame} />
+  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=quality1'+(props.embedded===false?'':'&embedded=1')} allow="fullscreen; autoplay" className={styles.frame} />
  </div>;
 }
 

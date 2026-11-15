@@ -22,18 +22,18 @@ export async function generateCloud({apiKey,messages,json=false,maxTokens=1500,t
  let response;
  try{response=await fetcher('https://api.groq.com/openai/v1/chat/completions',{
   method:'POST',redirect:'manual',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json','User-Agent':'Atlas/1.0'},
-  body:JSON.stringify({model,messages,temperature,max_completion_tokens:Math.min(1800,maxTokens),...(model===CLOUD_MODEL?{reasoning_effort:'none',reasoning_format:'hidden'}:{reasoning_effort:'low',include_reasoning:false}),...(json?{response_format:{type:'json_object'}}:{})}),signal:AbortSignal.timeout(Math.max(1000,Math.min(22000,timeoutMs)))
+  body:JSON.stringify({model,messages,temperature,max_completion_tokens:Math.max(1,Math.min(4096,Number.isFinite(maxTokens)?Math.floor(maxTokens):1500)),...(model===CLOUD_MODEL?{reasoning_effort:'none',reasoning_format:'hidden'}:{reasoning_effort:'low',include_reasoning:false}),...(json?{response_format:{type:'json_object'}}:{})}),signal:AbortSignal.timeout(Math.max(1000,Math.min(22000,timeoutMs)))
  });}catch(error){
   const detail=String(error?.message||'').replaceAll(apiKey,'[redacted]').replace(/(?:Bearer\s+|gsk_)[A-Za-z0-9_-]+/g,'[redacted]').slice(0,350);
   console.error('Atlas inference transport',String(error?.name||'Error'),detail);
   throw new InferenceError('network','No se pudo conectar con la inferencia en la nube.');
  }
  if(!response.ok){
-  if(response.status===429){const delay=Number(response.headers.get('retry-after'));await pause(Number.isFinite(delay)&&delay>0?delay:3600);throw new InferenceError('quota','Groq ha agotado una cuota. Atlas espera antes de volver a intentarlo; no cambia de plan.');}
+  if(response.status===429){const delay=Number(response.headers.get('retry-after'));await pause(Number.isFinite(delay)&&delay>0?delay:60);throw new InferenceError('quota','Groq ha agotado una cuota. Atlas espera antes de volver a intentarlo; no cambia de plan.');}
   throw new InferenceError(response.status===401||response.status===403?'credentials':'provider','El proveedor de inferencia no pudo completar esta vuelta.');
  }
  const payload=await response.json().catch(()=>null),choice=payload?.choices?.[0],answer=choice?.message?.content;
- if(choice?.finish_reason==='length'||typeof answer!=='string'||!answer.trim()||answer.length>16000)throw new InferenceError('output','La respuesta no se completó dentro del límite.');
+ if(typeof answer!=='string'||!answer.trim()||answer.length>24000||json&&choice?.finish_reason==='length')throw new InferenceError('output','La respuesta no se completó dentro del límite.');
  if(json){try{return JSON.parse(answer);}catch{throw new InferenceError('output','La respuesta estructurada no es válida.');}}
- return answer;
+ return choice?.finish_reason==='length'?answer+'\n\nRespuesta parcial: se alcanzó el límite de salida.':answer;
 }

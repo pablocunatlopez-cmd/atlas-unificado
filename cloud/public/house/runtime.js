@@ -1,3 +1,4 @@
+import {validateFilmShots,filmCameraAt} from './film-shots.js';
 import {createAdaptiveQuality} from './adaptive-quality.js?v=people1';
 import * as THREE from './vendor/three.module.js';
 import {createRenderEngine} from './render-engine.js';
@@ -11,7 +12,7 @@ const $=id=>document.getElementById(id),canvas=$('scene'),callbacks=[],urls=new 
 const send=(event,data={})=>parent.postMessage({type:'atlas:house:'+event,...data},location.origin);
 let quality,renderer,house,frame=0,disposed=false,paused=false,overview=true,recording=null,currentRoom='salon',ready=false;
 let player={x:roomById('salon').spawn[0],z:roomById('salon').spawn[1]},yaw=roomById('salon').yaw,pitch=.02,orbit=.58,elevation=.68,last=0,frames=0,elapsed=0;
-let joystick,stick={x:0,y:0},drag=null,transition=null,recordStart=0,captureAngle=0,recordRooms=[],recordSeconds=8;
+let joystick,stick={x:0,y:0},drag=null,transition=null,recordStart=0,captureAngle=0,recordRooms=[],recordShots=[],recordSeconds=8;
 let processState=normalizeProcessState(null),processReceivedAt=-Infinity,creativeState=null,creativeSource='coordinator',inspection=false;
 const keys=new Set(),camera=new THREE.PerspectiveCamera(52,1,.08,190),target=new THREE.Vector3(),raycaster=new THREE.Raycaster();
 const coarse=matchMedia('(pointer:coarse)').matches,touch=showTouchControls('auto',{touchPoints:navigator.maxTouchPoints,coarse,width:innerWidth});
@@ -57,25 +58,27 @@ function interact(){if(!overview)send('interact',{room:currentRoom});}
 function resize(){if(!renderer)return;const width=innerWidth,height=innerHeight;camera.aspect=width/height;camera.fov=overview?46:(width<height?67:58);camera.updateProjectionMatrix();renderer.setSize(width,height,false);}
 function cameraFrame(time){
  const p=camera.position;
- if(recording&&recordRooms.length){const progress=Math.min(.999,(time-recordStart)/(recordSeconds*1000)),room=roomById(recordRooms[Math.floor(progress*recordRooms.length)]),x=(room.bounds[0]+room.bounds[2])/2,z=(room.bounds[1]+room.bounds[3])/2,angle=(progress*recordRooms.length%1)*.7-.35;p.set(x+Math.sin(angle)*2.7,2.1,z+Math.cos(angle)*2.7);target.set(x,2.35,z);}
+ if(recording&&recordShots.length){const shot=filmCameraAt(recordShots,(time-recordStart)/1000);p.fromArray(shot.position);target.fromArray(shot.target);}
+ else if(recording&&recordRooms.length){const progress=Math.min(.999,(time-recordStart)/(recordSeconds*1000)),room=roomById(recordRooms[Math.floor(progress*recordRooms.length)]),x=(room.bounds[0]+room.bounds[2])/2,z=(room.bounds[1]+room.bounds[3])/2,angle=(progress*recordRooms.length%1)*.7-.35;p.set(x+Math.sin(angle)*2.7,2.1,z+Math.cos(angle)*2.7);target.set(x,2.35,z);}
  else if(overview){const distance=inspection?Math.max(11,8/camera.aspect):Math.max(42,31/camera.aspect),angle=recording?captureAngle+(time-recordStart)*.00013:orbit;const y=Math.sin(elevation)*distance,z=Math.cos(elevation)*distance;target.set(inspection?7.8:0,inspection?1.05:.3,inspection?10.35:-3.6);p.set(target.x+Math.sin(angle)*z,target.y+y,target.z+Math.cos(angle)*z);}
  else{const desired=new THREE.Vector3(player.x,1.64,player.z);if(transition){const progress=Math.min(1,(time-transition.at)/600),smooth=progress*progress*(3-2*progress);p.lerpVectors(transition.from,desired,smooth);if(progress===1)transition=null;}else p.copy(desired);const lookYaw=yaw+(recording?Math.sin((time-recordStart)*.0004)*.16:0);target.set(p.x+Math.sin(lookYaw)*Math.cos(pitch),p.y+Math.sin(pitch),p.z-Math.cos(lookYaw)*Math.cos(pitch));}
  camera.lookAt(target);
 }
 function renderNow(time){if(!renderer||!house)return;cameraFrame(time);house.update(time/1000,camera,innerHeight);renderer.render(house.scene,camera);}
 function screenshot(){renderNow(performance.now());return canvas.toDataURL('image/png');}
-async function record(seconds=8,rooms=[]){
+async function record(seconds=8,rooms=[],shots){
  if(recording)throw Error('Ya hay una grabación en curso.');
  if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('Este navegador no permite grabar el lienzo. Puedes exportar una imagen PNG.');
  const mime=['video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type));if(!mime)throw Error('No hay un formato de vídeo compatible en este navegador.');
+ const validatedShots=validateFilmShots(shots);
  const stream=canvas.captureStream(24),recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000}),chunks=[];
- recordRooms=Array.isArray(rooms)?rooms.filter(id=>roomById(id)).slice(0,4):[];recordSeconds=Math.max(2,Math.min(16,Number(seconds)||8));recordStart=performance.now();captureAngle=orbit;recording=recorder;$('record-state').hidden=false;
+ recordShots=validatedShots;recordRooms=Array.isArray(rooms)?rooms.filter(id=>roomById(id)).slice(0,4):[];recordSeconds=Math.max(2,Math.min(16,Number(seconds)||8));if(recordShots.length)recordSeconds=recordShots.reduce((n,s)=>n+s.seconds,0);recordStart=performance.now();captureAngle=orbit;recording=recorder;$('record-state').hidden=false;
  return new Promise((resolve,reject)=>{
-  let timer;const cleanup=()=>{clearTimeout(timer);stream.getTracks().forEach(track=>track.stop());recording=null;recordRooms=[];$('record-state').hidden=true;};
+  let timer;const cleanup=()=>{clearTimeout(timer);stream.getTracks().forEach(track=>track.stop());recording=null;recordRooms=[];recordShots=[];$('record-state').hidden=true;};
   recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
   recorder.onerror=()=>{cleanup();reject(Error('El dispositivo no pudo completar la grabación.'));};
   recorder.onstop=()=>{cleanup();const blob=new Blob(chunks,{type:mime});if(!blob.size){reject(Error('No se capturaron fotogramas.'));return;}const url=URL.createObjectURL(blob);urls.add(url);resolve({url,mime,filename:'atlas-casa-3d.'+(mime.startsWith('video/mp4')?'mp4':'webm'),bytes:blob.size,method:'Captura del entorno 3D renderizado; no vídeo neuronal.'});};
-  recorder.start(250);timer=setTimeout(()=>{if(recorder.state!=='inactive')recorder.stop();},Math.max(2,Math.min(16,Number(seconds)||8))*1000);
+  recorder.start(250);timer=setTimeout(()=>{if(recorder.state!=='inactive')recorder.stop();},recordSeconds*1000);
  });
 }
 function tick(now){
@@ -120,7 +123,7 @@ listen(window,'message',async event=>{
  if(message.type==='atlas:house:destroy'){dispose();}
  if(message.type==='atlas:house:capture'||message.type==='atlas:house:record'){
   if(!ready){send('result',{requestId:message.requestId,error:'El entorno todavía no está listo.'});return;}
-  try{const result=message.type==='atlas:house:capture'?screenshot():await record(message.seconds,message.rooms);send('result',{requestId:message.requestId,result});}catch(error){send('result',{requestId:message.requestId,error:error.message||'No se pudo exportar.'});}
+  try{const result=message.type==='atlas:house:capture'?screenshot():await record(message.seconds,message.rooms,message.shots);send('result',{requestId:message.requestId,result});}catch(error){send('result',{requestId:message.requestId,error:error.message||'No se pudo exportar.'});}
  }
 });
 listen(window,'pagehide',dispose);

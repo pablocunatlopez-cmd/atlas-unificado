@@ -5,3 +5,10 @@ export function requestsAtlasReview(value){
  if(/\b(no|deten|para|parar|pausa|pausar|cancela)\b/.test(text)||/\b(explica|ejemplo|traduce|significa)\b/.test(text))return false;
  return /\b(mejorate|automejorate|revisate|autoprogramate)\b/.test(text)||/\b(continua|sigue|empieza|comienza|ponte)\b.{0,35}\b(mejorarte|mejorandote|aprendiendo|revisandote)\b/.test(text)||/\b(revisa|mejora)\b.{0,20}\b(tu nucleo|tus capacidades|tu propio programa)\b/.test(text);
 }
+
+/** Tool selection belongs to the explicit UI action. Describing video, music
+ * or 3D capabilities in a chat question must remain a conversation. */
+export function resolveCloudRequestKind({kind,message}={}){
+ if(kind!==undefined)return kind;
+ return requestsAtlasReview(message)?'review':'chat';
+}

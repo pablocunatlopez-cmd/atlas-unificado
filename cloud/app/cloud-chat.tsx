@@ -17,6 +17,11 @@ const prompts=[
  {icon:'spark',title:'Explorar una pregunta',description:'Entender, conectar y contrastar.',text:'Quiero explorar una idea contigo. Ayúdame a separar lo que sabemos de lo que necesitamos comprobar.'},
  {icon:'branch',title:'Poner una idea a prueba',description:'Supuestos y contraejemplos útiles.',text:'Refuta esta idea: busca sus supuestos ocultos y el contraejemplo más fuerte. La idea es: '},
 ];
+const workshops=[
+ {href:'/?room=music',icon:'spark',title:'Componer música',description:'Melodía y acordes editables'},
+ {href:'/?room=cinema',icon:'orbit',title:'Dirigir un vídeo 3D',description:'Guion por IA y captura de la casa'},
+ {href:'/?room=lab',icon:'code',title:'Crear una escena 3D',description:'Composición por IA y geometría exportable'},
+];
 
 function Icon({name,size=20}:{name:string;size?:number}){
  const shapes:Record<string,ReactNode>={
@@ -196,7 +201,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
  async function share(){try{await navigator.clipboard.writeText(location.origin+'/');setCopied(true);setTimeout(()=>setCopied(false),2200);}catch{setNotice('Puedes compartir la dirección de esta página. Cada persona tendrá su propio historial.');}}
  const isCloud=motor.provider==='groq';
  const motorLabel=isCloud?'Lía en la nube':!motorRead?'Comprobando conexión':!motor.online?'Esperando a tu PC':motor.capabilities?.gpuMode==='training'?'GPU · candidato Qwen':motor.capabilities?.gpuMode==='video'?'GPU · generando vídeo':'Tu PC está conectado';
- const statusText=submitting?'Guardando tu mensaje en la nube…':loadingThread?'Abriendo conversación…':job?.status==='reconnecting'?'Conexión interrumpida':job?.status==='running'?'Lía está preparando tu respuesta…':job?'Mensaje guardado · esperando al motor':notice;
+ const statusText=cancelling?'Solicitando detener la respuesta…':submitting?'Guardando tu mensaje en la nube…':loadingThread?'Abriendo conversación…':job?.status==='reconnecting'?'Conexión interrumpida':job?.status==='running'?'Lía está preparando tu respuesta…':job?'Mensaje guardado · esperando al motor':notice;
  const firstName=displayName.split(/\s|@/)[0]||'Tu espacio';
 
  return <div className={styles.shell}>
@@ -234,17 +239,19 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
      <div className={styles.messages} role="log" aria-label="Conversación con Lía" aria-live={loadingThread?"off":"polite"} aria-relevant="additions" aria-atomic="false">
       {messages.length>visibleLimit?<button type="button" className={styles.earlier} onClick={()=>setVisibleLimit(previous=>previous+80)}>Ver mensajes anteriores <span>↑</span></button>:null}
       {messages.slice(-visibleLimit).map((message,index)=><article key={message.id||`${index}-${message.role}`} className={`${styles.message} ${message.role==='user'?styles.userMessage:styles.assistantMessage}`}><div className={styles.messageAvatar}>{message.role==='user'?firstName.slice(0,1).toUpperCase():<Eye/>}</div><div className={styles.messageMain}><div className={styles.messageAuthor}>{message.role==='user'?'Tú':'Lía'}{message.role==='assistant'?<span>{isCloud?'LÍA · HISTORIAL CONSERVADO':'QWEN · TU PC'}</span>:null}</div><div className={styles.messageBody}>{message.role==='assistant'?<Markdown text={message.content}/>:<p>{message.content}</p>}</div></div></article>)}
-      {job?<div className={styles.pending} role="status"><span className={styles.pendingGlyph}>✳</span><div><strong>{job.status==='running'?'Conectando las ideas…':job.status==='reconnecting'?'Tu mensaje sigue guardado.':'Tu mensaje ya está en la nube.'}</strong><span>{job.status==='running'?isCloud?'Lía está respondiendo desde Groq.':'Qwen está respondiendo desde tu ordenador.':job.status==='reconnecting'?'La respuesta puede seguir en curso.':isCloud?'Preparando la respuesta en la nube.':'Esperando a que el motor de tu PC lo recoja.'}</span></div>{!polling?<button type="button" onClick={()=>{setError('');void followJob(job.id,sequence.current);}}>Comprobar respuesta</button>:<span className={styles.pulseDots} aria-hidden="true"><i/><i/><i/></span>}</div>:null}
-     </div><div ref={bottomRef}/>
+     </div>
+     {job?<div className={styles.pending}><span className={styles.pendingGlyph}>✳</span><div><strong>{job.status==='running'?'Conectando las ideas…':job.status==='reconnecting'?'Tu mensaje sigue guardado.':'Tu mensaje ya está en la nube.'}</strong><span>{job.status==='running'?isCloud?'Lía está respondiendo desde Groq.':'Qwen está respondiendo desde tu ordenador.':job.status==='reconnecting'?'La respuesta puede seguir en curso.':isCloud?'Preparando la respuesta en la nube.':'Esperando a que el motor de tu PC lo recoja.'}</span></div>{!polling?<button type="button" onClick={()=>{setError('');void followJob(job.id,sequence.current);}}>Comprobar respuesta</button>:<span className={styles.pulseDots} aria-hidden="true"><i/><i/><i/></span>}</div>:null}
+     <div ref={bottomRef}/>
     </div>
    </div>
    <footer className={styles.composerArea}>
     <div className={styles.composerWrap}>
      <div className={styles.connectionNote}><span className={`${styles.dot} ${motor.online?styles.online:''}`}/><span>{isCloud?'Lía conversa en la nube con las herramientas de Atlas, Ion e Ícaro. Si se agota la cuota, espera sin cambiar de plan.':!motorRead?'Comprobando el motor de tu ordenador…':motor.online?'Tu ordenador está conectado. El motor de Lía puede responder.':'Puedes dejar un mensaje en cola; Qwen responderá cuando tu PC se conecte.'}</span></div>
      <form className={styles.composer} onSubmit={event=>void submit(event)}><textarea ref={inputRef} value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={keyDown} rows={2} maxLength={6000} disabled={submitting||loadingThread} placeholder={signedIn?'Pregunta lo que quieras o cuéntale qué quieres crear…':'Tu próxima idea empieza aquí…'} aria-label="Mensaje para Lía"/><div className={styles.composerTools}><button type="button" className={`${styles.internetToggle} ${internet?styles.internetOn:''}`} onClick={()=>setInternet(previous=>!previous)} disabled={busy} aria-pressed={internet} title="Pedir una consulta de fuentes públicas para este mensaje"><Icon name="globe" size={15}/>Internet<span className={styles.switchTrack}><i/></span></button><span className={styles.composerHint}>{draft.length>5500?`${draft.length}/6000`:isCloud?'Lía · Groq':'Qwen · motor local'}</span>{job?<button type="button" className={styles.stopButton} disabled={cancelling} onClick={()=>void cancel()}><span>■</span>{cancelling?'Deteniendo':'Detener'}</button>:<button type="submit" className={styles.sendButton} disabled={!signedIn||!draft.trim()||busy} aria-label="Enviar mensaje"><Icon name="arrow" size={20}/></button>}</div></form>
+     <nav className={styles.workshops} aria-label="Talleres para crear con Lía"><span className={styles.workshopLabel}>Lleva tu idea al taller</span><div>{workshops.map(workshop=><a key={workshop.href} href={workshop.href} target="_top"><Icon name={workshop.icon} size={16}/><span><strong>{workshop.title}</strong><small>{workshop.description}</small></span><span className={styles.workshopArrow} aria-hidden="true">↗</span></a>)}</div></nav>
      <div className={styles.belowComposer}><span>{isCloud?'Chat, memoria e investigación en la nube. La conversación se envía a Groq para generar la respuesta.':'La web y tu historial están en la nube. Qwen responde desde tu PC; debe estar encendido.'}</span><span className={styles.shortcut}>↵ Enviar <b>·</b> ⇧↵ Nueva línea</span></div>
      {error?<div className={styles.error} role="alert"><span>!</span><p>{error}</p><button type="button" onClick={()=>setError('')} aria-label="Cerrar aviso"><Icon name="close" size={14}/></button></div>:null}
-     <p className={styles.statusLine} role="status">{statusText||'Lía puede equivocarse. Contrasta lo importante.'}</p>
+     <p className={styles.statusLine} role="status" aria-live="polite" aria-atomic={true}>{statusText||'Lía puede equivocarse. Contrasta lo importante.'}</p>
     </div>
    </footer>
   </main>

@@ -7,7 +7,7 @@ test('inference uses only Groq and the fixed model, hides reasoning and bounds o
  let reservations=0;
  const answer=await generateCloud({apiKey:'test-secret',messages,maxTokens:99999,reserve:async()=>{reservations++;},fetcher:async(url,init)=>{
   assert.equal(url,'https://api.groq.com/openai/v1/chat/completions');assert.equal(init.redirect,'manual');
-  const body=JSON.parse(init.body);assert.equal(body.model,CLOUD_MODEL);assert.equal(body.max_completion_tokens,1800);assert.equal(body.reasoning_format,'hidden');assert.equal(body.reasoning_effort,'none');
+  const body=JSON.parse(init.body);assert.equal(body.model,CLOUD_MODEL);assert.equal(body.max_completion_tokens,4096);assert.equal(body.reasoning_format,'hidden');assert.equal(body.reasoning_effort,'none');
   return Response.json({choices:[{finish_reason:'stop',message:{content:'Respuesta'}}]});
  }});
  assert.equal(answer,'Respuesta');assert.equal(reservations,1);
@@ -62,3 +62,6 @@ test('a model outside the allowlist cannot spend quota or trigger a fetch',async
  await assert.rejects(generateCloud({apiKey:'test-secret',messages,model:'arbitrary-model',reserve:async()=>{reserved++;},fetcher:async()=>{calls++;return Response.json({});}}),e=>e.code==='model');
  assert.equal(reserved,0);assert.equal(calls,0);
 });
+
+test('a useful partial natural-language answer survives length termination while structured data stays strict',async()=>{const answer=await generateCloud({apiKey:'test-secret',messages,fetcher:async()=>Response.json({choices:[{finish_reason:'length',message:{content:'Una explicación útil que continúa'}}]})});assert.match(answer,/Una explicación útil/);assert.match(answer,/Respuesta parcial/);});
+test('an unspecified provider cooldown waits one minute instead of disabling the application for an hour',async()=>{let seconds;await assert.rejects(generateCloud({apiKey:'test-secret',messages,pause:async s=>seconds=s,fetcher:async()=>new Response('',{status:429})}),e=>e.code==='quota');assert.equal(seconds,60);});
