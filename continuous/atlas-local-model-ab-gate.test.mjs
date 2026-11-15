@@ -30,13 +30,15 @@ test('rejects candidates losing a previously passed case',async()=>{
 test('rejects excessive latency regressions',async()=>{
  let tick=0;
  const result=await compareAtlasLocalModels({
-  cases,baselineInfer:async()=>({answer:'OK'}),
-  candidateInfer:async()=>({answer:'OK'}),
+  cases,
+  baselineInfer:async()=>{tick+=10;return {answer:'OK'};},
+  candidateInfer:async()=>{tick+=30;return {answer:'OK'};},
   clock:()=>tick,
   readMemory:()=>1024,
   maxLatencyRegressionRatio:1.25
  });
- assert.equal(result.recommendation,'eligible_for_human_review');
+ assert.equal(result.recommendation,'reject_candidate');
+ assert.equal(result.latencyWithinLimit,false);
 });
 test('validates comparison thresholds',async()=>{
  await assert.rejects(compareAtlasLocalModels({
