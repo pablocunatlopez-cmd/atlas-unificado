@@ -41,7 +41,9 @@ Do not assign Saggy/Siggy a role until Atlas's canonical identity/configuration 
 
 Acceptance: every resident and route has a documented canonical purpose; no page claims capability not supported by its backing API; navigation to historical tools remains stable.
 
-P1 progress (partial, 2026-11-15): [CHARACTER_CATALOG.md](CHARACTER_CATALOG.md) inventories the 24 current residents, maps the 13 recovered names, records the 11 additional current names without claiming they are the missing ones, and separates symbolic/technical functions. The residents panel now lists all 24 entries and focuses the selected resident. Route inventory and per-resident operational status are still pending.
+P1 progress (partial, 2026-11-15): [CHARACTER_CATALOG.md](CHARACTER_CATALOG.md) inventories the 24 current residents, maps the 13 recovered names, records the 11 additional current names without claiming they are the missing ones, and separates symbolic/technical functions. The residents panel now lists all 24 entries and focuses the selected resident.
+
+P1 progress (additional, 2026-11-15): [ROUTE_INVENTORY.md](ROUTE_INVENTORY.md) classifies product, deep-link, legacy and API surfaces (`/`, `/chat/`, `/actividad/`, `/taller/`, `/origen/` and the `/api/*` map). Per-resident live operational status in docs remains pending.
 
 ### P2 — Truthful runtime visibility
 
@@ -125,6 +127,8 @@ P2 has partial, verified progress as of 2026-11-15:
 P2 is not complete: the typed task/evidence contract, explicit failed/stale reasons in every surface, and the session-bound work heartbeat described in P3 remain unimplemented.
 
 P2 progress (additional, 2026-11-15): the house status poll (`/api/cloud/status`) now has a hard 8-second timeout combined with the unmount AbortController (`AbortSignal.any`). A hung or slow response no longer leaves the UI in an ambiguous state; the badge flips to offline/failed and the process mirror fails closed under the existing 75 s freshness window. The tooltip distinguishes network/timeout/server failure from a clean “PC offline” signal. This closes the “hard request timeout” item of P2 for the house surface. Commit: 762e6d99ce20bed3913ba4c64cc0520db7038d35.
+
+P2 progress (evidence skeleton, 2026-11-15): `cloud/lib/evidence-contract.ts` defines `EvidenceRecord` v1 and pure `parseEvidenceRecord` / `evidenceDisplayState`. `/api/cloud/evidence` GET returns an empty list with contractVersion; POST is forbidden so the browser cannot mint verification. Integration claims still require `integratedRevision` from the coordinator. Client telemetry reasons (`REASON_LABELS`, `telemetryFreshness`) are live in `process-state.js` / `residents.js`.
 
 Memory progress (partial, 2026-11-15): manual personal notes now carry a closed scope (`global`, `resident:<id>`, `room:<id>`, `module:<id>`) and the general chat retrieves only `global` unless another scope is requested. Separately, the house records autonomous observations for the 18 workstations when `/api/cloud/status` receives fresh terminal telemetry: only `passed`/`failed`, deduplicated per 30-minute window, retained for 30 days and shown in the selected resident's card. The table is global and contains no user data; clients cannot write it. It is not learning, independent verification, personality or a background daemon. See [MEMORY_SCOPES.md](MEMORY_SCOPES.md).
 
