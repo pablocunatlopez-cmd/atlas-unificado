@@ -8,6 +8,7 @@ import {stripTypeScriptTypes} from 'node:module';
 import {readFile} from 'node:fs/promises';
 import * as vm from 'node:vm';
 import * as agents from '../lib/cloud/agents.ts';
+import {reserveInference} from '../lib/cloud/groq.mjs';
 import * as missions from '../lib/collaboration/missions.ts';
 import * as policy from '../lib/evolution/living-policy.ts';
 import * as tools from '../lib/evolution/living-tools.mjs';
@@ -45,7 +46,7 @@ type InferenceCall={model:string;messages:Array<{role:string;content:string}>;op
 
 async function fixture(){
  assert.equal(typeof vm.SourceTextModule,'function','Run with --experimental-vm-modules.');
- const db=new D1(),calls:{inference:InferenceCall[];evaluations:agents.AgentEvaluation[];experiments:number;gate?:Gate;reviewDecision?:'accept'|'reject';afterCreator?:()=>void;afterReview?:()=>void;creatorError?:Error&{code:string}}={inference:[],experiments:0,evaluations:[qualified('qwen/qwen3.8-27b',7,10),qualified('openai/gpt-oss-120b',8,30),qualified('openai/gpt-oss-20b',8,50)]};
+ const db=new D1(),calls:{inference:InferenceCall[];evaluations:agents.AgentEvaluation[];experiments:number;gate?:Gate;reviewDecision?:'accept'|'reject';afterCreator?:()=>void;afterReview?:()=>void;creatorError?:Error&{code:string};creatorOutputs?:unknown[];reserveBudget?:boolean}={inference:[],experiments:0,evaluations:[qualified('qwen/qwen3.8-27b',7,10),qualified('openai/gpt-oss-120b',8,30),qualified('openai/gpt-oss-20b',8,50)]};
  class ClockDate extends Date{constructor(value?:string|number){super(value===undefined?at:value);}static now(){return Date.parse(at);}}
  const context=vm.createContext({Date:ClockDate,crypto:globalThis.crypto,structuredClone,URL,console,TextEncoder,TextDecoder,Uint8Array,setTimeout,clearTimeout});
  const modules:Record<string,Record<string,unknown>>={
@@ -54,7 +55,7 @@ async function fixture(){
   '../cloud/agents':agents,'../cloud/agents.ts':agents,
   '../collaboration/missions':missions,'../collaboration/missions.ts':missions,
   '../cloud/agent-registry':{agentEvaluations:async()=>calls.evaluations},
-  '../cloud/inference':{CLOUD_MODEL:'qwen/qwen3.8-27b',inferModel:async(model:string,messages:InferenceCall['messages'],options:InferenceCall['options'])=>{calls.inference.push({model,messages,options});if(calls.inference.length===1&&calls.gate){calls.gate.signal();await calls.gate.wait;}if(messages[0].content.startsWith('Revisa')){calls.afterReview?.();return{decision:calls.reviewDecision||'accept',reason:'La intervención respeta los límites declarados; falta revisión visual.'};}calls.afterCreator?.();if(calls.creatorError)throw calls.creatorError;return proposal();}},
+  '../cloud/inference':{CLOUD_MODEL:'qwen/qwen3.8-27b',inferModel:async(model:string,messages:InferenceCall['messages'],options:InferenceCall['options'])=>{if(calls.reserveBudget)await reserveInference(db,Date.parse(at),options.purpose);calls.inference.push({model,messages,options});if(calls.inference.length===1&&calls.gate){calls.gate.signal();await calls.gate.wait;}if(messages[0].content.startsWith('Revisa')){calls.afterReview?.();return{decision:calls.reviewDecision||'accept',reason:'La intervención respeta los límites declarados; falta revisión visual.'};}calls.afterCreator?.();if(calls.creatorError)throw calls.creatorError;return calls.creatorOutputs?.length?calls.creatorOutputs.shift():proposal();}},
  };
  const source=stripTypeScriptTypes(await readFile(new URL('../lib/evolution/living-server.ts',import.meta.url),'utf8'),{mode:'strip'}),module=new vm.SourceTextModule(source,{context,identifier:'living-server.ts'}),linked=new Map<string,vm.Module>();
  await module.link(async specifier=>{if(linked.has(specifier))return linked.get(specifier)!;const exports=modules[specifier];assert.ok(exports,'Unexpected dependency: '+specifier);const synthetic=new vm.SyntheticModule(Object.keys(exports),function(){for(const[key,value]of Object.entries(exports))this.setExport(key,value);},{context});linked.set(specifier,synthetic);return synthetic;});
@@ -170,5 +171,42 @@ test('a graphics mission keeps its own evidence while the registered resident pe
 test('an internal mission cannot use a different resident as its delegate',async()=>{
  const f=await fixture();try{
   const result=await f.api.buildLiving({requestId:'invalid-delegate',actorId,contextActorId:'module:graphics'}).catch(error=>({status:'blocked',error}));assert.notEqual(result.status,'applied');assert.equal(f.calls.inference.length,0);assert.deepEqual(f.state().artifacts,{});assert.equal(f.state().published,0);
+ }finally{f.db.close();}
+});
+
+const invalidProposal=()=>{const p=proposal();p.music.notes[0]=12;return p;};
+test('one contract repair uses the same creator and persists its attempt before a separate review',async()=>{
+ const f=await fixture();try{
+  const repaired=proposal('Órbitas corregidas');f.calls.creatorOutputs=[invalidProposal(),repaired];const result=await f.api.buildLiving({requestId:'repair-valid',actorId});
+  assert.equal(result.status,'applied');assert.equal(result.repairAttempted,true);assert.deepEqual(f.calls.inference.map(c=>c.model),['openai/gpt-oss-120b','openai/gpt-oss-120b','openai/gpt-oss-20b']);assert.deepEqual(f.calls.inference.map(c=>c.options.maxTokens),[3000,3000,1200]);assert.equal(f.state().artifacts.music.proposal.title,repaired.title);assert.equal(JSON.parse(f.db.raw.prepare("SELECT content FROM living_builds WHERE request_id='repair-valid'").get()!.content as string).repairAttempted,true);
+  assert.ok(f.calls.inference.every(c=>c.messages.reduce((n,m)=>n+m.content.length,0)<=16000));assert.equal(JSON.parse(f.calls.inference[2].messages[1].content).proposal.title,repaired.title);
+ }finally{f.db.close();}
+});
+test('a second invalid contract stops without another repair or reviewer',async()=>{
+ const f=await fixture();try{
+  f.calls.creatorOutputs=[invalidProposal(),invalidProposal(),proposal()];const result=await f.api.buildLiving({requestId:'repair-invalid',actorId});assert.equal(result.status,'rejected');assert.equal(result.repairAttempted,true);assert.equal(f.calls.inference.length,2);assert.ok(f.calls.inference.every(c=>c.model==='openai/gpt-oss-120b'));assert.equal(f.calls.creatorOutputs.length,1);assert.deepEqual(f.state().artifacts,{});assert.equal(result.artifactIds.length,0);
+ }finally{f.db.close();}
+});
+test('an inactive session after invalid output starts no repair',async()=>{
+ const f=await fixture();try{
+  let active=true;f.calls.creatorOutputs=[invalidProposal(),proposal()];f.calls.afterCreator=()=>{active=false;};const result=await f.api.buildLiving({requestId:'repair-inactive',actorId,shouldContinue:async()=>active});assert.equal(result.status,'waiting');assert.equal(result.review,inactiveReview);assert.equal(result.repairAttempted,undefined);assert.equal(f.calls.inference.length,1);assert.deepEqual(f.state().artifacts,{});
+ }finally{f.db.close();}
+});
+test('repair preserves the reserved reviewer request under both daily budget limits',async()=>{
+ for(const scenario of [{trigger:'schedule' as const,used:45,allowed:true,final:48},{trigger:'schedule' as const,used:46,allowed:false,final:47},{trigger:'manual' as const,used:57,allowed:true,final:60},{trigger:'manual' as const,used:58,allowed:false,final:59}]){
+  const f=await fixture();try{
+   f.calls.reserveBudget=true;f.calls.creatorOutputs=[invalidProposal(),proposal()];f.db.raw.prepare('INSERT INTO cloud_inference_budget VALUES(?,?,0)').run(at.slice(0,10),scenario.used);const result=await f.api.buildLiving({requestId:'repair-budget-'+scenario.used,actorId,trigger:scenario.trigger});
+   assert.equal(result.status,scenario.allowed?'applied':'rejected');assert.equal(result.repairAttempted,scenario.allowed?true:undefined);assert.equal(f.calls.inference.length,scenario.allowed?3:1);assert.equal(f.db.raw.prepare('SELECT requests FROM cloud_inference_budget WHERE day=?').get(at.slice(0,10))!.requests,scenario.final);assert.equal(result.artifactIds.length,scenario.allowed?1:0);
+  }finally{f.db.close();}
+ }
+});
+test('a provider pause discovered after invalid output prevents repair despite spare daily quota',async()=>{
+ const f=await fixture();try{
+  f.calls.reserveBudget=true;f.calls.creatorOutputs=[invalidProposal(),proposal()];f.calls.afterCreator=()=>{f.db.raw.prepare('UPDATE cloud_inference_budget SET blocked_until=? WHERE day=?').run(Date.parse(at)+60000,at.slice(0,10));};const result=await f.api.buildLiving({requestId:'repair-provider-paused',actorId});assert.equal(result.status,'rejected');assert.equal(result.repairAttempted,undefined);assert.equal(f.calls.inference.length,1);assert.deepEqual(f.state().artifacts,{});
+ }finally{f.db.close();}
+});
+test('transport errors do not enter the contract repair path',async()=>{
+ const f=await fixture();try{
+  f.calls.creatorError=Object.assign(Error('La red no completó la inferencia.'),{code:'timeout'});const result=await f.api.buildLiving({requestId:'repair-transport',actorId});assert.equal(result.status,'rejected');assert.equal(result.repairAttempted,undefined);assert.equal(f.calls.inference.length,1);assert.deepEqual(f.state().artifacts,{});
  }finally{f.db.close();}
 });

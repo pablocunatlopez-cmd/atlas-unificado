@@ -42,7 +42,7 @@ function video(){return{version:1,title:'Una idea encuentra su ritmo',synopsis:'
 async function fixture(){
  assert.equal(typeof vm.SourceTextModule,'function','Pass --experimental-vm-modules to exercise the Worker module.');
  const db=new D1(),clock={now:Date.parse('2026-11-15T10:00:00Z')};
- const calls={inferences:[] as Call[],responses:[] as unknown[],gates:new Map<number,Gate>(),registry:0};
+ const calls={inferences:[] as Call[],reservations:[] as Record<string,unknown>[],responses:[] as unknown[],gates:new Map<number,Gate>(),registry:0};
  class ClockDate extends Date{constructor(value?:string|number){super(value===undefined?clock.now:value);}static now(){return clock.now;}}
  const context=vm.createContext({Date:ClockDate,crypto:globalThis.crypto,structuredClone,console,TextEncoder,TextDecoder,setTimeout,clearTimeout});
  const cases=coachingCases(1761),score=gradeCoaching(cases,{answers:cases.map(c=>({id:c.id,value:c.expected}))});
@@ -51,6 +51,7 @@ async function fixture(){
   '../cloud/agent-registry':{agentEvaluations:async()=>{calls.registry++;return[{model:'openai/gpt-oss-120b',version:agents.AGENT_EVAL_VERSION,status:'qualified',at:new ClockDate().toISOString(),latencyMs:20,score}];}},
   '../cloud/inference':{inferModel:async(model:string,messages:Call['messages'],options:Call['options'])=>{
    const index=calls.inferences.length;calls.inferences.push({model,messages,options});
+   calls.reservations.push(db.raw.prepare("SELECT id,request_id,status,lease_until FROM ai_creations WHERE status='generating'").get()!);
    const response=calls.responses.length?calls.responses.shift():composition(),barrier=calls.gates.get(index);
    if(barrier){barrier.signal();await barrier.wait;}
    if(response instanceof Error)throw response;
@@ -145,21 +146,60 @@ test('an expired lease can be retried and its stale model response cannot replac
  }finally{oldGate.release();newGate.release();await oldRun.catch(()=>{});await newRun?.catch(()=>{});f.db.close();}
 });
 
-test('invalid music and video outputs never become artifacts and the same request can retry',async t=>{
+test('one repair fixes out-of-range music without resending the raw draft or acquiring a new lease',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());
+ const rawDraft='RAW_DRAFT_DO_NOT_FORWARD: window.executePrivateCode(); '.repeat(2000),original=composition();
+ const invalid={...original,rawDraft,sections:original.sections.map((section,index)=>index===0?{...section,kick:[16]}:section)};
+ f.calls.responses.push(invalid,composition());
+ const prefix='Jazz tranquilo para Lía, con un motivo que vuelva al final. ',input:Input={kind:'music',prompt:prefix+'a'.repeat(4000-prefix.length),requestId:'repair-music'};
+ const created=await f.api.createAI('alice',input);
+ assert.equal(f.calls.inferences.length,2);assert.equal(f.calls.registry,1);assert.equal((created as AICreation&{repairAttempted?:boolean}).repairAttempted,true);
+ assert.deepEqual(plain(created.content),music.validateComposition(composition()));assert.deepEqual(f.calls.reservations[1],f.calls.reservations[0]);assert.equal(f.calls.reservations[0].id,created.id);
+ const first=f.calls.inferences[0],repair=f.calls.inferences[1];assert.equal(repair.model,first.model);
+ for(const call of [first,repair]){assert.equal(call.options.maxTokens,3900);assert.equal(call.options.timeoutMs,22000);assert.equal(call.options.json,true);assert.ok(call.messages.reduce((sum,message)=>sum+message.content.length,0)<=16000);}
+ const repairText=repair.messages.map(message=>message.content).join('\n');assert.ok(repairText.includes(input.prompt));assert.doesNotMatch(repairText,/RAW_DRAFT_DO_NOT_FORWARD|executePrivateCode/);
+ const feedback=repair.messages.filter(message=>!first.messages.some(previous=>previous.role===message.role&&previous.content===message.content)).map(message=>message.content).join('\n').replace(first.messages.at(-1)!.content,'').trim();
+ assert.ok(feedback.length>0&&feedback.length<=1100,'The repair receives a bounded validation report and its short correction heading.');assert.match(feedback,/kick|pasos|percusi[oó]n/i);assert.match(feedback,/0\s*(?:\.\.|a|–|-)\s*15/);assert.doesNotMatch(feedback,/\[object Object\]/);
+ const replay=await f.api.createAI('alice',input);assert.deepEqual(plain(replay),plain(created));assert.equal(f.calls.inferences.length,2);assert.equal(f.db.raw.prepare('SELECT count(*) AS n FROM ai_creations').get()!.n,1);
+});
+
+test('one repair validates a video plan before persisting it',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());f.calls.responses.push({...video(),shots:video().shots.map(shot=>({...shot,room:'nonexistent-room'}))},video());
+ const created=await f.api.createAI('alice',{kind:'video',prompt:'Conecta la mente y la música con un inicio y cierre claros.',requestId:'repair-video'});
+ assert.equal(f.calls.inferences.length,2);assert.equal((created as AICreation&{repairAttempted?:boolean}).repairAttempted,true);assert.deepEqual(plain(created.content),cinema.validateVideoPlan(video()));assert.deepEqual(f.calls.reservations[1],f.calls.reservations[0]);
+ assert.equal(f.calls.inferences[1].model,f.calls.inferences[0].model);assert.equal(f.row('alice','repair-video').status,'completed');assert.deepEqual(plain(await f.api.listAICreations('alice')),[plain(created)]);
+});
+
+test('an invalid response from an expired owner cannot consume a repair after another worker acquired the request',async()=>{
+ const f=await fixture(),oldGate=gate(),newGate=gate();f.calls.gates.set(0,oldGate);f.calls.gates.set(1,newGate);f.calls.responses.push({...composition(),arrangement:['missing-section']},composition());
+ const input:Input={kind:'music',prompt:'Un motivo musical para desarrollar con calma.',requestId:'repair-expired-owner'},oldRun=f.api.createAI('alice',input);let newRun:Promise<AICreation>|undefined;
+ try{
+  await oldGate.entered;f.clock.now+=90001;newRun=f.api.createAI('alice',input);await newGate.entered;const current=f.row('alice',input.requestId);
+  oldGate.release();await assert.rejects(oldRun,/CONFLICT|BUSY/);assert.equal(f.calls.inferences.length,2,'The stale invalid draft does not trigger a third model call.');assert.equal(f.row('alice',input.requestId).id,current.id);assert.equal(f.row('alice',input.requestId).status,'generating');
+  newGate.release();const completed=await newRun;assert.equal(completed.id,current.id);assert.equal(f.calls.inferences.length,2);assert.equal(f.row('alice',input.requestId).status,'completed');
+ }finally{oldGate.release();newGate.release();await oldRun.catch(()=>{});await newRun?.catch(()=>{});f.db.close();}
+});
+
+test('two invalid music or video outputs exhaust the single repair and the same request can retry',async t=>{
  for(const kind of ['music','video'] as const){
   const f=await fixture();t.after(()=>f.db.close());
   const valid=kind==='music'?composition():video();
   const invalid=kind==='music'?{...composition(),arrangement:['missing-section']}:{...video(),shots:video().shots.map(shot=>({...shot,room:'nonexistent-room'}))};
-  f.calls.responses.push(invalid,valid);const input:Input={kind,prompt:'Un encargo concreto para desarrollar la casa.',requestId:'retry-'+kind};
-  await assert.rejects(f.api.createAI('alice',input));const failed=f.row('alice',input.requestId);
-  assert.equal(failed.status,'failed');assert.equal(failed.lease_until,0);assert.equal(failed.content,null);assert.equal(failed.model,null);assert.deepEqual(plain(await f.api.listAICreations('alice')),[]);
-  const completed=await f.api.createAI('alice',input);assert.notEqual(completed.id,failed.id);assert.equal(f.calls.inferences.length,2);assert.equal(f.row('alice',input.requestId).status,'completed');
+  f.calls.responses.push(invalid,invalid,valid);const input:Input={kind,prompt:'Un encargo concreto para desarrollar la casa.',requestId:'retry-'+kind};
+  await assert.rejects(f.api.createAI('alice',input),error=>{const message=(error as Error).message;assert.match(message,/v[aá]lid|correcci[oó]n/i);assert.ok(message.length<=300);assert.doesNotMatch(message,/Zod|"code"|"path"|missing-section|nonexistent-room/);return true;});const failed=f.row('alice',input.requestId);
+  assert.equal(f.calls.inferences.length,2);assert.equal(failed.status,'failed');assert.equal(failed.lease_until,0);assert.equal(failed.content,null);assert.equal(failed.model,null);assert.deepEqual(plain(await f.api.listAICreations('alice')),[]);
+  const completed=await f.api.createAI('alice',input);assert.notEqual(completed.id,failed.id);assert.equal(f.calls.inferences.length,3);assert.equal(f.row('alice',input.requestId).status,'completed');assert.notEqual((completed as AICreation&{repairAttempted?:boolean}).repairAttempted,true);
   assert.deepEqual(plain(await f.api.listAICreations('alice')),[plain(completed)]);
  }
 });
 
 test('a failed inference releases its lease and can be retried without storing provider details',async t=>{
  const f=await fixture();t.after(()=>f.db.close());f.calls.responses.push(Error('private provider failure'),composition());const input:Input={kind:'music',prompt:'Una melodía original con acordes suaves.',requestId:'provider-retry'};
- await assert.rejects(f.api.createAI('alice',input),/private provider failure/);const failed=f.row('alice',input.requestId);assert.equal(failed.status,'failed');assert.equal(failed.lease_until,0);assert.equal(failed.content,null);assert.doesNotMatch(JSON.stringify(failed),/private provider failure/);
+ await assert.rejects(f.api.createAI('alice',input),/private provider failure/);const failed=f.row('alice',input.requestId);assert.equal(f.calls.inferences.length,1);assert.equal(failed.status,'failed');assert.equal(failed.lease_until,0);assert.equal(failed.content,null);assert.doesNotMatch(JSON.stringify(failed),/private provider failure/);
  const completed=await f.api.createAI('alice',input);assert.equal(f.calls.inferences.length,2);assert.equal(f.row('alice',input.requestId).status,'completed');assert.equal((await f.api.listAICreations('alice'))[0].id,completed.id);
+});
+
+test('quota failures do not consume a validation-repair inference',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());const quota=Object.assign(Error('private quota response'),{code:'quota'});f.calls.responses.push(quota,composition());const input:Input={kind:'music',prompt:'Una pieza breve para el estudio de Lía.',requestId:'quota-no-repair'};
+ await assert.rejects(f.api.createAI('alice',input),error=>(error as {code?:string}).code==='quota');assert.equal(f.calls.inferences.length,1);assert.equal(f.calls.responses.length,1);assert.equal(f.row('alice',input.requestId).status,'failed');assert.equal(f.row('alice',input.requestId).lease_until,0);assert.deepEqual(plain(await f.api.listAICreations('alice')),[]);
 });
