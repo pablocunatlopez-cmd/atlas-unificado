@@ -18,7 +18,7 @@ test('demo serves UI and requires an explicit POST to diagnose',async()=>{
   const bad=await fetch('http://127.0.0.1:'+port+'/diagnostics');
   assert.equal(bad.status,404);
   assert.equal(probes,0);
-  const good=await fetch('http://127.0.0.1:'+port+'/diagnostics',{method:'POST'});
+  const good=await fetch('http://127.0.0.1:'+port+'/diagnostics',{method:'POST',headers:{origin:'http://127.0.0.1:'+port}});
   assert.equal(good.status,200);
   assert.equal((await good.json()).status,'candidate_ready');
   assert.equal(probes,1);
@@ -50,10 +50,28 @@ test('local inference requires explicit POST and returns mocked answer',async()=
   assert.equal(denied.status,403);
   assert.equal(calls,0);
   const response=await fetch('http://127.0.0.1:'+port+'/infer',{
-   method:'POST',headers:{'content-type':'application/json'},
+   method:'POST',headers:{'content-type':'application/json',origin:'http://127.0.0.1:'+port},
    body:JSON.stringify({prompt:'Hola'})});
   assert.equal(response.status,200);
-  assert.equal((await response.json()).answer,'Respuesta local');
+  const payload=await response.json();
+  assert.equal(payload.answer,'Respuesta local');
+  assert.equal(payload.verified,true);
   assert.equal(calls,1);
+ }finally{await demo.close();}
+});
+
+test('rejects cross-site style POST without Origin',async()=>{
+ const port=19093;
+ let calls=0;
+ const demo=createAtlasCpuDemoServer({port,
+  fetchImpl:async()=>{calls++;throw Error('unexpected');}
+ });
+ await demo.listen();
+ try{
+  const response=await fetch('http://127.0.0.1:'+port+'/infer',{
+   method:'POST',headers:{'content-type':'application/json'},
+   body:JSON.stringify({prompt:'test'})});
+  assert.equal(response.status,403);
+  assert.equal(calls,0);
  }finally{await demo.close();}
 });
