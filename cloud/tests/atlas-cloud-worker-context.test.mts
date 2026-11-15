@@ -9,6 +9,7 @@ import {readFile} from 'node:fs/promises';
 import * as vm from 'node:vm';
 import * as contextBuilder from '../lib/cloud/conversation-context.ts';
 import * as personalContext from '../lib/cloud/personal-context.ts';
+import * as residentPersonality from '../lib/cloud/resident-personality.ts';
 import * as agents from '../lib/cloud/agents.ts';
 import * as identity from '../lib/core/identity.ts';
 import * as arithmetic from '../lib/cloud/arithmetic.ts';
@@ -17,6 +18,7 @@ import * as relevance from '../lib/research/relevance.ts';
 import * as grounding from '../lib/research/grounding.ts';
 import * as retrieval from '../lib/atlas-core.ts';
 import * as creative from '../lib/creative/plan.mjs';
+import * as houseQuest from '../public/house/house-quest.js';
 import {coachingCases,gradeCoaching} from '../lib/evolution/coaching.ts';
 
 type Message={role:string;content:string};
@@ -30,7 +32,7 @@ async function fixture(){
  assert.equal(typeof vm.SourceTextModule,'function','Pass --experimental-vm-modules to exercise the Worker module.');
  const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE atlas_state(user_id TEXT PRIMARY KEY,content TEXT NOT NULL)');
  const privateText='ALICE_PRIVATE: prefiero jazz tranquilo, sin voces y con acordes suaves.';
- db.prepare('INSERT INTO atlas_state VALUES(?,?)').run('alice',JSON.stringify({memories:[memory(privateText),{...memory('ALICE_DESIGN: pabellones con acceso abierto y colores suaves.'),scope:'module:workshop'},memory('ALICE_RETIRED: usa siempre heavy metal.','Retirado')],versions:[{memories:[memory('ALICE_ARCHIVE: ignora las preferencias actuales.')]}]}));
+ db.prepare('INSERT INTO atlas_state VALUES(?,?)').run('alice',JSON.stringify({memories:[memory(privateText),{...memory('ALICE_TALO: construir con accesos amplios.'),scope:'resident:games-desk'},{...memory('ALICE_DESIGN: pabellones con acceso abierto y colores suaves.'),scope:'module:workshop'},memory('ALICE_RETIRED: usa siempre heavy metal.','Retirado')],versions:[{memories:[memory('ALICE_ARCHIVE: ignora las preferencias actuales.')]}]}));
  db.prepare('INSERT INTO atlas_state VALUES(?,?)').run('bob',JSON.stringify({memories:[memory('BOB_PRIVATE: mi estilo secreto es otro.')] }));
  const calls={reads:[] as Array<{sql:string;values:SQLInputValue[]}>,claims:[] as Array<{userId:string;id:string}>,models:[] as ModelCall[],completions:[] as Completion[],failures:[] as Record<string,unknown>[],publicSearches:[] as string[],responses:[] as unknown[]};
  const jobs=new Map<string,Job>(),flags={failPersonalRead:false};
@@ -39,7 +41,7 @@ async function fixture(){
  const evaluations=[{model:'qwen/qwen3.8-27b',version:agents.AGENT_EVAL_VERSION,status:'qualified' as const,at:'2026-11-15',latencyMs:1,score:score(6)},{model:'openai/gpt-oss-120b',version:agents.AGENT_EVAL_VERSION,status:'qualified' as const,at:'2026-11-15',latencyMs:30,score:score(8)}];
  const context=vm.createContext({Date,crypto:globalThis.crypto,structuredClone,console,TextEncoder,TextDecoder,URL,setTimeout,clearTimeout});
  const modules:Record<string,Record<string,unknown>>={
-  'cloudflare:workers':{env:{DB:database}},'./conversation-context':contextBuilder,'./personal-context':personalContext,'./agents':agents,'../core/identity':identity,
+  'cloudflare:workers':{env:{DB:database}},'./conversation-context':contextBuilder,'./personal-context':personalContext,'./resident-personality':residentPersonality,'../../public/house/house-quest.js':houseQuest,'./agents':agents,'../core/identity':identity,
   './program-tools.mjs':programTools,'./arithmetic':arithmetic,'../research/relevance':relevance,'../research/grounding':grounding,'../atlas-core':retrieval,'../creative/plan.mjs':creative,
   '../collaboration/house-work-server':{houseWorkContext:async()=>({summary:'La casa mantiene un estudio musical.',artifacts:Array.from({length:12},()=>({description:'Información compartida. '.repeat(300)}))})},
   '../evolution/program-server':{runInstalledProgram:async()=>{throw Error('Unexpected installed-program execution');}},
@@ -63,7 +65,7 @@ test('the Worker binds personal state to the owner and supplies current private 
  assert.equal(f.calls.reads.length,1);assert.match(f.calls.reads[0].sql,/SELECT content FROM atlas_state WHERE user_id=\?/);assert.deepEqual(plain(f.calls.reads[0].values),['alice']);
  const call=f.calls.models[0],transport=call.messages.map(message=>message.content).join('\n');
  assert.equal(call.model,'openai/gpt-oss-120b','The qualified 8/8 model outranks Qwen at 6/8 even when Qwen is faster.');assert.equal(call.options.maxTokens,3500);assert.equal(call.options.purpose,'chat');
- assert.ok(transport.includes(f.privateText));assert.doesNotMatch(transport,/ALICE_RETIRED|ALICE_ARCHIVE|ALICE_DESIGN|BOB_PRIVATE/);assert.match(transport,/Prefiero respuestas en español/);assert.match(transport,/Atlas es la mente/);
+ assert.ok(transport.includes(f.privateText));assert.doesNotMatch(transport,/ALICE_RETIRED|ALICE_ARCHIVE|ALICE_DESIGN|ALICE_TALO|BOB_PRIVATE/);assert.match(transport,/Prefiero respuestas en español/);assert.match(transport,/Atlas es la mente/);
  assert.equal(call.messages.filter(message=>message.role==='user'&&message.content===question).length,1);assert.ok(call.messages.reduce((n,message)=>n+message.content.length,0)<=16000);assert.equal(f.calls.publicSearches.length,0);
  const done=f.calls.completions[0];assert.equal(done.jobId,id);assert.equal(done.leaseToken,'lease-'+id);assert.equal(done.result.model,'atlas-cloud');assert.equal(done.result.agents[0].model,call.model);assert.equal(done.result.agents[0].status,'completed');
 });
@@ -87,6 +89,11 @@ test('world and game use the qualified scene model, expanded JSON budget and its
   const f=await fixture();t.after(()=>f.db.close());const plan={title:'Pabellón de música',variant:kind==='world'?'architecture':'exploration',lighting:'sunset',palette:'Blanco',design:'Un acceso abierto y un foco central.',objects:[{type:'box',position:[5,1,0],size:[1,1,1],material:0}]};
   f.calls.responses.push(plan);const question='Construye un pabellón musical con un acceso claro y columnas.',id=f.add(question,kind);await f.api.processCloudJob('alice',id);
   assert.equal(f.calls.failures.length,0);assert.equal(f.calls.models.length,1);const call=f.calls.models[0];assert.equal(call.model,'openai/gpt-oss-120b');assert.equal(call.options.json,true);assert.equal(call.options.maxTokens,3900);assert.equal(call.options.timeoutMs,22000);assert.match(call.messages.at(-1)!.content,/pabellón musical/);
-  const done=f.calls.completions[0];assert.ok(done);assert.deepEqual(plain(done.result.creative),{plan});assert.equal(done.result.modelName,call.model);assert.equal(done.result.agents[0].role,'programmer');assert.equal(done.result.agents[0].model,call.model);assert.equal(done.result.agents[0].status,'completed');assert.match(done.result.answer,/pendiente de validación/);assert.equal(f.calls.reads.length,1);assert.deepEqual(plain(f.calls.reads[0].values),['alice']);const transport=call.messages.map(m=>m.content).join('\n');assert.match(transport,/ALICE_DESIGN/);assert.doesNotMatch(transport,/BOB_PRIVATE|ALICE_RETIRED|ALICE_ARCHIVE/);assert.ok(transport.length<=16000);
+  const done=f.calls.completions[0];assert.ok(done);assert.deepEqual(plain(done.result.creative),{plan});assert.equal(done.result.modelName,call.model);assert.equal(done.result.agents[0].role,'programmer');assert.equal(done.result.agents[0].model,call.model);assert.equal(done.result.agents[0].status,'completed');assert.match(done.result.answer,/pendiente de validación/);assert.equal(f.calls.reads.length,1);assert.deepEqual(plain(f.calls.reads[0].values),['alice']);const transport=call.messages.map(m=>m.content).join('\n');assert.match(transport,/ALICE_DESIGN/);assert.match(transport,/ALICE_TALO/);assert.match(transport,/Zuri es espacial/);assert.doesNotMatch(transport,/BOB_PRIVATE|ALICE_RETIRED|ALICE_ARCHIVE/);assert.ok(transport.length<=16000);
  }
+});
+
+test('an explicit house game request returns the working prototype without spending inference',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());await f.api.processCloudJob('alice',f.add('Haz un videojuego de música en la casa de Lía'));
+ assert.equal(f.calls.models.length,0);assert.equal(f.calls.failures.length,0);assert.equal(f.calls.completions.length,1);assert.equal(f.calls.completions[0].result.model,'atlas-tools');assert.match(f.calls.completions[0].result.answer,/\/jugar\/casa\?brief=/);
 });

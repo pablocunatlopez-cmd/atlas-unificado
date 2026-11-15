@@ -41,7 +41,7 @@ export type HouseAPI={
  pause:(value:boolean)=>void;
  setProcessState:(value:HouseProcessState)=>void;
 };
-type Props={onFunction?:(id:string)=>void;onPeopleStatus?:(value:HousePeopleStatus)=>void;creative?:PublicCreativePreview|null;onCreativeApplied?:(value:HouseInstallation)=>void;onResidentFocus?:(id:string)=>void;activeRoom?:HouseRoom;processState?:HouseProcessState;paused?:boolean;embedded?:boolean;className?:string;onRoomChange?:(room:HouseRoom)=>void;onInteract?:(room:HouseRoom)=>void;onReady?:(api:HouseAPI)=>void;onPerformance?:(value:HousePerformance)=>void;onError?:(message:string)=>void};
+type Props={prototype?:boolean;onFunction?:(id:string)=>void;onPeopleStatus?:(value:HousePeopleStatus)=>void;creative?:PublicCreativePreview|null;onCreativeApplied?:(value:HouseInstallation)=>void;onResidentFocus?:(id:string)=>void;activeRoom?:HouseRoom;processState?:HouseProcessState;paused?:boolean;embedded?:boolean;className?:string;onRoomChange?:(room:HouseRoom)=>void;onInteract?:(room:HouseRoom)=>void;onReady?:(api:HouseAPI)=>void;onPerformance?:(value:HousePerformance)=>void;onError?:(message:string)=>void};
 const validRoom=(value:unknown):value is HouseRoom=>typeof value==='string'&&HOUSE_ROOMS.some(room=>room.id===value);
 
 export function HouseScene(props:Props){
@@ -92,7 +92,7 @@ export function HouseScene(props:Props){
  useEffect(()=>{if(ready&&props.processState)api.setProcessState(props.processState);},[api,props.processState,ready]);
  useEffect(()=>{if(ready)api.setCreativeState(props.creative||null);},[api,props.creative,ready]);
  return <div className={[styles.scene,props.className||''].join(' ')} data-house-ready={ready} aria-busy={!ready&&!error}>
-  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=functions1'+(props.embedded===false?'':'&embedded=1')} allow="fullscreen; autoplay" className={styles.frame} />
+  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=surfaces2'+(props.embedded===false?'':'&embedded=1')+(props.prototype?'&prototype=1':'')} allow="fullscreen; autoplay" className={styles.frame} />
  </div>;
 }
 

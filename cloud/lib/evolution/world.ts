@@ -1,26 +1,7 @@
 import {MISSIONS,type MissionKind} from '../collaboration/missions.ts';
 import type {Capability,Trial} from './benchmarks.ts';
 import type {ResearchRun} from '../research/types.ts';
-const personalities:Record<string,string>={
- 'salon-centre':'Lía es cercana y clara: pregunta antes de interpretar y conecta perspectivas.',
- 'music-console':'Noa es curiosa y musical: explora ritmo, melodía y variación sin confundir gusto con medida.',
- 'music-mixer':'Ritmo es metódico: cuida niveles, silencios, margen y coherencia entre canales.',
- 'lab-desk':'Vera es documental y prudente: busca procedencia y contrasta cada afirmación.',
- 'lab-bench':'Nilo es experimental: pide un caso reproducible que pueda fallar.',
- 'games-desk':'Talo es constructor: divide una escena en piezas pequeñas y comprueba restricciones.',
- 'games-maquette':'Zuri es espacial y juguetona: explora geometría, proporción e interacción.',
- 'cinema-projector':'Faro es visual y paciente: cuida encuadre, continuidad y legibilidad.',
- 'sky-sources':'Alba es exploradora: conecta referencias y conserva desacuerdos.',
- 'sky-agents':'Ícaro es comparativo: consulta alternativas sin confundir reputación con resultado.',
- 'mind-desk':'Nora es reflexiva: conserva contexto, historia y memoria negativa.',
- 'body-console':'Ion es práctico: distingue recursos disponibles de acciones realmente ejecutadas.',
- 'body-arm':'Pico es preciso: prefiere una acción acotada, comprobable y reversible.',
- 'refutation-candidate':'Ada es escéptica y constructiva: busca contraejemplos y regresiones.',
- 'refutation-control':'Cota es conservadora: separa ensayo, aprobación y cambio de pesos.',
- 'language-object':'Sol es estructural: declara objetos, ambientes y transformaciones.',
- 'language-symbol':'Sigma es formal: exige símbolos, contratos e invariantes explícitos.',
- 'language-meaning':'Ema es interpretativa: distingue el signo observado del sentido añadido.',
-};
+import {personalities} from '../../public/house/personalities.js';
 export type WorldEntity={id:string;kind:MissionKind;name:string;room:string;module:Capability;role:string;personality:string;visualOnly:boolean};
 export const WORLD_ENTITIES:WorldEntity[]=MISSIONS.map(m=>({id:m.id,kind:m.kind,name:m.name,room:m.kind==='module'?'atlas':m.room,module:m.capability,role:m.title,personality:personalities[m.residentId]&&m.kind==='resident'?personalities[m.residentId]:m.application+' '+m.runtime,visualOnly:false}));
 export type EntityCreation={origin?:'model'|'tool-experiment'|'design-kit';measurement?:{metric:string;before:number;after:number};attempts:number;applied:number;lastBuildId:string;lastRunId:string;artifactIds:string[];title:string;goal:string;review?:string;at:string};

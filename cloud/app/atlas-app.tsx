@@ -59,7 +59,7 @@ export default function AtlasApp(){
    revision.current=data.revision;lastSaved.current=JSON.stringify(data.state);blocked.current=false;pending.current=null;setState(data.state);setReady(true);setSaveStatus("Guardado");
   }catch(e){setLoadError(e instanceof Error?e.message:"No se pudo cargar.");setSaveStatus("Sin sincronizar");}
  }
- useEffect(()=>{const params=new URLSearchParams(window.location.search);if(params.get("view")==="memory"){setView("memory");setMemScopeFilter(memoryScope(params.get("scope")));}load();const hour=new Date().getHours();setGreeting(hour<12?"Buenos días":hour<20?"Buenas tardes":"Buenas noches");},[]);
+ useEffect(()=>{const params=new URLSearchParams(window.location.search);if(params.get("view")==="memory"){setView("memory");setMemScopeFilter(memoryScope(params.get("scope")));}else if(params.get("view")==="research"){setView("research");}load();const hour=new Date().getHours();setGreeting(hour<12?"Buenos días":hour<20?"Buenas tardes":"Buenas noches");},[]);
  async function flush(){
   if(saving.current||blocked.current||!pending.current)return;
   saving.current=true;
