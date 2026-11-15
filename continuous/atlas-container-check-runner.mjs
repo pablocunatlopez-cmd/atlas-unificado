@@ -1,4 +1,5 @@
 import {spawn as nodeSpawn} from 'node:child_process';
+import {planAtlasContainerChecks} from './atlas-container-check-plan.mjs';
 /**
  * Runs only an already validated container argv, through a host-controlled
  * runtime. Does not attest that the runtime is rootless or secure.
@@ -17,6 +18,14 @@ export async function runAtlasContainerCheck({
   !Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>120000||
   !Number.isSafeInteger(maxOutputBytes)||maxOutputBytes<1024||maxOutputBytes>1048576)
   throw Error('Invalid container execution plan');
+ const mount=plan.argv[plan.argv.indexOf('--mount')+1];
+ const match=typeof mount==='string'?/^type=bind,src=(\/[^,]+),dst=\/workspace,readonly$/.exec(mount):null;
+ if(!match)throw Error('Invalid workspace mount');
+ const expected=planAtlasContainerChecks({workspacePath:match[1],imageDigest:plan.imageDigest,
+  checks:plan.policy?.commands,cpuSeconds:plan.policy?.cpuSeconds,
+  memoryMb:plan.policy?.memoryMb,runtime:plan.runtime});
+ if(JSON.stringify(plan.argv)!==JSON.stringify(expected.argv))
+  throw Error('Container arguments not trusted');
  return new Promise((resolve,reject)=>{
   let child,output='',errorOutput='',finished=false,timedOut=false,overflow=false;
   const settle=(err,value)=>{
