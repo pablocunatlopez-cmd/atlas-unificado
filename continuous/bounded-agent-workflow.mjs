@@ -19,7 +19,10 @@ export async function runAgentWorkflow({steps,handlers,signal,maxSteps=12,timeou
       typeof handlers[step.kind]!=='function')throw Error('Unapproved workflow step');
    const remaining=Math.max(1,Math.ceil(timeoutMs-(performance.now()-started)));
    const controller=new AbortController();
-   const abort=AbortSignal.any([controller.signal,AbortSignal.timeout(remaining),...(signal?[signal]:[])]);
+   const abort=AbortSignal.any([controller.signal,...(signal?[signal]:[])]);
+   // Keep a real referenced timer: AbortSignal.timeout alone may not keep Node alive
+   // while a handler never settles, causing test cancellation instead of timeout.
+   const timeout=setTimeout(()=>controller.abort(Error('Step timeout exceeded')),remaining);
    const event={index:i,kind:step.kind,status:'started'};
    events.push(event);onEvent(event);
    try{
@@ -35,7 +38,7 @@ export async function runAgentWorkflow({steps,handlers,signal,maxSteps=12,timeou
      const failed={index:i,kind:step.kind,status:'failed',errorCode:'step_failed'};
      events.push(failed);onEvent(failed);
      return {ok:false,results,events,failedAt:i};
-   }finally{controller.abort();}
+   }finally{clearTimeout(timeout);controller.abort();}
  }
  return {ok:true,results,events};
 }
