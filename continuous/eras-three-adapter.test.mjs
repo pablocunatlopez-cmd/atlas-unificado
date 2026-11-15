@@ -34,3 +34,13 @@ test('requires trusted loader for asset IDs',async()=>{
  const adapter=createErasThreeAdapter({THREE,scene:new Group()});
  await assert.rejects(adapter.create({...node('tree'),asset:'oak'}));
 });
+
+test('rejects missing parents without retaining a failed entity',async()=>{
+ const scene=new Group(),adapter=createErasThreeAdapter({THREE,scene});
+ await assert.rejects(adapter.create(node('orphan','missing')),/Parent not created/);
+ assert.equal(adapter.getObject('orphan'),null);
+ assert.equal(scene.children.length,0);
+ await adapter.create({...node('root'),type:'group'});
+ await adapter.create(node('child','root'));
+ assert.equal(adapter.getObject('child').parent,adapter.getObject('root'));
+});
