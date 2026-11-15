@@ -31,5 +31,23 @@ const review=await evaluateAtlasVerifiedChange({
 4. GitHub PR review remains the promotion boundary.
 5. LOR-ΩΣ records regression metrics and rejected changes.
 
+## Host-side policy wrapper
+`continuous/atlas-trusted-host.mjs` provides a fail-closed wrapper for canonical
+repository paths, injected GitHub commit lookup, process-local proposal UUID /
+diff / path binding, private single-use approval markers, branch-head
+preconditions and rollback callbacks. The proposal registry is process-local;
+restarting the host loses its bindings. GitHub lookup, approval signature
+verification, branch compare-and-swap, publication and rollback are injected
+server-owned adapters, not implemented credentials or attestations. Do not
+expose this module to a client or treat the wrapper alone as a production trust
+service.
+
+The browser house accepts a same-origin `atlas:house:eras-scene` message and
+validates its ERAS manifest before rendering bounded tree/rock geometry. It
+does not load arbitrary assets or code. This adapter is a renderer integration
+prototype; no browser visual audit or production ERAS manifest source is claimed.
+
 ## Status
-Pure evidence-review primitive and tests committed to draft PR. No CI attestations have been retrieved, tests run, or production verifier connected in this iteration.
+Evidence review remains a pure, injected boundary. A test verifier and simulated
+host callbacks do not constitute CI attestations, authenticated approval, or a
+production verifier.

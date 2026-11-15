@@ -15,7 +15,7 @@ type PanelState =
   | {
       kind: 'items';
       contractVersion: number;
-      rows: {record: EvidenceRecord; label: string; mayClaimIntegrated: boolean}[];
+      rows: {record: EvidenceRecord; state: string; label: string; mayClaimIntegrated: boolean}[];
     };
 
 const REQUEST_MS = 8000;
@@ -30,7 +30,7 @@ function readRows(data: {contractVersion?: number; evidence?: unknown[]}) {
       const record = parseEvidenceRecord(item);
       if (!record) return null;
       const display = evidenceDisplayState(record);
-      return {record, label: display.label, mayClaimIntegrated: display.mayClaimIntegrated};
+      return {record, state: display.state, label: display.label, mayClaimIntegrated: display.mayClaimIntegrated};
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
   return {version, rows};
@@ -126,7 +126,7 @@ export default function TypedEvidencePanel() {
             background: '#13231b',
           }}
         >
-          <strong style={{display: 'block', fontSize: 14, color: '#d5f0b7'}}>{state.label}</strong>
+          <strong data-evidence-state="unknown" style={{display: 'block', fontSize: 14, color: '#d5f0b7'}}>unknown · {state.label}</strong>
           <span style={{display: 'block', marginTop: 6, fontSize: 12, color: '#9cafa0'}}>
             Contrato v{EVIDENCE_CONTRACT_VERSION}. Cuando el puente publique un registro válido aparecerá aquí.
           </span>
@@ -135,7 +135,7 @@ export default function TypedEvidencePanel() {
 
       {state.kind === 'items' && (
         <ul style={{listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'grid', gap: 12}}>
-          {state.rows.map(({record, label, mayClaimIntegrated}) => (
+          {state.rows.map(({record, state: evidenceState, label, mayClaimIntegrated}) => (
             <li
               key={record.taskId + ':' + record.artifactId + ':' + record.completedAt}
               style={{
@@ -145,7 +145,7 @@ export default function TypedEvidencePanel() {
                 background: '#13231b',
               }}
             >
-              <strong style={{fontSize: 13}}>{label}</strong>
+              <strong data-evidence-state={evidenceState} style={{fontSize: 13}}>{evidenceState} · {label}</strong>
               <span style={{display: 'block', marginTop: 6, fontSize: 11, color: '#9cafa0'}}>
                 {record.verdict} · tarea {record.taskId} · proceso {record.processId} · artefacto {record.artifactId}
                 {mayClaimIntegrated && record.integratedRevision

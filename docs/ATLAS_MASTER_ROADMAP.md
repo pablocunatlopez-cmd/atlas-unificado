@@ -5,10 +5,11 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 
 ## Milestone 0 — establish reality and test baseline (P0)
 - [x] Inventory existing planning, scene, renderer, and evidence modules.
-- [x] Confirm package scripts and CI trigger; inspected GitHub Actions on a pinned SHA (syntax passed; 802 tests: 791 passed, 1 failed, 1 cancelled, 9 skipped).
+- [x] Recorded a historical CI snapshot (802 tests: 791 passed, 1 failed, 1 cancelled, 9 skipped); this is not the current branch baseline.
 - [x] Correct identified Three.js parent attachment failure and non-cooperative workflow timeout cancellation.
-- [ ] Re-run full suite on latest exact SHA and verify all required checks pass.
-- [ ] Fix failing tests; publish reproducible test report.
+- [x] Run the root source suite on `b97fe66fe52606d070e59a9722a6ef3ca838ded4`: 971 tests, 962 passed, 9 skipped, 0 failed.
+- [ ] Obtain a successful GitHub Actions run; the current PR run is `action_required` with zero jobs.
+- [ ] Generate a coverage report; no coverage measurement was produced by this run.
 **Done when:** clean install and CI test run pass with linked commit SHA.
 
 ## Milestone 1 — correct the agent safety boundaries (P0)
@@ -17,7 +18,7 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 - [x] Identify reverse dependencies for regression impact.
 - [x] Introduce injected trusted evidence verification interface.
 - [x] Stop the legacy coding-cycle planner from treating caller-supplied check/approval flags as verified permission.
-- [ ] Implement canonical-path/symlink checks in a trusted host.
+- [x] Add canonical-path/symlink rejection in an injected trusted-host prototype; production adapters remain pending.
 - [ ] Bind approvals, checks, diff digest and commit SHA to an authenticated principal.
 - [x] Define a fail-closed, bounded isolated-run contract and regression tests (planning only).
 - [x] Add a Docker invocation builder with pinned image, no network, read-only workspace, dropped capabilities and resource caps (does not execute).
@@ -74,3 +75,10 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 4. Each iteration should leave code, tests, or verified findings in GitHub.
 5. Sites publishing needs an actual authorized Sites integration; GitHub alone cannot deploy there.
 6. Prefer free/open-source components and measure resource use.
+
+## Current implementation status (2026-11-15)
+- **P0 evidence boundary:** coding-cycle proposals can be reviewed by the commit-bound gate; execution remains disabled pending a production CI verifier.
+- **P0 trusted host:** canonical-path and proposal/diff/commit checks, one-use approval, branch preconditions and rollback callbacks are implemented as an injected policy wrapper; GitHub/authentication adapters and durable proposal storage remain prototypes.
+- **ERAS house:** a bounded manifest adapter is connected to the same-origin house runtime message path; no production manifest source or browser visual audit has been verified.
+- **House evidence UI:** typed evidence appears in Refutation; `reported` and `failed` are distinct, and `integrated` requires `integratedRevision`. No `verified` claim is emitted without an independent verifier contract.
+- **Test baseline:** `npm ci` followed by `npm test` on `b97fe66fe52606d070e59a9722a6ef3ca838ded4` discovered 971 cases: 962 passed, 9 skipped, 0 failed. No coverage report was generated. Cloud lint/build were attempted but unavailable because Cloud workspace dependencies (`eslint`, `vinext`) were not installed; no browser visual audit was run.

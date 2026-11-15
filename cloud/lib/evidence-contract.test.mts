@@ -45,12 +45,13 @@ test('evidenceDisplayState never claims integration without integratedRevision',
 
   const passed = parseEvidenceRecord(base);
   const display = evidenceDisplayState(passed);
-  assert.equal(display.state, 'passed_reported');
+  assert.equal(display.state, 'reported');
   assert.equal(display.mayClaimIntegrated, false);
   assert.match(display.label, /sin integración/i);
 
   const integrated = parseEvidenceRecord({...base, integratedRevision: 'main@deadbeef'});
   const integratedDisplay = evidenceDisplayState(integrated);
+  assert.equal(integratedDisplay.state, 'integrated');
   assert.equal(integratedDisplay.mayClaimIntegrated, true);
   assert.match(integratedDisplay.label, /Integrada/);
 });
@@ -61,6 +62,6 @@ test('failed and rejected verdicts stay non-integrated', () => {
   assert.equal(evidenceDisplayState(failed).state, 'failed');
 
   const rejected = parseEvidenceRecord({...base, verdict: 'rejected'});
-  assert.equal(evidenceDisplayState(rejected).state, 'rejected');
+  assert.equal(evidenceDisplayState(rejected).state, 'failed');
   assert.equal(evidenceDisplayState(rejected).mayClaimIntegrated, false);
 });

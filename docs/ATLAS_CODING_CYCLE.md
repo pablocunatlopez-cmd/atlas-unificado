@@ -1,6 +1,6 @@
 # Atlas · Integrated coding cycle
 
-`continuous/atlas-coding-cycle.mjs` combines the repository context map, bounded patch planner and agent change review gate.
+`continuous/atlas-coding-cycle.mjs` combines the repository context map, bounded patch planner and commit-bound evidence review.
 
 ## Example
 ```js
@@ -12,19 +12,30 @@ const plan=planAtlasCodingCycle({
  changes:[{operation:'update',path:'continuous/eras.mjs',content:'export const version=2;'}]
 });
 console.log(plan.status); // planned_not_executed
-console.log(plan.nextStep); // run_tests_in_trusted_executor
+console.log(plan.nextStep); // verify_commit_bound_evidence
 ```
+
+`planAtlasCodingCycle` is planning-only. Its legacy `review` remains blocked
+without checks and approval. For commit-bound evidence, call
+`verifyAtlasCodingCycleEvidence({cycle, commitSha, evidence, verifyEvidence})`.
+The verifier must be provided by a trusted server and bind each record to the
+cycle's proposal ID, actions and exact commit SHA. A positive review still only
+means ready for human review; it never executes or publishes the patch.
 
 ## Workflow boundaries
 - Repository map accepts snapshots from a trusted host, not direct filesystem access.
 - Patch planner only describes changes; it does not write.
-- Review gate checks caller-provided evidence; it does not verify CI results or authenticate approvals.
-- Host must bind tests and approval to exact proposal digest and Git commit SHA.
+- Legacy check/approval fields are not accepted as proof.
+- The verified gate binds checks to the exact proposal, actions and Git commit SHA;
+  authentication and CI provenance remain the trusted verifier's responsibility.
 - All changes must be applied on a separate branch with rollback and human review.
 - LOR-ΩΣ should compare measured outcomes before any promotion.
 
 ## Current limitations
-No sandbox, shell execution, CI verification, authenticated approval, Sites deployment or autonomous self-modification is provided by this integration. Tests are committed but have not been executed in this iteration.
+No sandboxed test execution or production CI verifier is provided. The coding
+cycle does not execute code or claim that checks ran. See
+`ATLAS_TRUSTED_EVIDENCE.md` for the injected host boundary and its limitations.
 
 ## Next milestone
-Add a signed/verified evidence protocol and a trusted GitHub execution connector with a dry-run diff, branch preconditions and explicit publication gate.
+Connect production-authenticated verification and branch adapters; keep
+publication behind explicit human approval, branch compare-and-swap and rollback.

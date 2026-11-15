@@ -5,10 +5,12 @@ import {ROOMS,roomById,roomAt,movePlayer,navigationVector,blocked} from './layou
 import {WORKSTATIONS,residentById} from './residents.js';
 import {buildHouse} from './scene.js';
 import {normalizeProcessState,processForRoom,processCaption} from './process-state.js';
+import {atlasErasManifestToSceneGraph} from './eras-manifest-adapter.js';
 
 const $=id=>document.getElementById(id),canvas=$('scene'),callbacks=[],urls=new Set();
 const send=(event,data={})=>parent.postMessage({type:'atlas:house:'+event,...data},location.origin);
 let renderer,house,frame=0,disposed=false,paused=false,overview=true,recording=null,currentRoom='salon',ready=false;
+let erasScene=null,erasMode=false;
 let player={x:roomById('salon').spawn[0],z:roomById('salon').spawn[1]},yaw=roomById('salon').yaw,pitch=.02,orbit=.58,elevation=.68,last=0,frames=0,elapsed=0,lowFrames=0;
 let joystick,stick={x:0,y:0},drag=null,transition=null,recordStart=0,captureAngle=0;
 let processState=normalizeProcessState(null),processReceivedAt=-Infinity,creativeState=null,creativeSource='coordinator',inspection=false;
@@ -54,11 +56,46 @@ function interact(){if(!overview)send('interact',{room:currentRoom});}
 function resize(){if(!renderer)return;const width=innerWidth,height=innerHeight;camera.aspect=width/height;camera.fov=overview?46:(width<height?67:58);camera.updateProjectionMatrix();renderer.setSize(width,height,false);}
 function cameraFrame(time){
  const p=camera.position;
- if(overview){const distance=inspection?Math.max(11,8/camera.aspect):Math.max(42,31/camera.aspect),angle=recording?captureAngle+(time-recordStart)*.00013:orbit;const y=Math.sin(elevation)*distance,z=Math.cos(elevation)*distance;target.set(inspection?7.8:0,inspection?1.05:.3,inspection?10.35:-3.6);p.set(target.x+Math.sin(angle)*z,target.y+y,target.z+Math.cos(angle)*z);}
+ if(overview){const distance=erasMode?Math.max(16,18/camera.aspect):inspection?Math.max(11,8/camera.aspect):Math.max(42,31/camera.aspect),angle=recording?captureAngle+(time-recordStart)*.00013:orbit;const y=Math.sin(elevation)*distance,z=Math.cos(elevation)*distance;target.set(erasMode?0:inspection?7.8:0,erasMode?0:inspection?1.05:.3,erasMode?0:inspection?10.35:-3.6);p.set(target.x+Math.sin(angle)*z,target.y+y,target.z+Math.cos(angle)*z);}
  else{const desired=new THREE.Vector3(player.x,1.64,player.z);if(transition){const progress=Math.min(1,(time-transition.at)/600),smooth=progress*progress*(3-2*progress);p.lerpVectors(transition.from,desired,smooth);if(progress===1)transition=null;}else p.copy(desired);const lookYaw=yaw+(recording?Math.sin((time-recordStart)*.0004)*.16:0);target.set(p.x+Math.sin(lookYaw)*Math.cos(pitch),p.y+Math.sin(pitch),p.z-Math.cos(lookYaw)*Math.cos(pitch));}
  camera.lookAt(target);
 }
 function renderNow(time){if(!renderer||!house)return;cameraFrame(time);house.update(time/1000,camera,innerHeight);renderer.render(house.scene,camera);}
+function clearErasScene(){
+ if(!erasScene)return;
+ erasScene.traverse(object=>{
+  object.geometry?.dispose?.();
+  if(Array.isArray(object.material))object.material.forEach(material=>material.dispose?.());
+  else object.material?.dispose?.();
+ });
+ erasScene.parent?.remove(erasScene);erasScene=null;
+}
+function setErasManifest(manifest){
+ const graph=atlasErasManifestToSceneGraph(manifest);
+ const objects=new Map(),root=new THREE.Group();
+ root.add(new THREE.AmbientLight(0xffffff,.85));
+ const light=new THREE.DirectionalLight(0xffffff,1.5);light.position.set(6,12,8);root.add(light);
+ objects.set('eras-root',root);
+ for(const node of graph.nodes.slice(1)){
+  const object=node.type==='group'?new THREE.Group():new THREE.Mesh(
+   node.primitive==='tree'?new THREE.ConeGeometry(.45,1.8,7):new THREE.DodecahedronGeometry(.55,0),
+   new THREE.MeshStandardMaterial({color:node.primitive==='tree'?0x568b62:0x858b8a,roughness:.9})
+  );
+  object.position.set(...node.position);object.rotation.set(...node.rotation);object.scale.set(...node.scale);
+  const parent=objects.get(node.parent);if(!parent)throw Error('Missing ERAS scene parent');
+  parent.add(object);objects.set(node.id,object);
+ }
+ clearErasScene();
+ erasScene=root;house.scene.add(root);
+ for(const child of house.scene.children)if(child!==erasScene)child.visible=false;
+ erasMode=true;
+ return graph.nodes.length;
+}
+function restoreHouseScene(){
+ if(!erasMode)return;
+ for(const child of house.scene.children)if(child!==erasScene)child.visible=true;
+ clearErasScene();erasMode=false;
+}
 function screenshot(){renderNow(performance.now());return canvas.toDataURL('image/png');}
 async function record(seconds=8){
  if(recording)throw Error('Ya hay una grabación en curso.');
@@ -88,7 +125,7 @@ function tick(now){
  if(elapsed>=1.2){const fps=frames/elapsed;$('fps').textContent=Math.round(fps)+' FPS';canvas.dataset.frames=String(Number(canvas.dataset.frames||0)+frames);send('performance',{fps:Math.round(fps),frames:Number(canvas.dataset.frames),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,backend:'WebGL2'});if(fps<24){lowFrames++;if(lowFrames>=3&&renderer.getPixelRatio()>.85){renderer.setPixelRatio(Math.max(.85,renderer.getPixelRatio()*.85));resize();lowFrames=0;}}else lowFrames=0;frames=0;elapsed=0;}
  if(!ready){ready=true;$('boot').hidden=true;canvas.dataset.ready='true';reportReady();}
 }
-function dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);if(recording?.state!=='inactive')recording?.stop();joystick?.destroy();callbacks.forEach(remove=>remove());house?.dispose();renderer?.dispose();renderer?.forceContextLoss();for(const url of urls)URL.revokeObjectURL(url);urls.clear();}
+function dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);if(recording?.state!=='inactive')recording?.stop();joystick?.destroy();callbacks.forEach(remove=>remove());clearErasScene();house?.dispose();renderer?.dispose();renderer?.forceContextLoss();for(const url of urls)URL.revokeObjectURL(url);urls.clear();}
 for(const room of ROOMS){const button=document.createElement('button');button.type='button';button.dataset.room=room.id;button.textContent=room.short;button.setAttribute('aria-label','Ir a '+room.title);button.setAttribute('aria-pressed','false');listen(button,'click',()=>teleport(room.id));$('roomnav').append(button);}
 listen($('overview'),'click',()=>{setOverview(true);resize();});listen($('walk'),'click',()=>{teleport(currentRoom);resize();});listen($('interact'),'click',interact);listen($('retry'),'click',()=>location.reload());
 listen(window,'resize',resize);
@@ -108,6 +145,11 @@ listen(window,'message',async event=>{
  if(message.type==='atlas:house:evolution'){focusEvolution();}
  if(message.type==='atlas:house:creative'){applyCreative(message.value);}
  if(message.type==='atlas:house:overview'){setOverview(true);resize();}
+ if(message.type==='atlas:house:eras-scene'){
+  try{const nodes=setErasManifest(message.manifest);send('eras-scene',{status:'applied',nodes});}
+  catch(error){send('eras-scene',{status:'rejected',message:error instanceof Error?error.message:'Invalid ERAS scene'});}
+ }
+ if(message.type==='atlas:house:house-scene'){restoreHouseScene();send('eras-scene',{status:'house_restored'});}
  if(message.type==='atlas:house:pause'){paused=message.value===true;keys.clear();joystick?.reset();drag=null;last=0;}
  if(message.type==='atlas:house:processes'){processState=normalizeProcessState(message.value);processReceivedAt=performance.now();house?.setProcessState(processState);updateProcessLegend();}
  if(message.type==='atlas:house:revoke'&&urls.has(message.url)){URL.revokeObjectURL(message.url);urls.delete(message.url);}

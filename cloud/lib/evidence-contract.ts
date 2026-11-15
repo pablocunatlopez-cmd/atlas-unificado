@@ -26,7 +26,7 @@ export type EvidenceRecord = {
 };
 
 const idPattern = /^[a-zA-Z0-9._:-]{1,128}$/;
-const revisionPattern = /^[a-zA-Z0-9._/-]{1,160}$/;
+const revisionPattern = /^[a-zA-Z0-9._/@-]{1,160}$/;
 
 function isIsoDate(value: unknown): value is string {
   return typeof value === 'string' && Number.isFinite(Date.parse(value));
@@ -78,9 +78,9 @@ export function parseEvidenceRecord(input: unknown): EvidenceRecord | null {
   return record;
 }
 
-/** UI-facing label. Only `passed` with a valid record may say verified-capable text later. */
+/** UI-facing status. A v1 record alone is reported evidence, not independent verification. */
 export function evidenceDisplayState(record: EvidenceRecord | null): {
-  state: 'unknown' | 'failed' | 'rejected' | 'passed_reported';
+  state: 'unknown' | 'reported' | 'verified' | 'integrated' | 'failed';
   label: string;
   mayClaimIntegrated: boolean;
 } {
@@ -91,13 +91,13 @@ export function evidenceDisplayState(record: EvidenceRecord | null): {
     return {state: 'failed', label: 'Prueba fallida (reportada)', mayClaimIntegrated: false};
   }
   if (record.verdict === 'rejected') {
-    return {state: 'rejected', label: 'Candidata rechazada', mayClaimIntegrated: false};
+    return {state: 'failed', label: 'Candidata rechazada', mayClaimIntegrated: false};
   }
   if (record.verdict === 'passed') {
     // Passed tests alone are not integration. integratedRevision is required to claim it.
     const integrated = typeof record.integratedRevision === 'string' && record.integratedRevision.length > 0;
     return {
-      state: 'passed_reported',
+      state: integrated ? 'integrated' : 'reported',
       label: integrated ? 'Integrada (revisión citada)' : 'Pruebas superadas (sin integración citada)',
       mayClaimIntegrated: integrated,
     };
