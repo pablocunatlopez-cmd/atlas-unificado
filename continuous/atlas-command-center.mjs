@@ -5,7 +5,7 @@
  */
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STATUSES=new Set(['ready','review','blocked','offline']);
-export function renderAtlasCommandCenter({project='Atlas Unificado',status='review',tasks=[],metrics={},localDiagnostics=null}={}){
+export function renderAtlasCommandCenter({project='Atlas Unificado',status='review',tasks=[],metrics={},localDiagnostics=null,diagnosticsAction=false}={}){
  if(typeof project!=='string'||project.length>100||!STATUSES.has(status)||
     !Array.isArray(tasks)||tasks.length>30)throw Error('Invalid dashboard state');
  const cards=tasks.map(t=>{
@@ -48,6 +48,7 @@ export function renderAtlasCommandCenter({project='Atlas Unificado',status='revi
   <section class="atlas-overview" aria-label="Métricas">
    ${metric('proposals','Propuestas')}${metric('verified','Verificadas')}${metric('scenes','Escenas ERAS')}${metric('regressions','Regresiones')}
   </section>
+  ${diagnosticsAction?'<section aria-label="Comprobación local"><button type="button" data-action="run-cpu-diagnostics">Comprobar CPU y servidor local</button></section>':''}
   ${localPanel()}
   <div class="atlas-section-head"><div><div class="atlas-eyebrow">FLUJO DE TRABAJO</div><h2>Actividad reciente</h2></div><span>Revisión supervisada</span></div>
   <section class="atlas-tasks">${cards||'<p class="atlas-empty">Sin actividad registrada todavía.</p>'}</section>
