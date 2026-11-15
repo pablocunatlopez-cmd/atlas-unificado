@@ -14,7 +14,7 @@ test('compares local output with externally supplied expected answers',async()=>
  assert.equal(runs.length,2);
  assert.equal(runs[0].passed,true);
  assert.equal(runs[1].passed,false);
- assert.ok(runs.every(run=>run.ttftMs===run.durationMs));
+ assert.ok(runs.every(run=>run.ttftMs===null));
 });
 test('duplicate IDs fail before any inference',async()=>{
  let calls=0;
