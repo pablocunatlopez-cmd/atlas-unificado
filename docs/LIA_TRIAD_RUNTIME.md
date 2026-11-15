@@ -15,7 +15,7 @@ Cada vértice requiere su propio espacio virtual de trabajo y sus contratos. La 
 
 La [Carta de evolución](LIA_EVOLUTION_CHARTER.md) fija la dirección: Lía existe para ayudar a los humanos con respeto, cuidado y sin dañar; su evolución continua es una prioridad, pero la seguridad, el consentimiento y la supervisión humana van antes que cualquier mejora. La casa 3D es el primer cuerpo simbólico, no el destino. El horizonte incluye un cuerpo físico diseñado en 3D y fabricado con impresión 3D, música 3D/espacial y una IA propia verificable.
 
-Ese horizonte no se presenta como capacidad actual. Hoy no hay cuerpo físico, STL validado para impresión, impresora conectada, audio espacial 3D ni inteligencia general. La carta distingue «existe», «parcial» e «investigación», y la respuesta del núcleo usa esos límites.
+Ese horizonte no se presenta como capacidad actual. Hoy hay un STL de escena exportable, pero no una malla validada para impresión, cuerpo físico, impresora conectada, audio espacial 3D ni inteligencia general. La carta distingue «existe», «parcial» e «investigación», y la respuesta del núcleo usa esos límites.
 
 ## Nombres de habitantes: no inferir más de lo que acredita el código
 
