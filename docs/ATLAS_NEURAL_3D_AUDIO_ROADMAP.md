@@ -49,3 +49,16 @@ No model is installed or executed by this document or the router.
 Implemented: declarative backend catalog and fail-closed routing plan with tests.
 Not implemented: downloads, runtime probes, neural inference, 3D reconstruction,
 audio generation, Web Audio integration, benchmark-driven scheduling.
+
+## Current hardware policy: no discrete GPU assumed
+- CPU-only is the default for neural routing. CUDA-only gsplat is excluded
+  until the host confirms a suitable CUDA device and available VRAM.
+- Start with small quantized GGUF models and whisper.cpp tiny/base variants;
+  actual compatibility, speed and memory must be measured on the user's CPU.
+- CPU workload admission reserves RAM for the OS, model runtime and context.
+  It is a conservative heuristic, not a runtime probe.
+- ERAS real-time 3D should use lightweight Three.js/WebGL geometry and LOD,
+  not neural scene reconstruction on the CPU.
+- Use Web Audio spatialization for sound without a generative neural model.
+- Load one heavyweight model at a time; preserve fallback to non-neural tools.
+- Future GPU acceleration is optional and must not become a startup dependency.
