@@ -55,3 +55,13 @@ test('rejects symlinked approval directory before marker creation',async()=>{
    /not a symlink/);
  }finally{await rm(parent,{recursive:true,force:true});}
 });
+
+test('approval marker is created with private file permissions',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'atlas-approval-mode-'));
+ try{
+  const {stat}=await import('node:fs/promises');
+  await consumeAtlasApprovalOnce({directory,approvalId});
+  const marker=await stat(join(directory,approvalId+'.used'));
+  assert.equal(marker.mode&0o077,0);
+ }finally{await rm(directory,{recursive:true,force:true});}
+});
