@@ -210,3 +210,8 @@ test('transport errors do not enter the contract repair path',async()=>{
   f.calls.creatorError=Object.assign(Error('La red no completó la inferencia.'),{code:'timeout'});const result=await f.api.buildLiving({requestId:'repair-transport',actorId});assert.equal(result.status,'rejected');assert.equal(result.repairAttempted,undefined);assert.equal(f.calls.inference.length,1);assert.deepEqual(f.state().artifacts,{});
  }finally{f.db.close();}
 });
+
+
+test('the reviewer sees implemented renderer capabilities instead of treating past works as a closed inventory',async()=>{
+ const f=await fixture();try{const result=await f.api.buildLiving({requestId:'renderer-capabilities',actorId});assert.equal(result.status,'applied');const review=f.calls.inference.find(call=>call.messages[0].content.startsWith('Revisa'))!;const data=JSON.parse(review.messages[1].content);assert.deepEqual(data.renderer.shapes,[...contract.LIVING_SHAPES]);assert.ok(data.renderer.shapes.includes('helix'));assert.equal(data.renderer.contractValidated,true);assert.match(review.messages[0].content,/historial no es un inventario cerrado/);assert.ok(review.messages.reduce((n,m)=>n+m.content.length,0)<=16000);}finally{f.db.close();}
+});
