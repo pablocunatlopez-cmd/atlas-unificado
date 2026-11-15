@@ -38,3 +38,17 @@ test('unexpected entries are flagged rather than removed',async()=>{
   assert.equal(audit.findings[0].status,'unexpected_entry');
  }finally{await rm(directory,{recursive:true,force:true});}
 });
+
+test('symlinked marker is reported unsafe without reading target',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'atlas-audit-link-'));
+ try{
+  const {symlink}=await import('node:fs/promises');
+  const target=join(directory,'target.txt');
+  await writeFile(target,'sensitive');
+  await symlink(target,join(directory,'c'.repeat(64)+'.used'));
+  const audit=await auditAtlasApprovalMarkers({directory});
+  assert.equal(audit.status,'requires_human_review');
+  assert.equal(audit.findings.find(f=>f.name.endsWith('.used')).status,
+   'unsafe_or_unreadable_marker');
+ }finally{await rm(directory,{recursive:true,force:true});}
+});
