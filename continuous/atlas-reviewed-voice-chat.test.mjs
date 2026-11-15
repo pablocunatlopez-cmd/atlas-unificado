@@ -6,9 +6,10 @@ test('requires exact reviewed text before local inference',async()=>{
  let called=false;
  const fetchImpl=async()=>{called=true;return {ok:true,text:async()=>JSON.stringify({
   choices:[{message:{content:'Hola humano'}}]})};};
- await assert.rejects(answerAtlasReviewedVoice({transcription,approvedText:'other',fetchImpl}));
+ await assert.rejects(answerAtlasReviewedVoice({transcription,approvedText:'other',confirmed:true,fetchImpl}));
+ await assert.rejects(answerAtlasReviewedVoice({transcription,approvedText:'Hola Atlas',fetchImpl}));
  assert.equal(called,false);
- const r=await answerAtlasReviewedVoice({transcription,approvedText:'Hola Atlas',fetchImpl});
+ const r=await answerAtlasReviewedVoice({transcription,approvedText:'Hola Atlas',confirmed:true,fetchImpl});
  assert.equal(r.answer,'Hola humano');
  assert.equal(r.remote,false);
  assert.equal(called,true);
