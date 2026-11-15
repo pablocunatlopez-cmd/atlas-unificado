@@ -3,9 +3,21 @@ import {ROOM_IDS} from './layout.js';
 export const PROCESS_PHASES=Object.freeze(['observe','understand','connect','apply','refute','retain']);
 export const PROCESS_STATES=Object.freeze(['idle','running','passed','failed','waiting']);
 export const TELEMETRY_FRESH_MS=75000;
+export const TELEMETRY_CONTRACT_VERSION=1;
 export const PHASE_LABELS=Object.freeze({observe:'Observar',understand:'Comprender',connect:'Conectar',apply:'Aplicar',refute:'Refutar',retain:'Conservar'});
 // These are coordinator-reported outcomes, not independent evidence or integration claims.
 export const STATE_LABELS=Object.freeze({idle:'En reposo',running:'En ejecución',passed:'Resultado reportado',failed:'Fallo reportado',waiting:'En espera'});
+// Explicit reasons so the UI never invents activity from a missing or stale signal (P2).
+export const REASON_LABELS=Object.freeze({
+  fresh:'Señal reciente',
+  no_process:'Sin telemetría',
+  disconnected:'Puente desconectado',
+  stale:'Sin señal reciente',
+  invalid_time:'Señal con hora no válida',
+  wrong_phase:'En espera de su fase',
+  local_only:'Disponible · local',
+  reported:'Estado reportado'
+});
 const aliases={experience:'mind',suceso:'constellation',agents:'constellation',weights:'refutation',chat:'salon',research:'mind',library:'mind',tools:'body',review:'refutation',video:'cinema',creative:'games',core:'language',lor:'language',external:'constellation'};
 const identifier=value=>typeof value==='string'&&/^[a-z0-9_-]{1,40}$/.test(value);
 const counter=value=>Number.isSafeInteger(value)&&value>=0&&value<=1000000000;
@@ -27,7 +39,7 @@ export function normalizeProcessState(value){
   processes.push(item);
  }
  const at=typeof value?.at==='string'&&Number.isFinite(Date.parse(value.at))?new Date(value.at).toISOString():null;
- return {at,connected:value?.connected!==false,processes};
+ return {at,connected:value?.connected!==false,processes,contractVersion:TELEMETRY_CONTRACT_VERSION};
 }
 // A future-dated or malformed timestamp is not evidence of a fresh signal.
 // Callers that need freshness must fail closed instead of accepting a negative age.
@@ -39,15 +51,26 @@ export function telemetryAge(at,{now=Date.now()}={}){
  if(!Number.isFinite(age)||age<0)return null;
  return age;
 }
+export function telemetryFreshness(value,{ageMs,now=Date.now(),maxAgeMs=TELEMETRY_FRESH_MS}={}){
+ const age=Number.isFinite(ageMs)?ageMs:telemetryAge(value?.at,{now});
+ if(value?.connected===false)return {fresh:false,reason:'disconnected',ageMs:age};
+ if(age===null)return {fresh:false,reason:'invalid_time',ageMs:null};
+ if(age>maxAgeMs)return {fresh:false,reason:'stale',ageMs:age};
+ return {fresh:true,reason:'fresh',ageMs:age};
+}
 const priorities={running:5,failed:4,waiting:3,passed:2,idle:1};
 export function processForRoom(value,room,{ageMs=0}={}){
  const process=value.processes.filter(item=>item.room===room).sort((a,b)=>priorities[b.state]-priorities[a.state])[0];
- if(!process)return {id:room,room,state:'waiting',label:'Sin telemetría',workVerified:false};
- const fresh=value.connected!==false&&!!value.at&&Number.isFinite(ageMs)&&ageMs>=0&&ageMs<=TELEMETRY_FRESH_MS;
- if(!fresh&&process.state==='running')return {...process,state:'waiting',label:value.connected===false?'Puente desconectado':'Sin señal reciente',workVerified:false};
+ if(!process)return {id:room,room,state:'waiting',label:'Sin telemetría',workVerified:false,reason:'no_process',displayState:REASON_LABELS.no_process};
+ const freshness=telemetryFreshness(value,{ageMs});
+ if(!freshness.fresh&&process.state==='running'){
+  const reason=freshness.reason;
+  return {...process,state:'waiting',label:REASON_LABELS[reason]||REASON_LABELS.stale,workVerified:false,reason,displayState:REASON_LABELS[reason]||REASON_LABELS.stale};
+ }
  // workVerified here means only that recent running telemetry was received.
  // It does not mean the task result or an artifact was independently verified.
- return {...process,workVerified:fresh&&process.state==='running'};
+ const workVerified=freshness.fresh&&process.state==='running';
+ return {...process,workVerified,reason:workVerified?'fresh':'reported',displayState:STATE_LABELS[process.state]||REASON_LABELS.reported};
 }
 export function creatureArchetype(process,room){
  // Residents keep their identity when a different process visits the room.
@@ -67,7 +90,10 @@ export function measuredChanges(value,{now=Date.now(),maxAgeMs=TELEMETRY_FRESH_M
 export function processCaption(process){
  const parts=process.label?[process.label]:[];
  if(process.phase)parts.push(PHASE_LABELS[process.phase]);
- parts.push(STATE_LABELS[process.state]);
+ parts.push(STATE_LABELS[process.state]||process.displayState||'En espera');
+ if(process.reason&&process.reason!=='fresh'&&process.reason!=='reported'&&REASON_LABELS[process.reason]){
+  if(!parts.includes(REASON_LABELS[process.reason]))parts.push(REASON_LABELS[process.reason]);
+ }
  const counters=process.counters;
  if(counters&&counter(counters.accepted))parts.push((process.id==='experience'?'Cambios reportados ':'Aceptados reportados ')+counters.accepted);
  if(counters&&counter(counters.rejected))parts.push('Rechazados reportados '+counters.rejected);
