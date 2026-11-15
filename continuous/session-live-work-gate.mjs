@@ -12,11 +12,13 @@ export function evaluateSessionLiveWork(payload, {now = Date.now(), maxAgeMs = 1
   let freshSessions = 0;
   for (const row of recent) {
     if (!row || typeof row !== 'object' || row.allowsWork !== true) continue;
-    const age = typeof row.ageMs === 'number' && Number.isFinite(row.ageMs)
-      ? row.ageMs
-      : typeof row.at === 'string' && Number.isFinite(Date.parse(row.at))
-        ? now - Date.parse(row.at) : null;
-    if (age === null || age < 0 || age > validMaxAge) continue;
+    // A timestamp, when supplied, must agree with the reported age.
+    // Otherwise a stale opt-in could be revived by an incorrect ageMs=0.
+    const reportedAge = typeof row.ageMs === 'number' && Number.isFinite(row.ageMs) ? row.ageMs : null;
+    const timestampAge = typeof row.at === 'string' && Number.isFinite(Date.parse(row.at))
+      ? now - Date.parse(row.at) : null;
+    if (reportedAge === null && timestampAge === null) continue;
+    if ([reportedAge,timestampAge].some(age => age !== null && (age < 0 || age > validMaxAge))) continue;
     freshSessions++;
   }
   const reported = Number.isSafeInteger(payload.activeSessions) && payload.activeSessions >= 0
