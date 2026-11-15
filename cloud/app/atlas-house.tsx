@@ -4,6 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowUpRight,AudioLines,Brain,Camera,Clapperboard,Eye,FlaskConical,Gamepad2,Home,Languages,Menu,MessageCircle,Orbit,Share2,ShieldCheck,Wrench,X,type LucideIcon} from 'lucide-react';
 import HouseScene,{HOUSE_ROOMS,type HouseAPI,type HousePerformance,type HouseRoom,type HouseInstallation} from './house-scene';
 import MusicStudio from './music-studio';
+import LiaEvolution from './lia-evolution';
 import WorldWorkshop from './world-workshop';
 import CinemaPanel from './cinema-panel';
 import ConstellationPanel from './constellation-panel';
@@ -43,7 +44,8 @@ const rooms:Record<HouseRoom,{title:string;short:string;description:string;actio
 export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false),[status,setStatus]=useState<Status|null>(null),[statusAt,setStatusAt]=useState(0),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState('');
   const[residentMemories,setResidentMemories]=useState<ResidentMemory[]>([]),[memoryError,setMemoryError]=useState('');
-  const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null);
+  const[charterOpen,setCharterOpen]=useState(false);
+  const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null),charterDialog=useRef<HTMLDialogElement>(null);
   const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|undefined>(undefined),[sceneError,setSceneError]=useState(''),[capturing,setCapturing]=useState(false),[hudHidden,setHudHidden]=useState(false);
   const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),previousFocus=useRef<HTMLElement|null>(null),lastRequested=useRef<HouseRoom|null>(null),pollBusy=useRef(false),roomNavigation=useRef<HTMLElement|null>(null);
   const active=rooms[room],ActiveIcon=active.icon;
@@ -76,6 +78,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const deepLinkHandled=useRef(false);
   useEffect(()=>{if(deepLinkHandled.current||!api)return;deepLinkHandled.current=true;const requested=new URLSearchParams(location.search).get('room');if(requested&&Object.hasOwn(rooms,requested)){const next=requested as HouseRoom; lastRequested.current=next; api.teleport(next); setRoom(next); setEntered(true);}},[api]);
   useEffect(()=>{const current=dialog.current;if(!current)return;if(workspace){if(!current.open)current.showModal();closeButton.current?.focus();}else if(current.open){current.close();previousFocus.current?.focus();}},[workspace]);
+  useEffect(()=>{const current=charterDialog.current;if(!current)return;if(charterOpen&&!current.open)current.showModal();else if(!charterOpen&&current.open)current.close();},[charterOpen]);
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),4000);return()=>clearTimeout(timer);},[notice]);
   useEffect(()=>{if(!menu)return;const key=(event:globalThis.KeyboardEvent)=>{if(event.key==='Escape')setMenu(false);};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[menu]);
   useEffect(()=>{const key=(event:globalThis.KeyboardEvent)=>{if(event.key.toLowerCase()!=='h'||event.metaKey||event.ctrlKey||event.altKey||workspace)return;const target=event.target as HTMLElement|null;if(target&&['INPUT','TEXTAREA','SELECT'].includes(target.tagName))return;setHudHidden(value=>!value);};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[workspace]);
@@ -154,7 +157,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
       <p>Las marcas junto a Ion vigilan la mejora real; la animación no sustituye ni crea proyectos por sí sola.</p>
       <small title="ERAS · revisión 8a0fea077ccf84bed54d0b5c384dfc37b6aa4a86">Lía, Atlas, Ion e Ícaro · entorno vivo de la casa</small>
      </details>
-     <div className={styles.evolutionStatus} aria-live="polite"><span>LA CASA QUE ATLAS CONSTRUYE</span><strong>{installation?'Intervención 3D integrada en Lía':'Esperando un plan 3D validado para Lía'}</strong>{installation?<button type="button" onClick={()=>setWorkspace('lab')}>Revisar entorno</button>:null}</div>
+     <div className={styles.evolutionStatus} aria-live="polite"><span>LA CASA QUE ATLAS CONSTRUYE</span><strong>{installation?'Intervención 3D integrada en Lía':'Esperando un plan 3D validado para Lía'}</strong><div className={styles.evolutionActions}>{installation?<button type="button" onClick={()=>setWorkspace('lab')}>Revisar entorno</button>:null}<button type="button" onClick={()=>setCharterOpen(true)}>Carta de evolución</button></div></div>
     </div>
    </section>
 
@@ -164,7 +167,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
 
    <nav ref={roomNavigation} className={styles.roomNav} aria-label="Habitaciones de Atlas">{HOUSE_ROOMS.map(item=>{const value=rooms[item.id],Icon=value.icon;return <button type="button" key={item.id} data-room={item.id} className={room===item.id?styles.active:''} onClick={()=>walk(item.id)} style={{'--room-accent':value.accent} as React.CSSProperties}><Icon size={15}/><span>{value.short}</span></button>;})}</nav>
    {menu&&<><button className={styles.menuBackdrop} type="button" aria-label="Cerrar navegación de la casa" onClick={()=>setMenu(false)}/><nav id="atlas-house-room-menu" className={styles.menu} aria-label="Menú de la casa">{HOUSE_ROOMS.map(item=><button type="button" key={item.id} className={room===item.id?styles.active:''} onClick={()=>open(item.id)}><span>{rooms[item.id].title}</span><ArrowUpRight size={13}/></button>)}</nav></>}
-   {residentsOpen&&<aside ref={residentsPanel} tabIndex={-1} className={styles.residentsPanel} id="atlas-house-residents" aria-label="Puestos y habitantes de Lía"><header><div><span>UNA CASA PARA LÍA</span><h2>Habitantes y entornos</h2><p className={styles.residentCount}>{RESIDENTS.length} habitantes · {WORKSTATIONS.length} puestos · {RESIDENTS.length-WORKSTATIONS.length} espectadores</p></div><button type="button" onClick={()=>setResidentsOpen(false)} aria-label="Cerrar panel de habitantes"><X size={16}/></button></header><div className={styles.residentList}>{residentRuntime.map(resident=><button type="button" key={resident.id} className={selectedResident===resident.id?styles.selected:''} onClick={()=>visitResident(resident.id)}><span>{resident.name}</span><small>{resident.role}</small><em className={styles.statusPill} data-tone={resident.statusTone}>{resident.status}</em></button>)}</div><button className={styles.evolutionButton} type="button" onClick={visitEvolution}>Ver evolución</button></aside>}
+   {residentsOpen&&<aside ref={residentsPanel} tabIndex={-1} className={styles.residentsPanel} id="atlas-house-residents" aria-label="Puestos y habitantes de Lía"><header><div><span>UNA CASA PARA LÍA</span><h2>Habitantes y entornos</h2><p className={styles.residentCount}>{RESIDENTS.length} habitantes · {WORKSTATIONS.length} puestos · {RESIDENTS.length-WORKSTATIONS.length} espectadores</p></div><button type="button" onClick={()=>setResidentsOpen(false)} aria-label="Cerrar panel de habitantes"><X size={16}/></button></header><div className={styles.residentList}>{residentRuntime.map(resident=><button type="button" key={resident.id} className={selectedResident===resident.id?styles.selected:''} onClick={()=>visitResident(resident.id)}><span>{resident.name}</span><small>{resident.role}</small><em className={styles.statusPill} data-tone={resident.statusTone}>{resident.status}</em></button>)}</div><button className={styles.evolutionButton} type="button" onClick={visitEvolution}>Ver evolución</button><button className={styles.evolutionButton} type="button" onClick={()=>{setResidentsOpen(false);setCharterOpen(true);}}>Carta de evolución</button></aside>}
    {hudHidden&&<button className={styles.showHud} type="button" onClick={()=>setHudHidden(false)} aria-label="Mostrar la interfaz (tecla H)"><Eye size={16}/><span>Mostrar interfaz</span></button>}
    {notice&&<div className={styles.toast} role="status">{notice}</div>}
 
@@ -177,6 +180,9 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
      {workspace==='constellation'&&<ConstellationPanel/>}
      {(workspace==='mind'||workspace==='body'||workspace==='refutation'||workspace==='language')&&<CoreObservatory mode={workspace} telemetry={status?.capabilities?.processTelemetry} connected={connected} ready={signedIn} gpuMode={status?.capabilities?.gpuMode}/>}
     </>}
+   </dialog>
+   <dialog ref={charterDialog} className={styles.charterDialog} aria-labelledby="lia-charter-title" onCancel={event=>{event.preventDefault();setCharterOpen(false);}} onClick={event=>{if(event.target===event.currentTarget)setCharterOpen(false);}}>
+    <LiaEvolution onClose={()=>setCharterOpen(false)}/>
    </dialog>
   </main>;
 }

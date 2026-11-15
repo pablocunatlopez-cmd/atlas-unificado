@@ -77,6 +77,17 @@ Acceptance: an end-to-end test demonstrates open → task claim → observe/cons
 
 Acceptance: a release report reproduces exact model/repository revisions, datasets, commands, hardware, sample sizes, metrics and failure cases.
 
+### P5 — Lía's material and spatial horizon (research)
+
+This stage is a direction, not an implemented capability. It covers:
+
+1. **Body design:** move from decorative geometry to parametric, reviewable parts with explicit dimensions, tolerances, materials and a printable mesh.
+2. **Additive manufacturing:** validate safety, energy, maintenance and emergency-stop procedures before connecting a printer. A human authorizes every physical action.
+3. **Spatial music:** add positions, spatial mixing, listening tests and a reproducible export path; do not call stereo panning "3D music".
+4. **Own intelligence:** keep ATLAS-LM and any future model separate from the Lía narrative and evaluate it on external tasks.
+
+Acceptance: none of these stages may be reported as complete until there is a reproducible artifact, an external test, a documented human authorization and a rollback path. The [evolution charter](LIA_EVOLUTION_CHARTER.md) is the current source of truth.
+
 ## Operational safety invariants
 
 - No secrets in browser bundles, client telemetry, prompts to public services or logs.
@@ -114,3 +125,5 @@ P2 has partial, verified progress as of 2026-11-15:
 P2 is not complete: the typed task/evidence contract, explicit failed/stale reasons in every surface, a hard request timeout and the session-bound work heartbeat described in P3 remain unimplemented.
 
 Memory progress (partial, 2026-11-15): manual personal notes now carry a closed scope (`global`, `resident:<id>`, `room:<id>`, `module:<id>`) and the general chat retrieves only `global` unless another scope is requested. Separately, the house records autonomous observations for the 18 workstations when `/api/cloud/status` receives fresh terminal telemetry: only `passed`/`failed`, deduplicated per 30-minute window, retained for 30 days and shown in the selected resident's card. The table is global and contains no user data; clients cannot write it. It is not learning, independent verification, personality or a background daemon. See [MEMORY_SCOPES.md](MEMORY_SCOPES.md).
+
+Evolution charter progress (2026-11-15): `cloud/lib/lia-evolution.ts` defines Lía's purpose, non-harm priority, safety rules and capability map. The house shows it in a visible dialog, and `makeReply` answers purpose/evolution/body/3D-printing/3D-music questions with the same bounded statement. The map marks the 3D house as implemented; memory, glTF design and stereo music as partial; and a physical printed body, spatial music and an own general AI as research. No physical printer, STL print pipeline, spatial audio engine or general AI was added. See [LIA_EVOLUTION_CHARTER.md](LIA_EVOLUTION_CHARTER.md).
