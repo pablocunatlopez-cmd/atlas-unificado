@@ -6,6 +6,7 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 ## Milestone 0 — establish reality and test baseline (P0)
 - [x] Inventory existing planning, scene, renderer, and evidence modules.
 - [x] Confirm package scripts and CI trigger; inspected GitHub Actions on a pinned SHA (syntax passed; 802 tests: 791 passed, 1 failed, 1 cancelled, 9 skipped).
+- [x] Run the source suite on `main` at `ecb5e28` (962 tests: 953 passed, 0 failed, 9 skipped); see `TEST_BASELINE_2026-11-22.md` for scope and timestamp.
 - [x] Correct identified Three.js parent attachment failure and non-cooperative workflow timeout cancellation.
 - [ ] Re-run full suite on latest exact SHA and verify all required checks pass.
 - [ ] Fix failing tests; publish reproducible test report.
@@ -17,6 +18,7 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 - [x] Identify reverse dependencies for regression impact.
 - [x] Introduce injected trusted evidence verification interface.
 - [x] Stop the legacy coding-cycle planner from treating caller-supplied check/approval flags as verified permission.
+- [x] Provide a separate coding-cycle evidence review entry point using the injected verifier; it does not authorize execution or establish patch-to-commit binding.
 - [ ] Implement canonical-path/symlink checks in a trusted host.
 - [ ] Bind approvals, checks, diff digest and commit SHA to an authenticated principal.
 - [x] Define a fail-closed, bounded isolated-run contract and regression tests (planning only).
