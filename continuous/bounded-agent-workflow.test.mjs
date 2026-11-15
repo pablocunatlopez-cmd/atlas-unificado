@@ -29,3 +29,14 @@ test('aborts non-cooperative handlers at timeout from caller perspective',async(
  const result=await runAgentWorkflow({steps:[{kind:'slow'}],handlers:{slow:()=>new Promise(()=>{})},timeoutMs:120});
  assert.equal(result.ok,false);
 });
+
+test('timeout stops the workflow before any later step is started',async()=>{
+ let later=false;
+ const result=await runAgentWorkflow({steps:[{kind:'slow'},{kind:'later'}],
+  handlers:{slow:()=>new Promise(()=>{}),later:async()=>{later=true;}},
+  timeoutMs:120});
+ assert.equal(result.ok,false);
+ assert.equal(result.failedAt,0);
+ assert.equal(later,false);
+ assert.deepEqual(result.events.map(e=>e.status),['started','failed']);
+});
