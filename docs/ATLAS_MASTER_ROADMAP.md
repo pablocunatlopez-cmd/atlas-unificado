@@ -7,8 +7,8 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 - [x] Inventory existing planning, scene, renderer, and evidence modules.
 - [x] Confirm package scripts and CI trigger; inspected GitHub Actions on a pinned SHA (syntax passed; 802 tests: 791 passed, 1 failed, 1 cancelled, 9 skipped).
 - [x] Correct identified Three.js parent attachment failure and non-cooperative workflow timeout cancellation.
-- [ ] Re-run full suite on latest exact SHA and verify all required checks pass.
-- [ ] Fix failing tests; publish reproducible test report.
+- [x] Run the source suite on the main baseline `ecb5e28a609478bf454b6b6e4c34ff1671439d1b`: local Node 22.23.4, `npm ci --ignore-scripts && npm test`, 962 tests, 953 passed, 0 failed, 9 skipped. [CI run 43761858948](https://github.com/pablocunatlopez-cmd/atlas-unificado/actions/runs/43761858948) reports the same counts and passed syntax validation.
+- [ ] Measure coverage and run the complete suite and required CI checks on the final change SHA. The source script discovers tests under `continuous/` only and does not measure coverage; the baseline does not attest later changes, cloud tests, or omitted tests.
 **Done when:** clean install and CI test run pass with linked commit SHA.
 
 ## Milestone 1 — correct the agent safety boundaries (P0)
@@ -74,3 +74,13 @@ Atlas is a measurable, self-improving, low-cost agent with ERAS as its integrate
 4. Each iteration should leave code, tests, or verified findings in GitHub.
 5. Sites publishing needs an actual authorized Sites integration; GitHub alone cannot deploy there.
 6. Prefer free/open-source components and measure resource use.
+
+## Production readiness
+
+The coding cycle, evidence gate, container plans and ERAS integration are
+prototypes, not an end-to-end production authorization or deployment system.
+The host must independently authenticate CI and reviewers, bind the exact
+proposal and commit, prevent approval replay, verify isolation and remote
+branch preconditions, and provide a tested rollback before promotion.
+No guarantee of autonomous publication or rollback follows from the baseline
+test results.

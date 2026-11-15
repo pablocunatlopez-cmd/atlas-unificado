@@ -62,7 +62,7 @@ La UI debe preferir `displayState` / `REASON_LABELS[reason]` frente a inventar t
 | `passed` | Resultado reportado | El coordinador reporta un resultado satisfactorio; no equivale a integración ni a verificación independiente. |
 | `failed` | Fallo reportado | El coordinador reporta un fallo/refutación; mostrarlo como registro comunicado, no como prueba independiente sin artefacto. |
 
-Si el proceso desaparece de la telemetría o la señal expira, no se debe inferir actividad a partir de la animación, del último estado recibido o de un contador acumulado.
+Si el proceso desaparece de la telemetría, la señal expira o se pierde el enlace, no se debe presentar el último resultado o contador como actual ni inferir actividad a partir de la animación. La casa vuelve a un estado desconocido/en espera, incluso para resultados terminales.
 
 ## Evidencia necesaria para declarar una mejora de Lía
 
@@ -79,6 +79,8 @@ Antes de poder mostrar **Verificado** o **Integrado en Lía**, el servicio deber
 - motivo acotado para espera o fallo.
 
 El servicio que ejecuta y valida la tarea debe ser la fuente de esos datos. La UI solo los muestra; nunca los crea a partir de movimiento, narrativa, estado del navegador o respuestas del modelo.
+
+La casa muestra el panel de registros tipados al abrir los detalles de una sala. La validación de forma del contrato v1 y una revisión de integración citada son declaraciones del puente, no autenticación independiente de las pruebas ni confirmación de integración. Por ello se muestran como reportadas; `verified` e `integrated` no se afirman con este contrato. Un fallo o rechazo también se presenta como reportado, y la ausencia o un error de consulta permanece desconocido.
 
 ## Compatibilidad y siguiente trabajo
 

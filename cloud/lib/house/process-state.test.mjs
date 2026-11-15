@@ -35,9 +35,8 @@ test('fresh running state drives work, stale or absent telemetry becomes waiting
  assert.equal(stale.state,'waiting');
  assert.equal(stale.reason,'stale');
  assert.equal(stale.workVerified,false);
- assert.equal(stale.counters.observations,8);
- assert.equal(stale.counters.accepted,undefined);
- assert.match(stale.label,/Sin señal/);
+ assert.equal(stale.counters,undefined);
+ assert.match(processCaption(stale),/Sin señal/);
  const missing=processForRoom(data,'body');
  assert.equal(missing.state,'waiting');
  assert.equal(missing.reason,'no_process');
@@ -45,7 +44,7 @@ test('fresh running state drives work, stale or absent telemetry becomes waiting
  assert.match(missing.label,/Sin telemetría/);
  const poses=Array.from({length:10},(_,i)=>processMotion(stale,i/2));
  assert.ok(poses.every(pose=>pose.travel===0&&pose.limb===0&&pose.bob===0));
- assert.ok(Array.from({length:10},(_,i)=>processMotion({...processForRoom(data,'mind'),phase:'connect'},i/2)).some(pose=>Math.abs(pose.travel)>.1));
+ assert.ok(Array.from({length:10},(_,i)=>processMotion({...processForRoom(data,'mind',{ageMs:0}),phase:'connect'},i/2)).some(pose=>Math.abs(pose.travel)>.1));
 });
 
 test('telemetryFreshness classifies disconnected, invalid and stale signals',()=>{
@@ -92,12 +91,25 @@ test('missing, future or offline evidence cannot authorize work, and phases prod
 });
 
 test('refuted and passed evidence have distinct labels while their creatures never walk as if still working',()=>{
- const data=normalizeProcessState({processes:[{id:'tools',state:'passed',counters:{trials:12,accepted:3}},{id:'review',state:'failed',phase:'refute',counters:{rejected:2}}]});
- const pass=processForRoom(data,'body'),fail=processForRoom(data,'refutation');
+ const data=normalizeProcessState({at:'2026-11-01T12:00:00Z',processes:[{id:'tools',state:'passed',counters:{trials:12,accepted:3}},{id:'review',state:'failed',phase:'refute',counters:{rejected:2}}]});
+ const pass=processForRoom(data,'body',{ageMs:0}),fail=processForRoom(data,'refutation',{ageMs:0});
  assert.match(processCaption(pass),/Resultado reportado.*Aceptados reportados 3/);
  assert.match(processCaption(fail),/Refutar.*Fallo reportado.*Rechazados reportados 2/);
  for(const record of [pass,fail])for(let time=0;time<8;time+=.5){
   assert.equal(processMotion(record,time).limb,0);
   assert.equal(processMotion(record,time).travel,0);
+ }
+});
+
+test('all stale, disconnected and invalid states discard old outcomes and counters',()=>{
+ for(const state of ['running','passed','failed','waiting','idle']){
+  const data=normalizeProcessState({at:'2026-11-01T12:00:00Z',processes:[{id:'tools',state,label:'old label',phase:'apply',counters:{accepted:3,rejected:2}}]});
+  for(const [value,ageMs,reason] of [[data,76000,'stale'],[{...data,connected:false},0,'disconnected'],[data,-1,'invalid_time'],[data,Infinity,'invalid_time']]){
+   const result=processForRoom(value,'body',{ageMs});
+   assert.equal(result.reason,reason);
+   assert.equal(result.state,'waiting');
+   assert.equal(result.counters,undefined);
+   assert.doesNotMatch(processCaption(result),/old label|reportado|Refutar|Aplicar/);
+  }
  }
 });

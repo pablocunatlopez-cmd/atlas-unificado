@@ -3,8 +3,9 @@ import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {ROOMS,WALLS} from './layout.js';
 import {createProcessCreatures} from './process-creatures.js';
 import {createCreativeInstallation} from './creative-installation.js';
+import {createErasManifestThree} from './eras-manifest-three.js';
 
-export function buildHouse(){
+export function buildHouse({erasManifest}={}){
  const scene=new THREE.Scene();scene.background=new THREE.Color('#bfcbd0');scene.fog=new THREE.Fog('#bfcbd0',65,140);
  const statics=new THREE.Group(),ceilings=new THREE.Group();scene.add(statics,ceilings);
  const batches=new Map(),textures=[],interactive=[],solids=[...WALLS],animated=[];
@@ -101,10 +102,23 @@ export function buildHouse(){
  // Garden, reflecting pool and distant silhouette: all lightweight geometry.
  box(palette.stone,5,.15,1.6,-7,.05,10.5);box(palette.glass,4.7,.05,1.3,-7,.15,10.5);for(const x of [-12,-3,12.5,15.5])plant(x,11.4,1.3);
  for(let i=0;i<22;i++){const a=i*.91,x=Math.sin(a)*(19+random()*12),z=Math.cos(a)*(20+random()*14);cyl(palette.wood,.12,.18,2.2,x,1,z);ball(i%2?palette.green:palette.leaf,1.2,x,3,z,1,1.45,1);}
+ let erasWorld=null,disposed=false;
+ function setErasManifest(value){
+  if(disposed)return {accepted:false,objects:0};
+  let candidate;
+  try{
+   candidate=createErasManifestThree(value,{acceptObject:({position:[x,,z]})=>Math.abs(x)<=60&&Math.abs(z)<=60&&(Math.abs(x)>=20||Math.abs(z)>=20)});
+   if(!candidate.objectCount){candidate.dispose();return {accepted:false,objects:0};}
+   scene.add(candidate.group);
+   const previous=erasWorld;erasWorld=candidate;previous?.dispose();
+   return {accepted:true,objects:candidate.objectCount};
+  }catch{candidate?.dispose();return {accepted:false,objects:0};}
+ }
+ if(erasManifest)setErasManifest(erasManifest);
  // Commit each material group as one draw call. Geometry no longer needed after
  // merging is explicitly released; dynamic parts remain separate and cheap.
  for(const [mat,geometries] of batches){const merged=mergeGeometries(geometries,false);for(const geometry of geometries)geometry.dispose();const mesh=new THREE.Mesh(merged,mat);mesh.castShadow=!mat.transparent;mesh.receiveShadow=!mat.transparent;statics.add(mesh);}
  const hemi=new THREE.HemisphereLight('#eef4ee','#777a69',2.4);scene.add(hemi);const sun=new THREE.DirectionalLight('#fff0d5',3.0);sun.position.set(-15,25,12);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-23;sun.shadow.camera.right=23;sun.shadow.camera.top=23;sun.shadow.camera.bottom=-23;sun.shadow.camera.near=1;sun.shadow.camera.far=65;sun.shadow.bias=-.0006;sun.shadow.normalBias=.04;sun.target.position.set(0,0,0);scene.add(sun,sun.target);
- const creatures=createProcessCreatures(scene,textures),installation=createCreativeInstallation(scene);let disposed=false;
- return {scene,ceilings,interactive,solids,sun,setProcessState:value=>creatures.setState(value),setCreativeState:value=>installation.setState(value),creativeStatus:()=>installation.status(),update(time,camera,viewportHeight){creatures.update(time,camera,viewportHeight);if(camera)for(const marker of interactive)marker.visible=camera.position.y>3.5;for(const entry of animated){if(entry.type==='orb'){entry.object.rotation.y=time*.11;entry.object.position.y=1.43+Math.sin(time*.7)*.045;}else entry.object.rotation.y=time*(entry.type==='globe'?.055:.14);}},dispose(){if(disposed)return;disposed=true;installation.dispose();const geometries=new Set(),materials=new Set();scene.traverse(object=>{if(object.isInstancedMesh)object.dispose();if(object.geometry)geometries.add(object.geometry);if(object.material)for(const mat of Array.isArray(object.material)?object.material:[object.material])materials.add(mat);});for(const geometry of geometries)geometry.dispose();for(const mat of materials)mat.dispose();for(const map of textures)map.dispose();scene.clear();}};
+ const creatures=createProcessCreatures(scene,textures),installation=createCreativeInstallation(scene);
+ return {scene,ceilings,interactive,solids,sun,setErasManifest,setProcessState:value=>creatures.setState(value),setCreativeState:value=>installation.setState(value),creativeStatus:()=>installation.status(),update(time,camera,viewportHeight){creatures.update(time,camera,viewportHeight);if(camera)for(const marker of interactive)marker.visible=camera.position.y>3.5;for(const entry of animated){if(entry.type==='orb'){entry.object.rotation.y=time*.11;entry.object.position.y=1.43+Math.sin(time*.7)*.045;}else entry.object.rotation.y=time*(entry.type==='globe'?.055:.14);}},dispose(){if(disposed)return;disposed=true;installation.dispose();erasWorld?.dispose();const geometries=new Set(),materials=new Set();scene.traverse(object=>{if(object.isInstancedMesh)object.dispose();if(object.geometry)geometries.add(object.geometry);if(object.material)for(const mat of Array.isArray(object.material)?object.material:[object.material])materials.add(mat);});for(const geometry of geometries)geometry.dispose();for(const mat of materials)mat.dispose();for(const map of textures)map.dispose();scene.clear();}};
 }

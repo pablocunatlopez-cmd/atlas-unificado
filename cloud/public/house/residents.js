@@ -50,9 +50,13 @@ export function processForResident(value,resident,{ageMs=Infinity}={}){
  if(!process)return {id:resident.id,state:'waiting',workVerified:false,reason:'no_process',displayState:REASON_LABELS.no_process};
  const freshness=telemetryFreshness(value,{ageMs,maxAgeMs:TELEMETRY_FRESH_MS});
  const relevant=!resident.activePhases||resident.activePhases.includes(process.phase);
- if(process.state==='running'&&(!freshness.fresh||!relevant)){
-  const reason=!freshness.fresh?freshness.reason:'wrong_phase';
-  return {...process,state:'waiting',workVerified:false,reason,displayState:REASON_LABELS[reason]||REASON_LABELS.stale};
+ if(!freshness.fresh){
+  const reason=freshness.reason;
+  return {id:process.id,room:process.room,state:'waiting',workVerified:false,reason,displayState:REASON_LABELS[reason]||REASON_LABELS.stale};
+ }
+ if(process.state==='running'&&!relevant){
+  const reason='wrong_phase';
+  return {...process,state:'waiting',workVerified:false,reason,displayState:REASON_LABELS[reason]};
  }
  const workVerified=freshness.fresh&&relevant&&process.state==='running';
  return {...process,workVerified,reason:workVerified?'fresh':'reported',displayState:STATE_LABELS[process.state]||REASON_LABELS.reported};

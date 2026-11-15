@@ -52,20 +52,20 @@ export function telemetryAge(at,{now=Date.now()}={}){
  return age;
 }
 export function telemetryFreshness(value,{ageMs,now=Date.now(),maxAgeMs=TELEMETRY_FRESH_MS}={}){
- const age=Number.isFinite(ageMs)?ageMs:telemetryAge(value?.at,{now});
+ const age=ageMs===undefined?telemetryAge(value?.at,{now}):Number.isFinite(ageMs)&&ageMs>=0?ageMs:null;
  if(value?.connected===false)return {fresh:false,reason:'disconnected',ageMs:age};
  if(age===null)return {fresh:false,reason:'invalid_time',ageMs:null};
  if(age>maxAgeMs)return {fresh:false,reason:'stale',ageMs:age};
  return {fresh:true,reason:'fresh',ageMs:age};
 }
 const priorities={running:5,failed:4,waiting:3,passed:2,idle:1};
-export function processForRoom(value,room,{ageMs=0}={}){
+export function processForRoom(value,room,{ageMs}={}){
  const process=value.processes.filter(item=>item.room===room).sort((a,b)=>priorities[b.state]-priorities[a.state])[0];
  if(!process)return {id:room,room,state:'waiting',label:'Sin telemetría',workVerified:false,reason:'no_process',displayState:REASON_LABELS.no_process};
  const freshness=telemetryFreshness(value,{ageMs});
- if(!freshness.fresh&&process.state==='running'){
+ if(!freshness.fresh){
   const reason=freshness.reason;
-  return {...process,state:'waiting',label:REASON_LABELS[reason]||REASON_LABELS.stale,workVerified:false,reason,displayState:REASON_LABELS[reason]||REASON_LABELS.stale};
+  return {id:process.id,room,state:'waiting',workVerified:false,reason,displayState:REASON_LABELS[reason]||REASON_LABELS.stale};
  }
  // workVerified here means only that recent running telemetry was received.
  // It does not mean the task result or an artifact was independently verified.
@@ -90,7 +90,7 @@ export function measuredChanges(value,{now=Date.now(),maxAgeMs=TELEMETRY_FRESH_M
 export function processCaption(process){
  const parts=process.label?[process.label]:[];
  if(process.phase)parts.push(PHASE_LABELS[process.phase]);
- parts.push(STATE_LABELS[process.state]||process.displayState||'En espera');
+ parts.push(process.displayState||STATE_LABELS[process.state]||'En espera');
  if(process.reason&&process.reason!=='fresh'&&process.reason!=='reported'&&REASON_LABELS[process.reason]){
   if(!parts.includes(REASON_LABELS[process.reason]))parts.push(REASON_LABELS[process.reason]);
  }

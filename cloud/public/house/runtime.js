@@ -107,6 +107,10 @@ listen(window,'message',async event=>{
  if(message.type==='atlas:house:resident'){focusResident(message.id);}
  if(message.type==='atlas:house:evolution'){focusEvolution();}
  if(message.type==='atlas:house:creative'){applyCreative(message.value);}
+ if(message.type==='atlas:house:eras-manifest'&&typeof message.requestId==='string'){
+  const result=house?.setErasManifest(message.value)??{accepted:false,objects:0};
+  send('result',{requestId:message.requestId,result});
+ }
  if(message.type==='atlas:house:overview'){setOverview(true);resize();}
  if(message.type==='atlas:house:pause'){paused=message.value===true;keys.clear();joystick?.reset();drag=null;last=0;}
  if(message.type==='atlas:house:processes'){processState=normalizeProcessState(message.value);processReceivedAt=performance.now();house?.setProcessState(processState);updateProcessLegend();}

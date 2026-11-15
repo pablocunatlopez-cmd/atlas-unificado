@@ -19,7 +19,7 @@ export async function GET() {
     note:
       evidence.length === 0
         ? 'No typed evidence records are published yet. Absence means unknown, not success.'
-        : 'Records published by the bridge/coordinator. Passed alone does not mean integrated.',
+        : 'Records reported by the bridge/coordinator; neither tests nor integration are independently verified.',
   });
 }
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         error: 'evidence_write_forbidden',
         acceptedShape: parsed !== null,
         contractVersion: EVIDENCE_CONTRACT_VERSION,
-        note: 'Evidence must come from the coordinator after external tests. UI cannot create verification.',
+        note: 'Only the bridge can publish reports. The UI cannot create verification.',
       },
       {status: 403},
     );
@@ -89,6 +89,6 @@ export async function POST(request: Request) {
     accepted: accepted.length,
     contractVersion: EVIDENCE_CONTRACT_VERSION,
     evidence: listEvidence(),
-    note: 'Ephemeral store updated. Integration claims still require integratedRevision.',
+    note: 'Ephemeral store updated. A reported revision does not independently verify integration.',
   });
 }
