@@ -33,3 +33,16 @@ test('failed transcription cannot reach model',async()=>{
  assert.equal(session.ui.state.phase,'error');
  assert.equal(inferred,false);
 });
+
+test('rejects overlong transcript before showing review controls',async()=>{
+ let inferred=false;
+ const session=createAtlasLocalVoiceSession({
+  startRecording:async()=>{},
+  stopAndTranscribe:async()=>({status:'completed',local:true,transcript:'x'.repeat(8001)}),
+  fetchImpl:async()=>{inferred=true;}
+ });
+ await session.dispatch('voice-start');
+ await session.dispatch('voice-stop');
+ assert.equal(session.ui.state.phase,'error');
+ assert.equal(inferred,false);
+});
