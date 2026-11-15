@@ -36,6 +36,7 @@ export function evaluateCandidate(baseline,candidate,{minPassRate=0.9,maxLatency
   if(candidate.passRate<minPassRate)reasons.push('candidate_below_quality_floor');
   if(candidate.passed<baseline.passed)reasons.push('candidate_quality_regression');
   if(candidate.latencyP95Ms>baseline.latencyP95Ms*(1+maxLatencyRegression))reasons.push('latency_regression');
+  if(baseline.ttftP95Ms!==null&&candidate.ttftP95Ms===null)reasons.push('missing_first_token_measurement');
   if(baseline.ttftP95Ms!==null&&candidate.ttftP95Ms!==null&&candidate.ttftP95Ms>baseline.ttftP95Ms*(1+maxLatencyRegression))reasons.push('first_token_regression');
   return {accepted:reasons.length===0,reasons,baseline,candidate};
 }
