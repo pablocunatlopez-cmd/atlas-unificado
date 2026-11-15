@@ -1,3 +1,5 @@
+import {TELEMETRY_FRESH_MS,telemetryFreshness,STATE_LABELS,REASON_LABELS} from './process-state.js';
+
 const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for(const item of Object.values(value))freeze(item);}return value;};
 
 // A resident belongs to a physical station, not to an invented background job.

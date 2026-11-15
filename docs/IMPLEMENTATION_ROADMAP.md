@@ -34,56 +34,57 @@ Do not assign Saggy/Siggy a role until Atlas's canonical identity/configuration 
 
 ### P1 — Canonical identity and information architecture
 
-1. Inventory all routes and identify whether each route is a distinct product surface, a legacy experiment, or a deep link into the same Lía experience.
-2. Produce one source-of-truth identity catalog with stable IDs, vertex, room, purpose, linked process IDs, and whether the resident is operational, waiting, or purely decorative.
-3. Keep the current chat engines and private histories explicit; do not silently merge data or pretend that distinct backends are the same conversation.
-4. Add a visible orientation layer: “Lía is the goal; Atlas thinks, Ion acts, Ícaro/Alba connect the horizon.” Keep the three work environments and integrated Lía world navigable without renaming unrelated historical experiments.
-
-Acceptance: every resident and route has a documented canonical purpose; no page claims capability not supported by its backing API; navigation to historical tools remains stable.
+1. Inventory all routes and classify them as product, deep-link, legacy, or API.
+2. Keep `/` as Lía's canonical home; preserve `/origen/` as legacy without branding it as the default.
+3. Publish a character catalog for the 24 residents with process assignments that never invent work.
 
 ### P2 — Truthful runtime visibility
 
 1. Define a typed, versioned process event/status contract with task ID, owner scope, specialist ID, phase, timestamp, expiry, status, evidence/artefact reference, and bounded counters.
-2. Have the house render only coordinator telemetry. Animations remain a visual reflection; they never create work or increment accepted-change counts.
-3. Add explicit “active / waiting / stale / failed / verified” states, with the last update time and reason for waiting/failure.
-4. Test stale, future-dated, disconnected, malformed and cross-scope telemetry. Unknown state must fail closed to waiting.
-5. Keep polling visibility-aware, avoid overlapping requests, and ensure cleanup reliably resets request locks and aborts in-flight operations.
-
-Acceptance: tests prove stale or invalid telemetry never authorizes a work pose or a success count; the UI accurately distinguishes “coordinator connected” from “model answered”.
+2. Fail closed on stale or missing telemetry (freshness window + hard request timeout).
+3. Explicit reason codes for disconnected / stale / no process — UI must not invent activity.
+4. Typed evidence for “improvement integrated” claims; absence = unknown.
 
 ### P3 — Session-bound improvement cycle
 
 Only after P0–P2 pass:
 
-1. Start a bounded session heartbeat while the game tab is visible and the user has explicitly enabled live work.
-2. Use the existing coordinator and queue; do not start a worker/model per resident.
-3. Deduplicate tasks and use leases, expiry, idempotency keys, cancellation and recovery of abandoned work.
-4. Set one active improvement task initially. Give chat priority and enforce time, token/GPU, memory, network and artifact-size budgets.
-5. Use a closed action registry, server-side authorization, per-user isolation, timeouts and sandboxing. Treat agent/source text as untrusted data.
-6. Require external-to-generator tests and refutation criteria before promoting an artifact into Lía. Keep candidate and stable versions separate and support rollback.
-7. Pause nonessential tasks when the tab is hidden, the user pauses, the heartbeat expires, the bridge disconnects or the resource budget is reached.
+- Opt-in + visible tab heartbeats
+- Server `liveCycleEnabled` flag
+- PC gate before autonomous review work
+- Evidence records after real tests — never invent integration
 
-Acceptance: an end-to-end test demonstrates open → task claim → observe/consult → authorized action → tests → promotion or rejection → audit record; pause/close cancels or expires the task; a failing candidate cannot be integrated.
+## Acceptance rules
 
-### P4 — Capability evaluation and model independence
-
-1. Build versioned, held-out tests for language, coding, math, retrieval, memory, safety and tool use.
-2. Establish baselines for the current Qwen-backed system and ATLAS-LM separately.
-3. Track regression, latency, RAM/VRAM, energy/cost where measurable, uncertainty and provenance.
-4. Report model weights trained, software changes, memory updates and external-model assistance as separate categories.
-5. Make no universal “better than GPT/Grok/future systems” claim. Publish task-specific, reproducible comparisons and limitations.
-
-Acceptance: a release report reproduces exact model/repository revisions, datasets, commands, hardware, sample sizes, metrics and failure cases.
-
-## Operational safety invariants
-
-- No secrets in browser bundles, client telemetry, prompts to public services or logs.
-- No arbitrary shell, filesystem, network or package-install capability from generated text.
-- No remote file path access without explicit server-side authorization and path confinement.
-- No promotion based solely on model consensus, passing a self-generated test, animation, task count or plausible narrative.
 - Every accepted change has a source revision, artifact identity, test evidence, reviewer/authorization record and rollback target.
 - If evidence is missing, display **unknown**, not success.
 
-## Current execution status
+## Status notes
 
-This roadmap is a plan. The Lía identity documents have been added to the repository, but the live job loop is not thereby implemented. The frontend baseline recovery and the recent house component type/build validation remain the immediate blockers. No test or build result should be claimed until it has actually been run.
+This roadmap is a plan. The Lía identity documents are in the repository, but the live job loop described in P3 is not implemented.
+
+P2 has partial, verified progress as of 2026-11-15:
+
+P2 progress (additional, 2026-11-15): the house status poll (`/api/cloud/status`) now has a hard 8-second timeout combined with the unmount AbortController (`AbortSignal.any`). A hung or slow response no longer leaves the UI in an ambiguous state; the badge flips to offline/failed and the process mirror fails closed under the existing 75 s freshness window. The tooltip distinguishes network/timeout/server failure from a clean “PC offline” signal. This closes the “hard request timeout” item of P2 for the house surface. Commit: 762e6d99ce20bed3913ba4c64cc0520db7038d35.
+
+P2 progress (evidence skeleton, 2026-11-15): `cloud/lib/evidence-contract.ts` defines `EvidenceRecord` v1 and pure `parseEvidenceRecord` / `evidenceDisplayState`. `/api/cloud/evidence` GET returns an empty list with contractVersion; POST is forbidden so the browser cannot mint verification. Integration claims still require `integratedRevision` from the coordinator. Client telemetry reasons (`REASON_LABELS`, `telemetryFreshness`) are live in `process-state.js` / `residents.js`.
+
+Memory progress (partial, 2026-11-15): manual personal notes now carry a closed scope (`global`, `resident:<id>`, `room:<id>`, `module:<id>`) and the general chat retrieves only `global` unless another scope is requested. Separately, the house records autonomous observations for the 18 workstations when `/api/cloud/status` receives fresh terminal telemetry: only `passed`/`failed`, deduplicated per 30-minute window, retained for 30 days and shown in the selected resident's card. The table is global and contains no user data; clients cannot write it. It is not learning, independent verification, personality or a background daemon. See [MEMORY_SCOPES.md](MEMORY_SCOPES.md).
+
+Evolution charter progress (2026-11-15): `cloud/lib/lia-evolution.ts` defines Lía's purpose, non-harm priority, safety rules and capability map. The house shows it in a visible dialog, and `makeReply` answers purpose/evolution/body/3D-printing/3D-music questions with the same bounded statement. The map marks the 3D house as implemented; memory, glTF design, scene STL export and stereo music as partial; and a physical printed body, spatial music and an own general AI as research. The STL export writes millimetre ASCII triangles and a report that checks manifoldness, degenerate triangles, local solid thickness, overlaps and separate bodies; it does not validate materials, resistance or a slicer. No physical printer, print-validated body, spatial audio engine or general AI was added. See [LIA_EVOLUTION_CHARTER.md](LIA_EVOLUTION_CHARTER.md).
+
+### Progress log — 2026-11-15 (evening)
+
+**P2 evidence path (code complete, deploy pending):**
+- `EvidenceRecord` v1 + store + `GET/POST /api/cloud/evidence` (POST bridge-token only).
+- PC: `typed-evidence-from-report.mjs`, `publish-report-evidence.mjs`, `autonomous-review` attaches `typedEvidence`.
+- Bridge tick syncs latest autonomy report to Sites once per `report.at`.
+- `/actividad/` `TypedEvidencePanel` polls every 15 s; empty = unknown.
+
+**P3 session-bound cycle (pipeline ready, flags off):**
+- Heartbeat contract, API, opt-in UI (house + actividad), ephemeral store.
+- `ATLAS_LIVE_CYCLE_ENABLED` server flag (default false).
+- PC gate `session-live-work-gate.mjs`; optional `ATLAS_ENFORCE_SESSION_LIVE_WORK` on review jobs.
+- See `continuous/SESSION_LIVE_WORK.md` and `continuous/TYPED_EVIDENCE_HOOK.md`.
+
+**Still operator steps (not code):** publish Sites; set env flags only when intentionally enabling live cycle; restart local coordinator + bridge.

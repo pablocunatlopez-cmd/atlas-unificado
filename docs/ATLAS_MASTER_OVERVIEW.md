@@ -119,7 +119,7 @@ Proponer código no equivale a ejecutarlo; pasar tests locales no acredita segur
 
 ## 10. Agentes conceptuales
 
-El propietario ha propuesto los nombres Director, Galileo, Darwin, Hefesto, Mnemosine, Lethe, Toth, Proteo, Tribunal, Adversario, Provider Resolver, LOR Evaluator, Linaje Sombra y Atlas Market/Omega-Keš. Se entienden como mapa de funciones, salvo prueba de implementación individual.
+El propietario ha propuesto los nombres Director, Galileo, Darwin, Hefesto, Mnemosine, Lethe, Toth, Proteo, Tribunal, Adversario, Provider Resolver, LOR Evaluator, Linaje Sombra y Atlas Market/Omega-Keš. Se entienden como mapa de funciones, salvo prueba de implementación individual. El [catálogo de personajes](CHARACTER_CATALOG.md) separa estas funciones de los 24 habitantes del mundo 3D y documenta sus solapamientos.
 
 | Función | Responsabilidad prevista |
 |---|---|

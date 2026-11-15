@@ -23,6 +23,12 @@ test('work assignments are explicit, local music does not invent a PC job, and d
  assert.deepEqual(residentById('sky-agents').processIds,['agents']);assert.deepEqual(residentById('body-arm').processIds,['tools']);
  assert.match(residentById('body-arm').role,/software.*simbólico/);assert.ok(AUDIENCE.every(resident=>resident.processIds.length===0));
  assert.deepEqual(residentById('lab-bench').activePhases,['apply','refute']);assert.equal(new Set(RESIDENTS.map(resident=>resident.archetype)).size,4);
+ const local=processForResident({processes:[]},residentById('music-console'));
+ assert.equal(local.reason,'local_only');
+ assert.equal(local.workVerified,false);
+ const audience=processForResident({processes:[]},AUDIENCE[0]);
+ assert.equal(audience.reason,'reported');
+ assert.equal(audience.state,'idle');
 });
 
 test('the roster and scene share phase-specific work instead of showing every experience station as active',()=>{
@@ -32,6 +38,16 @@ test('the roster and scene share phase-specific work instead of showing every ex
   const state={at,connected:true,processes:[{id:'experience',state:'running',phase}]};
   const working=assigned.filter(id=>processForResident(state,residentById(id),{ageMs:0}).workVerified);
   assert.deepEqual(working,expected,phase+' only activates its assigned stations');
-  for(const id of assigned)assert.equal(processForResident({...state,connected:false},residentById(id),{ageMs:0}).workVerified,false);
+  for(const id of assigned){
+   const offline=processForResident({...state,connected:false},residentById(id),{ageMs:0});
+   assert.equal(offline.workVerified,false);
+   assert.equal(offline.reason,'disconnected');
+  }
  }
+ const stale=processForResident({at,connected:true,processes:[{id:'experience',state:'running',phase:'apply'}]},residentById('lab-bench'),{ageMs:80000});
+ assert.equal(stale.workVerified,false);
+ assert.equal(stale.reason,'stale');
+ const wrongPhase=processForResident({at,connected:true,processes:[{id:'experience',state:'running',phase:'observe'}]},residentById('lab-bench'),{ageMs:0});
+ assert.equal(wrongPhase.workVerified,false);
+ assert.equal(wrongPhase.reason,'wrong_phase');
 });

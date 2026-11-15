@@ -1,6 +1,7 @@
 /** D1-backed, user-isolated handoff to the owner's local inference worker. */
 import {validateCreativePlan} from '../creative/plan.mjs';
 import {sanitizeProcessTelemetry} from '../core/process-telemetry.mjs';
+import {RESIDENT_MEMORY_LIMIT,RESIDENT_MEMORY_RETENTION_MS,buildResidentMemoryEvents,isResidentId} from '../core/resident-memory.mjs';
 export class CloudQueueError extends Error {
  constructor(message,status=400){super(message);this.status=status;}
 }

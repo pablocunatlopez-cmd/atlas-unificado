@@ -4,6 +4,7 @@ import {ArrowDownToLine,ArrowLeft,ArrowRight,ArrowUp,Box,Check,ChevronDown,Code2
 import {buildScene,type StudioMode,type Brief,type Scene} from '@/lib/studio/scene';
 import {studioPreviewMode} from '@/lib/studio/preview-policy';
 import {sceneToGltf} from '@/lib/studio/gltf';
+import {sceneToStl,type MeshReport} from '@/lib/studio/stl';
 import type {StudioProject,ProjectSummary} from '@/lib/studio/types';
 import {compatibleRuntime} from '@/lib/studio/runtime-compat.mjs';
 import {readErasMessage} from '@/lib/studio/eras-bridge';

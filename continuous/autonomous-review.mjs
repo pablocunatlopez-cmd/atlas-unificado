@@ -3,6 +3,7 @@ import {checkToolContract,retainContract} from './tool-contract.mjs';
 import {assessCapabilities} from './audit-assessment.mjs';
 import {chat} from './chat.mjs';
 import {selectAutonomousTask} from './autonomy-curriculum.mjs';
+import {recordsFromAutonomyReport} from './typed-evidence-from-report.mjs';
 export async function reviewCapabilities(extensions,key,{signal,assess=assessCapabilities,allowCreation=false,history=[],generate,codeGeneration=false,build=buildExtension}={}){
  signal?.throwIfAborted();
  const checks=[];
@@ -47,5 +48,7 @@ export async function reviewCapabilities(extensions,key,{signal,assess=assessCap
  const selectable=allowCreation?selectAutonomousTask(projected,candidate?[...history,{at,candidate}]:history):null;
  const nextTask=selectable?{taskId:selectable.id,name:selectable.name}:null;
  const intervalMinutes=nextTask?5:Number.isFinite(minutes)?Math.max(5,Math.min(allowCreation?15:120,minutes)):15;
- return {at,checks,candidate,curriculum,nextTask,assessment,assessmentStatus:'Opinión del modelo no verificada; solo checks y resultados ejecutados constituyen evidencia. Las opciones del turno no representan capacidades globales.',intervalMinutes,scope:'Programación, auditoría y reparación de herramientas; pesos Qwen sin cambios.'};
+ const report={at,checks,candidate,curriculum,nextTask,assessment,assessmentStatus:'Opinión del modelo no verificada; solo checks y resultados ejecutados constituyen evidencia. Las opciones del turno no representan capacidades globales.',intervalMinutes,scope:'Programación, auditoría y reparación de herramientas; pesos Qwen sin cambios.'};
+ report.typedEvidence=recordsFromAutonomyReport(report,{sourceRevision:'local/autonomous-review',completedAt:at});
+ return report;
 }

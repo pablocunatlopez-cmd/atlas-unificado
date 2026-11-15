@@ -4,8 +4,21 @@ import {normalizeIcarusJourneys} from './sky-journeys.js';
 
 export const PROCESS_PHASES=Object.freeze(['observe','understand','connect','apply','refute','retain']);
 export const PROCESS_STATES=Object.freeze(['idle','running','passed','failed','waiting']);
+export const TELEMETRY_FRESH_MS=75000;
+export const TELEMETRY_CONTRACT_VERSION=1;
 export const PHASE_LABELS=Object.freeze({observe:'Observar',understand:'Comprender',connect:'Conectar',apply:'Aplicar',refute:'Refutar',retain:'Conservar'});
 export const STATE_LABELS=Object.freeze({idle:'En reposo',running:'En ejecución',passed:'Resultado reportado',failed:'Fallo reportado',waiting:'En espera'});
+// Explicit reasons so the UI never invents activity from a missing or stale signal (P2).
+export const REASON_LABELS=Object.freeze({
+  fresh:'Señal reciente',
+  no_process:'Sin telemetría',
+  disconnected:'Puente desconectado',
+  stale:'Sin señal reciente',
+  invalid_time:'Señal con hora no válida',
+  wrong_phase:'En espera de su fase',
+  local_only:'Disponible · local',
+  reported:'Estado reportado'
+});
 const aliases={experience:'mind',suceso:'constellation',agents:'constellation',weights:'refutation',chat:'salon',research:'mind',library:'mind',tools:'body',review:'refutation',video:'cinema',creative:'games',core:'language',lor:'language',external:'constellation'};
 const identifier=value=>typeof value==='string'&&/^[a-z0-9_-]{1,40}$/.test(value);
 const counter=value=>Number.isSafeInteger(value)&&value>=0&&value<=1000000000;
@@ -53,7 +66,10 @@ export function measuredChanges(value,{now=Date.now(),maxAgeMs=75000}={}){
 export function processCaption(process){
  const parts=process.label?[process.label]:[];
  if(process.phase)parts.push(PHASE_LABELS[process.phase]);
- parts.push(STATE_LABELS[process.state]);
+ parts.push(STATE_LABELS[process.state]||process.displayState||'En espera');
+ if(process.reason&&process.reason!=='fresh'&&process.reason!=='reported'&&REASON_LABELS[process.reason]){
+  if(!parts.includes(REASON_LABELS[process.reason]))parts.push(REASON_LABELS[process.reason]);
+ }
  const counters=process.counters;
  if(counters&&counter(counters.accepted))parts.push((process.id==='experience'?'Cambios reportados ':'Aceptados reportados ')+counters.accepted);
  if(counters&&counter(counters.rejected))parts.push('Rechazados reportados '+counters.rejected);

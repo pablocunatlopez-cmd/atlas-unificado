@@ -6,12 +6,15 @@ import HouseScene,{HOUSE_ROOMS,type HouseAPI,type HousePerformance,type HouseRoo
 import LivingWorld from './living-world';
 import HouseWorkLoop,{type HouseWorkUpdate} from './house-work-loop';
 import MusicStudio from './music-studio';
+import LiaEvolution from './lia-evolution';
 import WorldWorkshop from './world-workshop';
 import CinemaPanel from './cinema-panel';
 import ConstellationPanel from './constellation-panel';
 import CoreObservatory,{type CoreTelemetry} from './core-observatory';
 import styles from './atlas-house.module.css';
+import LiveWorkOptIn from './live-work-opt-in';
 import {RESIDENTS,WORKSTATIONS,residentById,processForResident} from '../public/house/residents.js';
+import {telemetryAge,TELEMETRY_FRESH_MS} from '../public/house/process-state.js';
 import {readCreativePreview} from './experience-creative-preview';
 import {normalizeIcarusJourneys,residentForIcarusEvent} from '../public/house/sky-journeys.js';
 import {VOCATIONS,vocationFor} from '@/lib/collaboration/vocations';
@@ -19,7 +22,8 @@ import {WORLD_ENTITIES,type WorldState} from '@/lib/evolution/world';
 import {LIA_ARCHITECTURE} from '@/lib/core/identity';
 import {measuredChanges,STATE_LABELS} from '../public/house/process-state.js';
 
-type HouseResident={id:string;room:HouseRoom;name:string;role:string;archetype:string;processIds:string[];cosmetic:boolean;activePhases?:string[];status?:string;statusTone?:'idle'|'running'|'passed'|'failed'|'waiting'};
+type ResidentRecord={id:string;room:HouseRoom;name:string;role:string;archetype:string;processIds:string[];cosmetic:boolean;activePhases?:string[]};
+type HouseResident=ResidentRecord&{status?:string;statusTone?:'idle'|'running'|'passed'|'failed'|'waiting'};
 type Props={signedIn:boolean;displayName:string;signInPath:string};
 type Status={provider?:string;online:boolean;modelName?:string;lastSeen?:string|null;capabilities?:{gpuMode?:'chat'|'video'|'training';processTelemetry?:(CoreTelemetry&{experience?:{creative?:unknown;icarus?:unknown}|null})|null}};
 const rooms:Record<HouseRoom,{title:string;short:string;description:string;action:string;icon:LucideIcon;accent:string}>={

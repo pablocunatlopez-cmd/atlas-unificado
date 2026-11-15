@@ -11,4 +11,6 @@ export function createCloudQueue(db:D1Database,options?:{now?:()=>number;uuid?:(
  claimOwned(userId:string,id:string):Promise<{job:null|{id:string;conversationId:string;messages:Array<{role:string;content:string}>;kind:string;question:string;internet:boolean;parameters:Record<string,unknown>;leaseToken:string}}>;
  complete(input:Record<string,unknown>):Promise<Record<string,unknown>>;
  fail(input:Record<string,unknown>):Promise<Record<string,unknown>>;
+ observeResidentEvents(telemetry:unknown):Promise<{observed:number}>;
+ residentMemories(residentId:string):Promise<{residentId:string;memories:Array<{id:string;processId:string;state:string;phase:string|null;text:string;at:string;observedAt:string}>}>;
 };
