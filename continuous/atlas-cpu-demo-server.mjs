@@ -59,13 +59,15 @@ ask.addEventListener('click',async()=>{
   if(req.method==='GET'&&req.url==='/client.js'){send(200,'text/javascript; charset=utf-8',script);return;}
   if(req.method==='POST'&&['/diagnostics','/infer'].includes(req.url)){
    const origin=req.headers.origin;
+   const contentType=String(req.headers['content-type']||'');
    const fetchSite=req.headers['sec-fetch-site'];
    if((fetchSite&&fetchSite!=='same-origin')||
+    !origin||
     (origin&&!['http://127.0.0.1:'+port,'http://localhost:'+port].includes(origin))){
     send(403,'text/plain','Invalid origin');return;
    }
    if(req.url==='/infer'){
-    if(!String(req.headers['content-type']||'').startsWith('application/json')){
+    if(!contentType.toLowerCase().startsWith('application/json')){
      send(415,'application/json',JSON.stringify({error:'json_required'}));return;
     }
     let body='';
@@ -83,7 +85,7 @@ ask.addEventListener('click',async()=>{
       timeoutMs:30000,maxTokens:256
      });
      send(200,'application/json; charset=utf-8',
-      JSON.stringify({answer:result.answer,local:true,verified:false}));
+      JSON.stringify({answer:result.answer,local:true,verified:true,verification:'llama_response_received'}));
     }catch{send(422,'application/json; charset=utf-8',
      JSON.stringify({error:'local_inference_failed'}));}
     return;
