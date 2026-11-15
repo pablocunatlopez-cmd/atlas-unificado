@@ -4,6 +4,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {planCreativeWorld} from './creative-plan.mjs';
 import {sanitizeProcessTelemetry} from './process-telemetry.mjs';
+import {readSessionLiveWork} from './session-live-work-gate.mjs';
 const ROOT=path.dirname(fileURLToPath(import.meta.url)),DATA=path.join(ROOT,'data');
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const VIDEO_ID=/^video-\d{13}-[a-f0-9]{8}$/;
@@ -17,7 +18,7 @@ export function publicBridgeCapabilities(input){
   video:{ready:status?.ready===true,openfieldInstalled:status?.openfield?.sourceInstalled===true,nativeOpenfieldReady:status?.openfield?.nativeVideoReady===true,provider:'wan21-comfy',downloadedBytes:boundedBytes(models.reduce((sum,item)=>sum+boundedBytes(item?.downloadedBytes),0)),totalBytes:boundedBytes(models.reduce((sum,item)=>sum+boundedBytes(item?.expectedBytes),0))},
   gpuMode:input?.gpuMode==='training'?'training':input?.busy===true||input?.gpuMode==='video'?'video':'chat',processTelemetry:sanitizeProcessTelemetry(input?.processTelemetry)};
 }
-export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},localBase='http://127.0.0.1:8788',sleep=pause,signal,heartbeatMs=12000}={}){
+export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},localBase='http://127.0.0.1:8788',sleep=pause,signal,heartbeatMs=12000,enforceSessionLiveWork=false}={}){
  const site=new URL(siteUrl);
  if(site.protocol!=='https:'||site.username||site.password||site.search||site.hash||site.pathname!=='/')throw Error('La dirección de nube debe ser un origen HTTPS.');
  if(typeof token!=='string'||!/^[A-Za-z0-9_-]{32,200}$/.test(token))throw Error('Clave de puente inválida.');
@@ -92,11 +93,19 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
   if(active)return {status:'busy'};active=true;
   try{
    signal?.throwIfAborted();const health=await localReady();if(!health){const snapshot=await capabilities();if(['video','training'].includes(snapshot.gpuMode)){const state=await cloud('heartbeat',{modelName:'Qwen · GPU reservada',capabilities:snapshot});if(snapshot.gpuMode==='training'&&state.queuedCount>0)await localPost('/evolution/yield',{},combined(10000));emit({status:'gpu_reserved',mode:snapshot.gpuMode});return {status:'busy'};}emit({status:'waiting_for_local_model'});return {status:'offline'};}
-   const modelName=health.modelName||'Qwen local';let publicCapabilities=await capabilities();const {job}=await cloud('claim',{modelName,capabilities:publicCapabilities});
-   if(!job){emit({status:'online',modelName});return {status:'idle'};}
+   const modelName=health.modelName||'Qwen local';let publicCapabilities=await capabilities();
+   const sessionLiveWork=await readSessionLiveWork(siteUrl,{request,signal:combined(8000)});
+   emit({status:'online',modelName,sessionLiveWork});
+   const {job}=await cloud('claim',{modelName,capabilities:publicCapabilities});
+   if(!job){emit({status:'online',modelName,sessionLiveWork});return {status:'idle'};}
    if(typeof job.id!=='string'||typeof job.leaseToken!=='string'||!Array.isArray(job.messages))throw Error('Trabajo de nube inválido.');
-   emit({status:'answering',jobId:job.id,modelName});
+   emit({status:'answering',jobId:job.id,modelName,sessionLiveWork});
    const kind=job.kind??'chat';if(!['chat','world','game','video','lor','review'].includes(kind))throw Error('Tipo de trabajo no disponible.');
+   if(kind==='review'&&enforceSessionLiveWork&&!sessionLiveWork.mayStartLiveWork){
+    emit({status:'online',modelName,sessionLiveWork,skippedReview:true,reason:sessionLiveWork.reason});
+    await cloud('fail',{jobId:job.id,leaseToken:job.leaseToken,error:'Revisión en vivo no autorizada: hace falta ciclo activo y opt-in de sesión visible ('+sessionLiveWork.reason+').'});
+    return {status:'skipped_review',reason:sessionLiveWork.reason};
+   }
    const abort=new AbortController(),jobSignal=combined(kind==='video'?1800000:450000,abort.signal);
    let stage=kind==='video'?'video':kind==='chat'?null:'architect',progress=0,finished=false;
    const onProgress=event=>{if(STAGES.has(event.stage))stage=event.stage;const value=event.progress??(typeof event.value==='number'?event.value*100:undefined);if(Number.isFinite(value))progress=Math.max(progress,Math.min(99,Math.max(0,Math.round(value))));};
@@ -130,13 +139,13 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
     jobSignal.throwIfAborted();
     await cloud('complete',{jobId:job.id,leaseToken:job.leaseToken,result:safeResult});
     finished=true;
-    emit({status:'online',modelName,lastCompletedJob:job.id});return {status:'completed',jobId:job.id};
+    emit({status:'online',modelName,lastCompletedJob:job.id,sessionLiveWork});return {status:'completed',jobId:job.id};
    }catch(error){
     if(!signal?.aborted)await cloud('fail',{jobId:job.id,leaseToken:job.leaseToken,error:abort.signal.aborted?'Solicitud cancelada.':'El motor del PC no pudo completar esta respuesta. Puedes volver a intentarlo.'}).catch(()=>{});
     // This diagnostic stays in the PC's bridge-status file. The cloud receives
     // only the generic failure above; never include provider credentials here.
     const detail=String(error?.message||'Fallo local').replace(/\bsk-[A-Za-z0-9_-]+\b|Bearer\s+\S+/gi,'[credencial oculta]').slice(0,1000);
-    emit({status:'job_failed',jobId:job.id,kind,stage,error:detail});return {status:'failed',jobId:job.id};
+    emit({status:'job_failed',jobId:job.id,kind,stage,error:detail,sessionLiveWork});return {status:'failed',jobId:job.id};
    }finally{clearInterval(heartbeat);}
   }finally{active=false;}
  }
@@ -156,7 +165,8 @@ async function main(){
  await lock.writeFile(String(process.pid));
  const controller=new AbortController();for(const name of ['SIGINT','SIGTERM'])process.on(name,()=>controller.abort());
  let writes=Promise.resolve();
- const worker=createCloudBridge({siteUrl:config.siteUrl,token,signal:controller.signal,onState:state=>{writes=writes.then(()=>fs.writeFile(path.join(DATA,'cloud-bridge-status.json'),JSON.stringify(state,null,2))).catch(()=>{});}});
+ const enforceSessionLiveWork=process.env.ATLAS_ENFORCE_SESSION_LIVE_WORK==='1'||process.env.ATLAS_ENFORCE_SESSION_LIVE_WORK==='true';
+ const worker=createCloudBridge({siteUrl:config.siteUrl,token,signal:controller.signal,enforceSessionLiveWork,onState:state=>{writes=writes.then(()=>fs.writeFile(path.join(DATA,'cloud-bridge-status.json'),JSON.stringify(state,null,2))).catch(()=>{});}});
  try{
   while(!controller.signal.aborted){
    try{await fs.access(path.join(DATA,'service.stop'));break;}catch{}
