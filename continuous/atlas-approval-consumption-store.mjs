@@ -1,4 +1,5 @@
-import {open,mkdir,stat} from 'node:fs/promises';
+import {open,mkdir,lstat} from 'node:fs/promises';
+import {constants} from 'node:fs';
 import {resolve} from 'node:path';
 /**
  * Cooperative local one-time approval marker. Exclusive 'wx' creation is
@@ -18,9 +19,9 @@ export async function consumeAtlasApprovalOnce({
   throw Error('Approval metadata too large or invalid');
  const root=resolve(directory);
  await mkdir(root,{recursive:true,mode:0o700});
- const info=await stat(root);
+ const info=await lstat(root);
  if(!info.isDirectory()||(info.mode&0o077)!==0)
-  throw Error('Approval directory must be private (0700)');
+  throw Error('Approval directory must be private (0700) and not a symlink');
  const marker=resolve(root,approvalId+'.used');
  let handle;
  try{
@@ -41,8 +42,11 @@ export async function consumeAtlasApprovalOnce({
  }
  // Sync directory entry as well as marker contents where supported.
  // On platforms without directory fsync, fail closed; marker remains used.
- const dirHandle=await open(root,'r');
+ const dirHandle=await open(root,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_DIRECTORY);
  try{
+  const opened=await dirHandle.stat();
+  if(!opened.isDirectory()||opened.dev!==info.dev||opened.ino!==info.ino)
+   throw Error('Approval directory changed during write');
   await dirHandle.sync();
  }finally{
   await dirHandle.close();

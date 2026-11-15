@@ -41,3 +41,27 @@ test('existing marker remains consumed after a new call',async()=>{
   assert.equal(again.status,'already_consumed');
  }finally{await rm(directory,{recursive:true,force:true});}
 });
+
+test('rejects symlinked approval directory before marker creation',async()=>{
+ const parent=await mkdtemp(join(tmpdir(),'atlas-approval-link-'));
+ try{
+  const {symlink}=await import('node:fs/promises');
+  const target=join(parent,'target');
+  const {mkdir}=await import('node:fs/promises');
+  await mkdir(target,{mode:0o700});
+  const directory=join(parent,'alias');
+  await symlink(target,directory,'dir');
+  await assert.rejects(consumeAtlasApprovalOnce({directory,approvalId}),
+   /not a symlink/);
+ }finally{await rm(parent,{recursive:true,force:true});}
+});
+
+test('approval marker is created with private file permissions',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'atlas-approval-mode-'));
+ try{
+  const {stat}=await import('node:fs/promises');
+  await consumeAtlasApprovalOnce({directory,approvalId});
+  const marker=await stat(join(directory,approvalId+'.used'));
+  assert.equal(marker.mode&0o077,0);
+ }finally{await rm(directory,{recursive:true,force:true});}
+});
