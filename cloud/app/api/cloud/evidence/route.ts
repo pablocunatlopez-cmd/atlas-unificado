@@ -1,5 +1,5 @@
 import {NextResponse} from 'next/server';
-import {EVIDENCE_CONTRACT_VERSION, parseEvidenceRecord} from '../../../lib/evidence-contract';
+import {EVIDENCE_CONTRACT_VERSION, parseEvidenceRecord} from '../../../../lib/evidence-contract';
 
 export const dynamic = 'force-dynamic';
 
