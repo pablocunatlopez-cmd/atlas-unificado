@@ -24,3 +24,15 @@ test('does not call confirmation without review',async()=>{
  await assert.rejects(ui.dispatch('voice-confirm'));
  assert.equal(confirmations,0);
 });
+
+test('rejects concurrent voice actions while a callback is pending',async()=>{
+ let release;
+ const pending=new Promise(resolve=>{release=resolve;});
+ const ui=createAtlasVoiceUiController({
+  onStart:()=>pending,onStop:async()=>'',onConfirm:async()=>''});
+ const first=ui.dispatch('voice-start');
+ await assert.rejects(ui.dispatch('voice-stop'),/already in progress/);
+ release();
+ await first;
+ assert.equal(ui.state.phase,'recording');
+});
