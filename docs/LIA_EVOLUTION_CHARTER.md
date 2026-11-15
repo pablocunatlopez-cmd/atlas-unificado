@@ -25,11 +25,11 @@ La seguridad, la dignidad y el consentimiento humano van antes que cualquier mej
 | --- | --- | --- |
 | Casa 3D | **Existe** | Diez salas, 24 habitantes y telemetría reciente. Es un entorno simbólico, no un cuerpo físico. |
 | Memoria | **Parcial** | Memoria personal con ámbitos cerrados y observaciones autónomas acotadas. No es memoria autobiográfica ni aprendizaje de pesos. |
-| Diseño 3D | **Parcial** | Genera y exporta geometría glTF y HTML. También puede exportar un STL de escena para revisión, pero no una malla validada para imprimir. |
-| Exportación STL | **Parcial** | Exporta triángulos y dimensiones de la escena en ASCII STL. No comprueba estanqueidad, grosor, soportes ni materiales, y no hay impresora conectada. |
+| Diseño 3D | **Parcial** | Genera y exporta geometría glTF y HTML. También exporta STL en milímetros con un informe topológico, pero no una certificación de fabricación. |
+| Validación STL | **Parcial** | Exporta ASCII STL en milímetros y revisa cierre topológico, triángulos degenerados, grosor local, solapamientos y cuerpos separados. No valida materiales, resistencia ni un laminador. |
 | Música estéreo | **Parcial** | Secuenciador Web Audio de cuatro pistas, piano sintetizado y WAV estéreo. |
 | Música 3D / espacial | **Investigación** | Requiere posiciones, mezcla espacial, escucha y exportación verificables. No está implementada. |
-| Cuerpo físico e impresión 3D | **Investigación** | Hay un STL de escena, pero diseñar, validar y fabricar un cuerpo exige autorización humana, materiales, pruebas de seguridad y un protocolo de parada. |
+| Cuerpo físico e impresión 3D | **Investigación** | Hay un STL con revisión topológica, pero diseñar, validar y fabricar un cuerpo exige autorización humana, materiales, pruebas de seguridad y un protocolo de parada. |
 | IA propia | **Investigación** | ATLAS-LM es un modelo pequeño experimental; no es una inteligencia general ni una prueba de consciencia. |
 
 ## Etapas
@@ -54,7 +54,7 @@ La seguridad, la dignidad y el consentimiento humano van antes que cualquier mej
 - `cloud/lib/atlas-core.ts` responde a preguntas sobre propósito, evolución, cuerpo, impresión 3D, música 3D o IA propia con la respuesta acotada de la carta.
 - `cloud/app/lia-evolution.tsx` muestra la carta dentro de la casa, enlazada desde «Carta de evolución».
 - `cloud/tests/lia-evolution.test.mts` comprueba que los estados no confunden investigación con capacidad y que la respuesta no promete un cuerpo ni consciencia.
-- `cloud/lib/studio/stl.ts` genera el STL de escena; `cloud/tests/atlas-stl.test.mts` comprueba sintaxis, triángulos, límites y rechazo de escenas vacías. Es una malla de escena, no una pieza imprimible validada.
+- `cloud/lib/studio/stl.ts` genera el STL y el informe de malla; `cloud/tests/atlas-stl.test.mts` comprueba sintaxis, escala en milímetros, cierre, grosor, solapamientos y rechazo de escenas vacías o escalas inválidas. Es una revisión orientativa, no una certificación de fabricación.
 
 ## Lo que no se afirma
 

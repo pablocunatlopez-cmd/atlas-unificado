@@ -2,8 +2,15 @@ import type {Scene,Vec3} from './scene.ts';
 type Geometry={position:number[];normal:number[];indices:number[]};
 export function sphereGeometry(rows=24,columns=36):Geometry{
  const position:number[]=[],normal:number[]=[],indices:number[]=[];
- for(let y=0;y<=rows;y++)for(let x=0;x<=columns;x++){const theta=y/rows*Math.PI,phi=x/columns*Math.PI*2;const p=[Math.sin(theta)*Math.cos(phi),Math.cos(theta),Math.sin(theta)*Math.sin(phi)];position.push(...p);normal.push(...p);}
- for(let y=0;y<rows;y++)for(let x=0;x<columns;x++){const a=y*(columns+1)+x,b=a+columns+1;indices.push(a,a+1,b,a+1,b+1,b);}
+ const add=(x:number,y:number,z:number)=>{const length=Math.hypot(x,y,z),index=position.length/3;position.push(x,y,z);normal.push(x/length,y/length,z/length);return index;};
+ // A single north and south vertex keeps the shell closed. The former UV grid
+ // duplicated both poles, creating degenerate triangles and 36 coincident edges.
+ const north=add(0,1,0),rings:number[][]=[];
+ for(let y=1;y<rows;y++){const theta=y/rows*Math.PI,ring:number[]=[];for(let x=0;x<columns;x++){const phi=x/columns*Math.PI*2;ring.push(add(Math.sin(theta)*Math.cos(phi),Math.cos(theta),Math.sin(theta)*Math.sin(phi)));}rings.push(ring);}
+ const south=add(0,-1,0);
+ for(let x=0;x<columns;x++)indices.push(north,rings[0][(x+1)%columns],rings[0][x]);
+ for(let y=0;y<rings.length-1;y++)for(let x=0;x<columns;x++){const a=rings[y][x],b=rings[y][(x+1)%columns],c=rings[y+1][(x+1)%columns],d=rings[y+1][x];indices.push(a,b,c,a,c,d);}
+ for(let x=0;x<columns;x++)indices.push(south,rings[rings.length-1][x],rings[rings.length-1][(x+1)%columns]);
  return{position,normal,indices};
 }
 export function boxGeometry():Geometry{
