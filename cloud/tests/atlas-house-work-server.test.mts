@@ -38,7 +38,7 @@ function gate():Gate{let release!:()=>void,signal!:()=>void;const entered=new Pr
 
 async function fixture(){
  assert.equal(typeof vm.SourceTextModule,'function','Pass --experimental-vm-modules to exercise the Worker module.');
- const db=new D1(),clock={now:Date.parse('2026-11-14T20:00:00Z')},calls:{tools:string[];consults:any[];gate?:Gate;enableProgram?:boolean;programMutation?:()=>void;programCalls:number}={tools:[],consults:[],programCalls:0};
+ const db=new D1(),clock={now:Date.parse('2026-11-14T20:00:00Z')},calls:{tools:string[];consults:any[];gate?:Gate;enableProgram?:boolean;programMutation?:()=>void;programCalls:number;livingBuilds:any[];livingArtifacts:Record<string,unknown>;livingBudget:{day:string;used:number;automaticLimit:number;manualLimit:number;backgroundAvailable:boolean;manualAvailable:boolean};consultMutation?:(value:any)=>void;livingGate?:Gate}={tools:[],consults:[],programCalls:0,livingBuilds:[],livingArtifacts:{},livingBudget:{day:'2026-11-14',used:0,automaticLimit:48,manualLimit:60,backgroundAvailable:true,manualAvailable:true}};
  class ClockDate extends Date{constructor(value?:string|number){super(value===undefined?clock.now:value);}static now(){return clock.now;}}
  const context=vm.createContext({Date:ClockDate,crypto:globalThis.crypto,structuredClone,URL,console,TextEncoder,TextDecoder,Uint8Array,setTimeout,clearTimeout});
  const modules:Record<string,Record<string,unknown>>={
@@ -46,8 +46,8 @@ async function fixture(){
   './house-work-policy':workPolicy,'./house-evidence':houseEvidence,
   './foreground-tools':{...tools,performHouseTool:(mission:missions.Mission,previous?:any)=>{calls.tools.push(mission.id);return tools.performHouseTool(mission,previous);}},
   './missions':missions,'../core/identity':identity,'./policy':receiptPolicy,'../evolution/world':world,'../evolution/spiral':spiral,'../research/engine':engine,'../research/web':web,
-  './server':{consultIcarus:async(input:any)=>{calls.consults.push(input);if(calls.gate){calls.gate.signal();await calls.gate.wait;}const m=missions.missionFor(input.actorId)!;return{id:'icarus-'+calls.consults.length,requestId:input.requestId,residentId:m.residentId,actorId:m.id,actorName:m.name,domain:m.domain,title:m.title,question:m.question,targetProject:m.targetProject,targetFiles:[...m.targetFiles],application:m.application,validation:[...m.validation],status:'proposed',at:new ClockDate().toISOString(),completedAt:new ClockDate().toISOString(),sources:[{id:'source-read',url:'https://developer.mozilla.org/en-US/docs/Web/API/AbortController',title:'Read reference',excerpt:'Actual request was mocked for this integration test.',readAt:new ClockDate().toISOString()}],attempts:[],proposal:{change:'A tested proposal',reason:'Visible reference',validation:['Actual tests'],sourceIds:['source-read']},agents:[{role:'proposer',model:'test-model',status:'completed'},{role:'reviewer',model:'test-reviewer',status:'completed'}]};}},
-  '../evolution/living-server':{livingPayload:async()=>({enabled:true,artifacts:{},budget:{day:'2026-11-14',used:0,automaticLimit:48,manualLimit:60,backgroundAvailable:true,manualAvailable:true}}),buildLiving:async()=>{throw Error('No scene fixture was supplied.');}},
+  './server':{consultIcarus:async(input:any)=>{calls.consults.push(input);if(calls.gate){calls.gate.signal();await calls.gate.wait;}const m=missions.missionFor(input.actorId)!;const consultation={id:'icarus-'+calls.consults.length,requestId:input.requestId,residentId:m.residentId,actorId:m.id,actorName:m.name,domain:m.domain,title:m.title,question:m.question,targetProject:m.targetProject,targetFiles:[...m.targetFiles],application:m.application,validation:[...m.validation],status:'proposed',at:new ClockDate().toISOString(),completedAt:new ClockDate().toISOString(),sources:[{id:'source-read',url:'https://developer.mozilla.org/en-US/docs/Web/API/AbortController',title:'Read reference',excerpt:'Actual request was mocked for this integration test.',readAt:new ClockDate().toISOString()}],attempts:[],proposal:{change:'A tested proposal',reason:'Visible reference',validation:['Actual tests'],sourceIds:['source-read']},agents:[{role:'proposer',model:'test-model',status:'completed'},{role:'reviewer',model:'test-reviewer',status:'completed'}]};calls.consultMutation?.(consultation);return consultation;}},
+  '../evolution/living-server':{livingPayload:async()=>({enabled:true,artifacts:calls.livingArtifacts,budget:calls.livingBudget}),buildLiving:async(input:any)=>{const control=JSON.parse(db.raw.prepare("SELECT content FROM research_control WHERE id='main'").get()!.content as string);calls.livingBuilds.push({input,memories:structuredClone(control.spiral?.world?.memories)});if(calls.livingGate){calls.livingGate.signal();await calls.livingGate.wait;}const active=!input.shouldContinue||await input.shouldContinue();calls.livingBuilds.at(-1).continued=active;return{id:'living-build-'+calls.livingBuilds.length,actorId:input.actorId,actorName:missions.missionFor(input.actorId)?.name||'Fixture specialist',room:input.room,status:active?'applied':'waiting',origin:input.mode==='auto'?'model':'tool-experiment',title:'Scene candidate',goal:'A bounded suspended scene',checks:[{name:'Mock contract boundary',passed:true}],creator:'fixture-model',artifactIds:active?['living-fixture']:[],at:new ClockDate().toISOString(),review:active?'Scene candidate accepted by fixture.':'Session stopped; previous scene retained.'};}},
   '../evolution/program-server':{programDue:()=>calls.enableProgram===true,evolveProgram:async(previous:any,at:number,actorId:string)=>{calls.programCalls++;calls.programMutation?.();return{state:{cursor:1,attempts:1,projects:{},nextAttemptAt:new ClockDate(clock.now+3600000).toISOString()},trial:{id:'program-trial-1',actorId,taskId:'positive-total',at:new ClockDate().toISOString(),decision:'installed',artifactId:'program-test-installed',reason:'Mocked model candidate, actual persistence guard under test.'}};}}
  };
  const source=stripTypeScriptTypes(await readFile(new URL('../lib/collaboration/house-work-server.ts',import.meta.url),'utf8'),{mode:'strip'});
@@ -57,6 +57,11 @@ async function fixture(){
  const api=module.namespace as unknown as {houseWorkPayload:()=>Promise<any>;stepHouseWork:(requestId:string,sessionId?:string,epoch?:number)=>Promise<any>;houseWorkVisibility:(id:string,epoch:number,visible:boolean)=>Promise<any>;rollbackHouseArtifact:(kind:string)=>Promise<any>;houseWorkControl:(enabled:boolean)=>Promise<any>};
  const control=()=>JSON.parse(db.raw.prepare("SELECT content FROM research_control WHERE id='main'").get()!.content as string);
  return{db,clock,calls,api,control,advance:(ms=workPolicy.HOUSE_WORK_INTERVAL+1)=>clock.now+=ms};
+}
+async function selectResearch(f:Awaited<ReturnType<typeof fixture>>,focus:'3d'|'music'|'games'='3d'){
+ await f.api.houseWorkPayload();const state=JSON.parse(f.db.raw.prepare("SELECT content FROM house_work WHERE id='main'").get()!.content as string);
+ const mission=missions.MISSION_ROTATION.find(m=>m.targetProject==='atlas'&&m.focus===focus)!;assert.ok(mission,'An Atlas mission exists for '+focus);
+ state.cursor=0;state.researchCursor=missions.MISSION_ROTATION.indexOf(mission);state.nextResearchMs=0;f.db.raw.prepare("UPDATE house_work SET content=? WHERE id='main'").run(JSON.stringify(state));return mission;
 }
 
 test('first house read bootstraps state and a real music artefact reaches persistent world memory',async()=>{
@@ -106,4 +111,41 @@ test('a hidden session stops later stages and an older visible epoch cannot revi
 });
 test('shared artifacts retain lineage and can restore the preceding valid revision',async()=>{
  const f=await fixture();try{let latest:any;for(let i=0;i<16;i++){latest=await f.api.stepHouseWork('history-'+i);if(latest.rollbackKinds.length)break;f.advance();}assert.ok(latest.rollbackKinds.length);const kind=latest.rollbackKinds[0],current=latest.artifacts[kind];assert.ok(current.parentId);const restored=await f.api.rollbackHouseArtifact(kind);assert.equal(restored.artifacts[kind].id,current.parentId);assert.notEqual(restored.artifacts[kind].fingerprint,current.fingerprint);assert.equal(restored.artifacts[kind].evidence.claim,'reported');assert.equal(restored.artifacts[kind].evidence.reportedImprovement,false);}finally{f.db.close();}
+});
+
+test('fresh reviewed 3D research is remembered before the first automatic scene is requested',async()=>{
+ const f=await fixture();try{
+  const mission=await selectResearch(f);assert.equal(f.calls.livingArtifacts[mission.room],undefined);f.calls.livingBudget.used=46;
+  const response=await f.api.stepHouseWork('fresh-scene');const builds=f.calls.livingBuilds.filter(b=>b.input.mode==='auto');assert.equal(builds.length,1);assert.equal(builds[0].input.actorId,'resident:'+mission.residentId);assert.equal(builds[0].input.contextActorId,mission.id);assert.equal(builds[0].input.room,missions.missionFor('resident:'+mission.residentId)!.room);assert.equal(builds[0].input.trigger,'schedule');assert.equal(typeof builds[0].input.shouldContinue,'function');
+  assert.equal(builds[0].memories[mission.id].consultation.id,'icarus-1');assert.deepEqual(builds[0].memories[mission.id].consultation.sourceIds,['source-read']);assert.equal(builds[0].continued,true);assert.equal(await builds[0].input.shouldContinue(),false,'The completed pulse no longer owns its lease.');assert.equal(response.result.works.at(-1).artifactId,'living-fixture');assert.ok(response.result.works.at(-1).summary.includes(missions.missionFor('resident:'+mission.residentId)!.name));
+ }finally{f.db.close();}
+});
+
+test('ordinary 3D work keeps its deterministic experiment rather than calling the automatic model',async()=>{
+ const f=await fixture();try{
+  await f.api.houseWorkPayload();const state=JSON.parse(f.db.raw.prepare("SELECT content FROM house_work WHERE id='main'").get()!.content as string),cursor=Array.from({length:192},(_,i)=>i).find(i=>{const m=workPolicy.houseMission(i);return m.targetProject==='atlas'&&m.focus==='3d';})!;
+  const mission=workPolicy.houseMission(cursor),delegate=missions.missionFor('resident:'+mission.residentId)!;state.cursor=cursor;state.nextResearchMs=f.clock.now+workPolicy.HOUSE_RESEARCH_INTERVAL;f.db.raw.prepare("UPDATE house_work SET content=? WHERE id='main'").run(JSON.stringify(state));f.calls.livingArtifacts[mission.room]={id:'existing-scene'};f.calls.livingArtifacts[delegate.room]={id:'existing-scene'};
+  await f.api.stepHouseWork('ordinary-scene');assert.ok(f.calls.livingBuilds.some(b=>[mission.id,delegate.id].includes(b.input.actorId)&&b.input.mode==='experiment'));assert.ok(f.calls.livingBuilds.every(b=>b.input.mode!=='auto'));assert.equal(f.calls.consults.length,0);
+ }finally{f.db.close();}
+});
+
+test('a new scene needs two automatic calls remaining and an applicable cited proposal',async()=>{
+ const cases=[{name:'one-call-left',mutate:(f:Awaited<ReturnType<typeof fixture>>)=>{f.calls.livingBudget.used=47;}},{name:'budget-paused',mutate:(f:Awaited<ReturnType<typeof fixture>>)=>{f.calls.livingBudget.backgroundAvailable=false;}},{name:'rejected',mutate:(f:Awaited<ReturnType<typeof fixture>>)=>{f.calls.consultMutation=c=>c.status='rejected';}},{name:'unread',mutate:(f:Awaited<ReturnType<typeof fixture>>)=>{f.calls.consultMutation=c=>c.sources=[];}},{name:'invented-citation',mutate:(f:Awaited<ReturnType<typeof fixture>>)=>{f.calls.consultMutation=c=>c.proposal.sourceIds=['not-read'];}}];
+ for(const item of cases){const f=await fixture();try{await selectResearch(f);item.mutate(f);await f.api.stepHouseWork(item.name);assert.equal(f.calls.livingBuilds.filter(b=>b.input.mode==='auto').length,0,item.name);}finally{f.db.close();}}
+});
+
+test('other specialties keep their own tools after a fresh consultation',async()=>{
+ const f=await fixture();try{const mission=await selectResearch(f,'music');await f.api.stepHouseWork('fresh-music');assert.equal(f.calls.consults[0].actorId,mission.id);assert.equal(f.calls.livingBuilds.filter(b=>b.input.mode==='auto').length,0);assert.ok(f.calls.tools.includes(mission.id));}finally{f.db.close();}
+});
+
+test('a consultation that cannot reach memory cannot start an automatic scene',async()=>{
+ const f=await fixture();try{await selectResearch(f);f.calls.consultMutation=()=>{f.db.raw.prepare("UPDATE research_control SET lease_id='concurrent-research',lease_until=? WHERE id='main'").run(f.clock.now+60000);};const result=await f.api.stepHouseWork('unpersisted-evidence');assert.equal(f.calls.livingBuilds.filter(b=>b.input.mode==='auto').length,0);assert.ok(result.result.works.at(-1).memoryPending);assert.ok(Number(f.db.raw.prepare('SELECT count(*) AS n FROM house_work_memory').get()!.n)>0);}finally{f.db.close();}
+});
+
+test('the continuation callback observes a hidden tab and global pause while a scene stage is running',async()=>{
+ for(const action of ['hide','pause'] as const){const f=await fixture(),id='22222222-2222-4222-8222-222222222222';try{
+  await selectResearch(f);f.calls.livingGate=gate();const running=f.api.stepHouseWork('scene-'+action,id,1);await Promise.race([f.calls.livingGate.entered,running.then(()=>{throw Error('Automatic scene was not started.');})]);
+  if(action==='hide')await f.api.houseWorkVisibility(id,2,false);else{const control=f.control();control.enabled=false;f.db.raw.prepare("UPDATE research_control SET content=?,revision=revision+1 WHERE id='main'").run(JSON.stringify(control));}
+  assert.equal(await f.calls.livingBuilds[0].input.shouldContinue(),false);f.calls.livingGate.release();const result=await running;assert.equal(result.result.works.at(-1).status,'waiting');assert.equal(result.result.works.at(-1).artifactId,undefined);
+ }finally{f.db.close();}}
 });

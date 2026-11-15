@@ -20,6 +20,8 @@ La intención es construir una Lía conversacional y creativa: Atlas piensa, Ion
 
 La casa puede ejecutar herramientas acotadas, guardar propuestas, producir programas de escena y conservar una memoria de resultados. Las tareas de ingeniería de nube pueden modificar el código y publicar una versión después de comprobarla. Las composiciones y los proyectos tienen contratos, procedencia y mecanismos para conservar la versión anterior ante fallos.
 
+En la investigación visible de una misión de 3D o juegos para Atlas, una propuesta real con memoria guardada puede encargar una nueva obra al modelo y a un revisor distinto. Cuando el propietario es un módulo o proceso, un residente actúa como constructor visible y la evidencia conserva el identificador de su propietario original. Se exige margen para las dos llamadas dentro de la cuota automática. Entre creación, revisión y aplicación se vuelve a comprobar que la sesión siga visible y la actividad habilitada. Los turnos ordinarios conservan los experimentos locales; los encargos de reformas completas siguen en la cola de ingeniería. Un latido de presencia mantiene vigentes las sesiones visibles durante consultas largas.
+
 Esto no modifica los pesos del modelo conversacional. Una vuelta de investigación, una animación, otra disposición geométrica o una validación de formato tampoco demuestra mayor inteligencia o calidad artística. La selección de contexto es memoria de aplicación; la síntesis Web Audio es sonido generado por instrumentos; los personajes son representaciones de roles que usan los modelos autorizados.
 
 La actividad local de la casa y las llamadas a modelos tienen ritmos distintos. El límite actual es de 60 llamadas diarias, con las tareas automáticas limitadas a 48 para reservar margen al uso directo. Un chat puede consumir una llamada principal, otra de revisión y otra si se pide preparar una búsqueda pública. Una creación musical o un guion usa una llamada, y repetir la misma solicitud completada recupera el resultado sin otra inferencia. Ese presupuesto no permite una consulta neuronal por segundo para cada personaje.
@@ -33,3 +35,9 @@ La actividad local de la casa y las llamadas a modelos tienen ritmos distintos. 
 - Las pruebas estructurales detectan fallos, pero no miden por sí solas fidelidad al encargo, belleza, musicalidad o conversación al nivel de los mejores modelos. Esas afirmaciones requerirían comparaciones y evaluación humana sobre encargos representativos.
 
 La siguiente medida de progreso debe ser un resultado visible y utilizable que responda mejor al encargo, acompañado de su evaluación y de una versión recuperable. El número de vueltas o de personajes no sustituye esa medida.
+
+## Comprobación del servicio publicado
+
+En la versión 49 se ejecutaron dos encargos públicos de prueba con GPT-OSS 120B: una partitura de tres secciones y una dirección de tres planos que suma diez segundos. Ambas solicitudes devolvieron 200 y sus repeticiones recuperaron la misma creación. El presupuesto pasó de 30 a 32 llamadas: los reintentos completados no gastaron otras dos.
+
+La inspección de la partitura detectó poca elaboración: dos notas y un acorde por sección. Se ajustó la orientación compositiva para desarrollar frases, sostener la armonía y distinguir las secciones sin convertir una cantidad de notas en criterio automático de calidad. Esta observación negativa se conserva; la validez de la respuesta no acredita que la pieza sea buena. La revisión del vídeo confirma el guion y sus restricciones, no una grabación realizada ni fidelidad visual de todos los detalles narrados. No se completó una inspección GPU ni una escucha en este entorno.

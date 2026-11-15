@@ -51,20 +51,38 @@ export async function stepHouseWork(requestId:string,sessionId?:string,visibilit
  const lock=await db.prepare(HOUSE_ACQUIRE).bind(JSON.stringify(state),lease,started+HOUSE_LEASE,r.revision,started,started,requestId).first();if(!lock)return houseWorkPayload();
  const completed:HouseWork[]=[];
  const plans=[houseMission(state.cursor),houseMission(state.cursor+1),houseMission(state.cursor+2)];if(started>=state.nextResearchMs&&!g.busy)plans.push(MISSION_ROTATION[state.researchCursor%MISSION_ROTATION.length]);
+ const shouldContinue=async()=>{const [global,current,visible]=await Promise.all([globalState(db),row(db),sessionActive(db,sessionId)]);return visible&&global.enabled&&JSON.parse(current.content).enabled!==false&&current.lease_id===lease&&current.revision===leaseRevision&&current.lease_until>Date.now();};
  try{
   await flushMemory(db);
   // Three independent specialists per pulse; cloud inference remains serialized
   // and has its own two-minute gate and existing automatic daily allowance.
   for(let index=0;index<plans.length;index++){
-   if(!(await globalState(db)).enabled||!await sessionActive(db,sessionId))break;
+   if(!await shouldContinue())break;
    const mission=plans[index],at=new Date().toISOString(),work:HouseWork={id:'work-'+crypto.randomUUID(),requestId,actorId:mission.id,residentId:mission.residentId,actorName:mission.name,domain:mission.domain,title:mission.title,summary:'',status:'waiting',at,startedAt:at,operation:'tool',sourceCount:0,modelSteps:0,checks:[]};
    const details:Parameters<typeof memory>[2]={};
    try{
     if(index===3&&Date.now()>=state.nextResearchMs&&!g.busy){try{const c=await consultIcarus({requestId:'house:'+requestId,actorId:mission.id,trigger:'schedule'});details.consultation=c;work.consultationId=c.id;work.sourceCount=c.sources.length;work.modelSteps=c.agents.filter(a=>a.status==='completed').length;work.operation='research';}catch(e){if((e as Error).message!=='BUSY')work.summary='Consulta pendiente; se conservan las herramientas disponibles. ';}state.nextResearchMs=Date.now()+HOUSE_RESEARCH_INTERVAL;state.researchCursor++;}
-    if(!await sessionActive(db,sessionId))throw Error('SESSION_INACTIVE');
-    let result:HouseToolResult;
+    if(!await shouldContinue())throw Error('SESSION_INACTIVE');
+    let result:Omit<HouseToolResult,'status'>&{status:WorkStatus};
     if(mission.targetProject==='atlas'&&['3d','games'].includes(mission.focus)){
-     const living=await livingPayload();if(living.enabled&&living.artifacts[mission.room]){const creation=await buildLiving({requestId:'house-tool:'+requestId+':'+index,room:mission.room,actorId:mission.id,trigger:'schedule',mode:'experiment'});details.creation=creation;result={domain:mission.domain,status:creation.status==='applied'?'applied':creation.status==='unchanged'?'unchanged':'waiting',title:creation.title,summary:creation.review||creation.goal,checks:creation.checks,changed:creation.status==='applied',needsEngineering:true};}else result=performHouseTool(mission);
+     const living=await livingPayload(),builder=missionFor('resident:'+mission.residentId),consultation=details.consultation,knownSources=new Set(consultation?.sources.filter(s=>s.excerpt?.trim()&&Number.isFinite(Date.parse(s.readAt))).map(s=>s.id));
+     const fresh=index===3&&consultation?.status==='proposed'&&consultation.actorId===mission.id&&consultation.targetProject==='atlas'&&!!consultation.proposal?.sourceIds.length&&consultation.proposal.sourceIds.every(id=>knownSources.has(id));
+     const pairAvailable=living.budget.backgroundAvailable&&living.budget.automaticLimit-living.budget.used>=2;
+     let researched=false;
+     if(living.enabled&&builder&&fresh&&pairAvailable){
+      // Save the exact mission's consultation before the model reads its memory.
+      // This intermediate receipt has its own id so the final work can replace
+      // it without defeating rememberWorldWork's replay protection.
+      const researchWork:HouseWork={...work,id:work.id+':research',status:'waiting',summary:'Propuesta documental revisada; pendiente de una intervención de escena válida.'};
+      researched=await memory(db,researchWork,{consultation});
+     }
+     if(living.enabled&&builder&&(researched||living.artifacts[builder.room])){
+      if(!await shouldContinue())throw Error('SESSION_INACTIVE');
+      const creation=await buildLiving({requestId:'house-tool:'+requestId+':'+index,room:builder.room,actorId:builder.id,...(researched?{contextActorId:mission.id}:{}),trigger:'schedule',mode:researched?'auto':'experiment',shouldContinue});details.creation=creation;
+      if(creation.status==='applied')work.artifactId=creation.artifactIds[0];
+      if(creation.origin==='model'&&creation.status==='applied')work.modelSteps+=2;
+      result={domain:mission.domain,status:creation.status==='applied'?'applied':creation.status==='unchanged'?'unchanged':creation.status==='rejected'?'rejected':'waiting',title:creation.title,summary:(mission.id!==builder.id?'Ejecución delegada a '+builder.name+' ('+builder.id+'). ':'')+(creation.review||creation.goal),checks:creation.checks,changed:creation.status==='applied',needsEngineering:true};
+     }else result=performHouseTool(mission);
     }else result=performHouseTool(mission,state.artifacts[mission.focus==='music'?'music':mission.focus==='video'?'film':mission.focus==='language'?'lor':mission.focus==='conversation'?'conversation':mission.focus==='programming'?'program':'research']);
     work.status=result.status;work.title=result.title;work.summary+=(details.consultation?.status==='rejected'?'La propuesta externa fue rechazada y no se aplicó. Herramienta existente: ':'')+result.summary;work.checks=result.checks;
     if(result.artifact){
@@ -75,7 +93,7 @@ export async function stepHouseWork(requestId:string,sessionId?:string,visibilit
      else{const artifact:HouseArtifact={id:artifactId,kind:result.artifact.kind,value:result.artifact.value,at,actorId:mission.id,actorName:mission.name,fingerprint,evidence,...(previous?{parentId:previous.id}:{})};if(previous)state.history[result.artifact.kind]=[...(state.history[result.artifact.kind]||[]),previous].slice(-6);state.artifacts[result.artifact.kind]=artifact;work.artifactId=artifact.id;}
      state.fingerprints[ownerKey]=fingerprint;
     }
-    if(!await sessionActive(db,sessionId))throw Error('SESSION_INACTIVE');
+    if(!await shouldContinue())throw Error('SESSION_INACTIVE');
     const programSaved=await attemptProgram(db,mission,work,details);
     if(result.needsEngineering){const prior=state.engineering[mission.id];if(!prior||prior.status==='open'||details.consultation?.status==='proposed'&&details.consultation.id!==prior.consultationId)state.engineering[mission.id]={id:work.id,actorId:mission.id,title:mission.title,targetProject:mission.targetProject,targetFiles:mission.targetFiles,question:mission.question,sourceUrls:details.consultation?.sources.map(s=>s.url)||mission.sources.map(s=>s.url),...(work.consultationId?{consultationId:work.consultationId}:{}),at:prior?.at||at,status:'open'};}
     work.at=new Date().toISOString();if(!programSaved&&!await memory(db,work,details)){work.memoryPending=true;await pendingMemory(db,work,details);}

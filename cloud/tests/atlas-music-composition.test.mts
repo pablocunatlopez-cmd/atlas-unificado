@@ -28,3 +28,10 @@ test('actual audio scheduler receives distinct generated pitches, chords and sec
  assert.equal(result.endTime,13.2);assert.ok(oscillators.some(o=>o.type==='triangle'&&Math.abs(o.frequency.value-hz(60))<1e-8&&o.startTime===.2));assert.ok(oscillators.some(o=>o.type==='triangle'&&Math.abs(o.frequency.value-hz(62))<1e-8&&o.startTime===4.2));assert.ok(oscillators.some(o=>o.type==='sine'&&Math.abs(o.frequency.value-hz(51))<1e-8&&o.startTime===.2));assert.throws(()=>scheduleComposition(mixer,value,-1),/Inicio/);assert.ok(mixer.sources.size>100);
 });
 test('composer prompt requests actual musical decisions and treats the brief as data',()=>{const prompt=musicPrompt('Jazz irregular, tema oscuro');assert.match(prompt,/Jazz irregular/);assert.match(prompt,/melody/);assert.match(prompt,/chords/);assert.match(prompt,/conducción de voces/);assert.match(prompt,/datos/);assert.throws(()=>musicPrompt(''));assert.throws(()=>musicPrompt('a'.repeat(4001)));});
+test('musical guidance develops complete phrases and harmonic coverage while respecting genre and intentional space',()=>{
+ const prompt=musicPrompt('Jazz nocturno en dos secciones, tema-puente-tema');
+ for(const criterion of [/frases con dirección/,/a lo largo de toda la sección/,/armonía cubra cada compás/,/séptimas y novenas/,/tensiones preparadas o resueltas/,/cromatismo debe tener función/,/decisiones audibles/,/velocidades que modelen una dinámica/,/reutiliza el ID del tema/])assert.match(prompt,criterion);
+ assert.match(prompt,/adapta esa densidad al encargo, sin convertirla en cuota/);assert.match(prompt,/ambient.*pueden funcionar muchas menos notas/);assert.match(prompt,/silencios deliberados/);assert.match(prompt,/no son objetivos de densidad/);
+ // Sparse material remains valid: artistic guidance is not an invented density gate.
+ assert.equal(validateComposition(score()).sections[0].melody.length,3);
+});

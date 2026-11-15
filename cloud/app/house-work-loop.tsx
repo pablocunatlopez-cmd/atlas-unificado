@@ -96,8 +96,11 @@ export default function HouseWorkLoop({signedIn,onVisual,onVisit}:Props){
   const visible=()=>{clearTimeout(timer);if(document.hidden){notifyHidden();readFirst=true;controller?.abort();}else{markVisible();readFirst=true;schedule(0);}};
   const pageHide=()=>{clearTimeout(timer);notifyHidden();readFirst=true;controller?.abort();};
   const pageShow=()=>{if(!document.hidden){markVisible();readFirst=true;schedule(0);}};
+  // A model consultation can outlast the 45-second presence lease. Renew only
+  // while visible; an older heartbeat cannot revive a newer hidden epoch.
+  const heartbeat=setInterval(()=>{if(!mounted||document.hidden)return;void fetch('/api/house-work',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'visibility',sessionId,visibilityEpoch:visibilityEpoch.current,visible:true}),signal:AbortSignal.timeout(5000)}).catch(()=>{});},15000);
   wake.current=()=>{if(!inFlight)schedule(0);};document.addEventListener('visibilitychange',visible);window.addEventListener('pagehide',pageHide);window.addEventListener('pageshow',pageShow);schedule(0);
-  return()=>{notifyHidden();mounted=false;clearTimeout(timer);controller?.abort();wake.current=null;document.removeEventListener('visibilitychange',visible);window.removeEventListener('pagehide',pageHide);window.removeEventListener('pageshow',pageShow);};
+  return()=>{notifyHidden();mounted=false;clearTimeout(timer);clearInterval(heartbeat);controller?.abort();wake.current=null;document.removeEventListener('visibilitychange',visible);window.removeEventListener('pagehide',pageHide);window.removeEventListener('pageshow',pageShow);};
  },[signedIn]);
  function toggle(){if(control)return;const action=data?.enabled?'pause':'resume';command.current=action;setControl(action);wake.current?.();}
  const latest=data?.recent[0];

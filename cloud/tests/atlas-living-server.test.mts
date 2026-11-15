@@ -8,6 +8,7 @@ import {stripTypeScriptTypes} from 'node:module';
 import {readFile} from 'node:fs/promises';
 import * as vm from 'node:vm';
 import * as agents from '../lib/cloud/agents.ts';
+import * as missions from '../lib/collaboration/missions.ts';
 import * as policy from '../lib/evolution/living-policy.ts';
 import * as tools from '../lib/evolution/living-tools.mjs';
 import * as lab from '../lib/evolution/living-lab.mjs';
@@ -44,20 +45,21 @@ type InferenceCall={model:string;messages:Array<{role:string;content:string}>;op
 
 async function fixture(){
  assert.equal(typeof vm.SourceTextModule,'function','Run with --experimental-vm-modules.');
- const db=new D1(),calls:{inference:InferenceCall[];evaluations:agents.AgentEvaluation[];gate?:Gate;reviewDecision?:'accept'|'reject'}={inference:[],evaluations:[qualified('qwen/qwen3.8-27b',7,10),qualified('openai/gpt-oss-120b',8,30),qualified('openai/gpt-oss-20b',8,50)]};
+ const db=new D1(),calls:{inference:InferenceCall[];evaluations:agents.AgentEvaluation[];experiments:number;gate?:Gate;reviewDecision?:'accept'|'reject';afterCreator?:()=>void;afterReview?:()=>void;creatorError?:Error&{code:string}}={inference:[],experiments:0,evaluations:[qualified('qwen/qwen3.8-27b',7,10),qualified('openai/gpt-oss-120b',8,30),qualified('openai/gpt-oss-20b',8,50)]};
  class ClockDate extends Date{constructor(value?:string|number){super(value===undefined?at:value);}static now(){return Date.parse(at);}}
  const context=vm.createContext({Date:ClockDate,crypto:globalThis.crypto,structuredClone,URL,console,TextEncoder,TextDecoder,Uint8Array,setTimeout,clearTimeout});
  const modules:Record<string,Record<string,unknown>>={
   'cloudflare:workers':{env:{DB:db}},
-  './living-tools.mjs':tools,'./living-lab.mjs':lab,'./living-policy':policy,'./world':world,'../../public/house/layout.js':layout,'../../public/house/living-contract.js':contract,'../research/web':web,
+  './living-tools.mjs':tools,'./living-lab.mjs':{...lab,proposeLivingExperiment:(...args:Parameters<typeof lab.proposeLivingExperiment>)=>{calls.experiments++;return lab.proposeLivingExperiment(...args);}},'./living-policy':policy,'./world':world,'../../public/house/layout.js':layout,'../../public/house/living-contract.js':contract,'../research/web':web,
   '../cloud/agents':agents,'../cloud/agents.ts':agents,
+  '../collaboration/missions':missions,'../collaboration/missions.ts':missions,
   '../cloud/agent-registry':{agentEvaluations:async()=>calls.evaluations},
-  '../cloud/inference':{CLOUD_MODEL:'qwen/qwen3.8-27b',inferModel:async(model:string,messages:InferenceCall['messages'],options:InferenceCall['options'])=>{calls.inference.push({model,messages,options});if(calls.inference.length===1&&calls.gate){calls.gate.signal();await calls.gate.wait;}if(messages[0].content.startsWith('Revisa'))return{decision:calls.reviewDecision||'accept',reason:'La intervención respeta los límites declarados; falta revisión visual.'};return proposal();}},
+  '../cloud/inference':{CLOUD_MODEL:'qwen/qwen3.8-27b',inferModel:async(model:string,messages:InferenceCall['messages'],options:InferenceCall['options'])=>{calls.inference.push({model,messages,options});if(calls.inference.length===1&&calls.gate){calls.gate.signal();await calls.gate.wait;}if(messages[0].content.startsWith('Revisa')){calls.afterReview?.();return{decision:calls.reviewDecision||'accept',reason:'La intervención respeta los límites declarados; falta revisión visual.'};}calls.afterCreator?.();if(calls.creatorError)throw calls.creatorError;return proposal();}},
  };
  const source=stripTypeScriptTypes(await readFile(new URL('../lib/evolution/living-server.ts',import.meta.url),'utf8'),{mode:'strip'}),module=new vm.SourceTextModule(source,{context,identifier:'living-server.ts'}),linked=new Map<string,vm.Module>();
  await module.link(async specifier=>{if(linked.has(specifier))return linked.get(specifier)!;const exports=modules[specifier];assert.ok(exports,'Unexpected dependency: '+specifier);const synthetic=new vm.SyntheticModule(Object.keys(exports),function(){for(const[key,value]of Object.entries(exports))this.setExport(key,value);},{context});linked.set(specifier,synthetic);return synthetic;});
  await module.evaluate();
- const api=module.namespace as unknown as{livingPayload:()=>Promise<any>;buildLiving:(input:{requestId:string;actorId?:string;trigger?:'manual'|'schedule'})=>Promise<LivingResult>};
+ const api=module.namespace as unknown as{livingPayload:()=>Promise<any>;buildLiving:(input:{requestId:string;actorId?:string;contextActorId?:string;trigger?:'manual'|'schedule';shouldContinue?:()=>Promise<boolean>})=>Promise<LivingResult>};
  await api.livingPayload();
  const state=()=>JSON.parse(db.raw.prepare("SELECT content FROM living_world WHERE id='main'").get()!.content as string);
  const saveState=(value:unknown)=>db.raw.prepare("UPDATE living_world SET content=? WHERE id='main'").run(JSON.stringify(value));
@@ -110,7 +112,7 @@ test('a memory pointer cannot import another resident consultation as evidence',
 test('the active lease blocks another request and a stored receipt replays without inference',async()=>{
  const f=await fixture();try{
   f.calls.gate=gate();const running=f.api.buildLiving({requestId:'first',actorId});await Promise.race([f.calls.gate.entered,running.then(()=>{throw Error('Build ended before gated inference.');})]);
-  await assert.rejects(f.api.buildLiving({requestId:'second',actorId}),/BUSY/);assert.equal(f.calls.inference.length,1);f.calls.gate.release();const first=await running,replay=await f.api.buildLiving({requestId:'first',actorId});assert.equal(replay.id,first.id);assert.equal(f.calls.inference.length,2);assert.equal(f.db.raw.prepare('SELECT count(*) AS n FROM living_builds').get()!.n,1);
+  await assert.rejects(f.api.buildLiving({requestId:'second',actorId}),/BUSY/);assert.equal(f.calls.inference.length,1);f.calls.gate.release();const first=await running,replay=await f.api.buildLiving({requestId:'first',actorId,shouldContinue:async()=>false});assert.equal(replay.id,first.id);assert.equal(replay.status,'applied');assert.equal(f.calls.inference.length,2);assert.equal(f.db.raw.prepare('SELECT count(*) AS n FROM living_builds').get()!.n,1);
  }finally{f.db.close();}
 });
 
@@ -126,5 +128,47 @@ test('unqualified models cannot publish a new scene or consume inference calls',
  const f=await fixture();try{
   const previous=f.previous();f.calls.evaluations=f.calls.evaluations.map(e=>({...e,status:'rejected'}));const result=await f.api.buildLiving({requestId:'unqualified',actorId});assert.equal(result.status,'rejected');assert.equal(f.calls.inference.length,0);assert.deepEqual(f.state().artifacts.music.proposal,previous);
   f.calls.evaluations=[qualified('openai/gpt-oss-120b')];const single=await f.api.buildLiving({requestId:'no-reviewer',actorId});assert.equal(single.status,'rejected');assert.equal(f.calls.inference.length,0);assert.deepEqual(f.state().artifacts.music.proposal,previous);
+ }finally{f.db.close();}
+});
+
+const inactiveReview='La sesión dejó de estar activa o se pausó el trabajo; no se inicia otra etapa y se conserva la obra.';
+test('an inactive foreground session starts no creator call and publishes no artifact',async()=>{
+ const f=await fixture();try{
+  const result=await f.api.buildLiving({requestId:'inactive-start',actorId,shouldContinue:async()=>false});assert.equal(result.status,'waiting');assert.equal(result.review,inactiveReview);assert.equal(f.calls.inference.length,0);assert.deepEqual(f.state().artifacts,{});assert.equal(f.state().published,0);assert.equal(result.artifactIds.length,0);
+ }finally{f.db.close();}
+});
+test('a session hidden while the creator runs starts no reviewer call and keeps the prior scene',async()=>{
+ const f=await fixture();try{
+  const previous=f.previous();let active=true;f.calls.gate=gate();const running=f.api.buildLiving({requestId:'hidden-after-creator',actorId,shouldContinue:async()=>active});await Promise.race([f.calls.gate.entered,running.then(()=>{throw Error('Build ended before gated inference.');})]);active=false;f.calls.gate.release();const result=await running;
+  assert.equal(result.status,'waiting');assert.equal(result.review,inactiveReview);assert.equal(f.calls.inference.length,1);assert.equal(f.calls.experiments,0);assert.deepEqual(f.state().artifacts.music.proposal,previous);assert.equal(f.state().published,0);assert.equal(result.artifactIds.length,0);
+ }finally{f.db.close();}
+});
+test('a session hidden after review cannot apply an accepted candidate',async()=>{
+ const f=await fixture();try{
+  const previous=f.previous();let active=true;f.calls.afterReview=()=>{active=false;};const result=await f.api.buildLiving({requestId:'hidden-after-review',actorId,shouldContinue:async()=>active});
+  assert.equal(result.status,'waiting');assert.equal(result.review,inactiveReview);assert.equal(f.calls.inference.length,2);assert.deepEqual(f.state().artifacts.music.proposal,previous);assert.equal(f.state().published,0);assert.equal(result.artifactIds.length,0);
+ }finally{f.db.close();}
+});
+test('quota fallback cannot apply a tool experiment after its foreground session ends',async()=>{
+ const f=await fixture();try{
+  const previous=f.previous();let active=true;f.calls.afterCreator=()=>{active=false;};f.calls.creatorError=Object.assign(Error('La inferencia espera cuota.'),{code:'quota'});const result=await f.api.buildLiving({requestId:'inactive-quota-fallback',actorId,shouldContinue:async()=>active});
+  assert.equal(result.status,'waiting');assert.equal(result.review,inactiveReview);assert.equal(f.calls.inference.length,1);assert.equal(f.calls.experiments,0);assert.deepEqual(f.state().artifacts.music.proposal,previous);assert.equal(f.state().published,0);assert.equal(result.artifactIds.length,0);
+ }finally{f.db.close();}
+});
+
+test('a graphics mission keeps its own evidence while the registered resident performs the scene work',async()=>{
+ const f=await fixture();try{
+  const ownerId='module:graphics',delegateId='resident:games-desk',owner=missions.missionFor(ownerId)!;assert.equal(owner.targetProject,'atlas');assert.equal('resident:'+owner.residentId,delegateId);
+  f.db.raw.exec('CREATE TABLE research_control(id TEXT PRIMARY KEY,content TEXT NOT NULL);CREATE TABLE icarus_consultations(request_id TEXT PRIMARY KEY,id TEXT UNIQUE,content TEXT NOT NULL,created_at TEXT NOT NULL);');
+  const source={id:'graphics-read',title:'Instancias de geometría',url:'https://threejs.org/docs/#api/en/objects/InstancedMesh',excerpt:'InstancedMesh permite reutilizar geometría con transformaciones por instancia.',readAt:at},consultation={id:'icarus-graphics',actorId:ownerId,targetProject:'atlas',status:'proposed',at,completedAt:at,question:'¿Cómo conservar geometría compartida?',sources:[source],proposal:{change:'Representar una misma forma con posiciones y escalas distintas.',reason:'La fuente documenta transformaciones por instancia.',validation:['Conservar legibilidad y posiciones acotadas.'],sourceIds:[source.id]}};
+  f.db.raw.prepare('INSERT INTO icarus_consultations VALUES(?,?,?,?)').run('graphics',consultation.id,JSON.stringify(consultation),at);
+  f.db.raw.prepare('INSERT INTO research_control VALUES(?,?)').run('main',JSON.stringify({spiral:{world:{memories:{[ownerId]:{question:consultation.question,consultation:{id:consultation.id},sourceIds:[source.id]},[delegateId]:{question:'DELEGATE_PRIVATE_QUESTION',sourceIds:['not-read']}}}}}));
+  const result=await f.api.buildLiving({requestId:'graphics-delegation',actorId:delegateId,contextActorId:ownerId});assert.equal(result.status,'applied');assert.equal(result.actorId,delegateId);assert.equal(f.state().artifacts.games.actorId,delegateId);
+  const brief=JSON.parse(f.calls.inference[0].messages[1].content);assert.equal(brief.actor.id,ownerId);assert.equal(brief.delegate.id,delegateId);assert.equal(brief.personalMemory.question,consultation.question);assert.equal(brief.evidence.consultation.id,consultation.id);assert.equal(brief.evidence.consultation.proposal.change,consultation.proposal.change);assert.deepEqual(brief.evidence.consultation.proposal.sourceIds,[source.id]);assert.ok(brief.evidence.sources.some((s:{id:string;text:string})=>s.id===source.id&&s.text===source.excerpt));assert.ok(!JSON.stringify(brief).includes('DELEGATE_PRIVATE_QUESTION'));
+ }finally{f.db.close();}
+});
+test('an internal mission cannot use a different resident as its delegate',async()=>{
+ const f=await fixture();try{
+  const result=await f.api.buildLiving({requestId:'invalid-delegate',actorId,contextActorId:'module:graphics'}).catch(error=>({status:'blocked',error}));assert.notEqual(result.status,'applied');assert.equal(f.calls.inference.length,0);assert.deepEqual(f.state().artifacts,{});assert.equal(f.state().published,0);
  }finally{f.db.close();}
 });
