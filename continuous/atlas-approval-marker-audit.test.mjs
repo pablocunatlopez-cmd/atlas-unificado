@@ -21,6 +21,7 @@ test('partial marker is retained and blocks replay',async()=>{
  const directory=await mkdtemp(join(tmpdir(),'atlas-audit-'));
  try{
   await writeFile(join(directory,partial+'.used'),'{"version":1');
+  await chmod(join(directory,partial+'.used'),0o600);
   const audit=await auditAtlasApprovalMarkers({directory});
   assert.equal(audit.status,'requires_human_review');
   assert.equal(audit.findings[0].status,'invalid_or_partial_marker');
