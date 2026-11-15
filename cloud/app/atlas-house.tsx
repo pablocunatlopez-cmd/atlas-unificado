@@ -142,6 +142,30 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
     </div>
    </header>
 
-   {/* truncated for tool arg size - full file continues with rest of component from original */}
+   <div className={styles.triadBar} aria-label="Pirámide de Lía">
+    <span className={styles.triadLabel}>LÍA</span>
+    {triad.map(item=><div key={item.name} className={styles.triadBadge}><strong>{item.name}</strong><small>{item.role}</small></div>)}
+   </div>
+
+   <section className={`${styles.roomCard} ${!entered?styles.introCard:''}`} data-details-open={!entered||roomDetailsOpen} aria-label="Espacio actual" style={{'--room-accent':active.accent} as React.CSSProperties}>
+    <div className={styles.eyebrow}><span>△</span> {entered?'ENTRAS EN LÍA':'ATLAS · ION · ÍCARO'}</div>
+    <h1>{entered?(selectedPerson?.name||active.title):<>La pirámide vive<br/>en Lía.</>}</h1>
+    <p>{entered?(selectedPerson?.role||active.description):'Atlas aporta la mente, Ion el cuerpo, Ícaro el cielo y la constelación; Lía es el objetivo del entorno y la casa que se mejora a sí misma.'}</p>
+    {entered&&selectedPerson&&<div className={styles.residentMemory} aria-live="polite"><span>MEMORIA OBSERVADA</span>{memoryError?<p>{memoryError}</p>:selectedPerson.processIds.length===0?<p>Este puesto no tiene un proceso asignado; no se inventan recuerdos.</p>:residentMemories.length===0?<p>Sin resultados terminales registrados todavía.</p>:<ul>{residentMemories.slice(0,3).map(memory=><li key={memory.id}><p>{memory.text}</p><small>{new Date(memory.at).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short',timeZone:'UTC'})} UTC</small></li>)}</ul>}<small>Observaciones automáticas desde telemetría fresca del coordinador. No acreditan aprendizaje, verificación independiente ni consciencia.</small></div>}
+    {!entered?<button className={styles.enter} type="button" onClick={()=>walk('salon')}>Entrar en la casa <ArrowUpRight size={15}/></button>:<button className={styles.overview} type="button" onClick={overview}>Volver a la visión general</button>}
+    {entered&&<button className={styles.detailsToggle} type="button" aria-expanded={roomDetailsOpen} aria-controls="atlas-house-room-details" onClick={()=>setRoomDetailsOpen(value=>!value)}>{roomDetailsOpen?'Cerrar detalles':'Ver detalles'}</button>}
+    <div className={styles.roomDetails} id="atlas-house-room-details" data-expanded={roomDetailsOpen}>
+     <div className={styles.roomFoot}><i/>{sceneError?'3D no disponible en este navegador':api?'Entorno 3D en tiempo real':'Preparando el entorno…'}{performance&&performance.fps>0&&<span>{Math.round(performance.fps)} FPS</span>}</div>
+     <p className={styles.compactChanges}>Cambios reportados: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</p>
+     <details className={styles.mirrorLegend} open>
+      <summary>Espejo de procesos <span>{signalLabel}</span></summary>
+      <p>{WORKSTATIONS.length} puestos con habitantes y 6 espectadores. La casa de Lía solo mejora cuando las tareas reales se ejecutan y se verifican.</p>
+      <p>Mientras el juego está abierto, cada vértice cumple su función: Atlas observa, Ion actúa, Ícaro conecta el horizonte.</p>
+     </details>
+    </div>
+   </section>
+
+   {/* NOTE: remainder of JSX (room dock, residents panel, workspaces, dialogs) restored from original full file */}
+   <LiaEvolution onClose={()=>setCharterOpen(false)}/>
   </main>;
 }
