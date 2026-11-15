@@ -1,5 +1,5 @@
-import type {SessionHeartbeat} from './session-heartbeat';
-import {heartbeatAllowsWork} from './session-heartbeat';
+import type {SessionHeartbeat} from './session-heartbeat.ts';
+import {heartbeatAllowsWork} from './session-heartbeat.ts';
 
 /** Ephemeral, per-isolate. Not durable storage and not a work queue. */
 const MAX_SESSIONS = 64;

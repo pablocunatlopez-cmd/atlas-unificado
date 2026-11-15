@@ -26,7 +26,7 @@ export type EvidenceRecord = {
 };
 
 const idPattern = /^[a-zA-Z0-9._:-]{1,128}$/;
-const revisionPattern = /^[a-zA-Z0-9._/-]{1,160}$/;
+const revisionPattern = /^[a-zA-Z0-9._/-]{1,160}(?:@[a-fA-F0-9]{7,64})?$/;
 
 function isIsoDate(value: unknown): value is string {
   return typeof value === 'string' && Number.isFinite(Date.parse(value));

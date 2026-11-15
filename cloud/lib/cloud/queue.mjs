@@ -1,7 +1,7 @@
+import {RESIDENT_MEMORY_LIMIT,RESIDENT_MEMORY_RETENTION_MS,buildResidentMemoryEvents,isResidentId} from '../core/resident-memory.mjs';
 /** D1-backed, user-isolated handoff to the owner's local inference worker. */
 import {validateCreativePlan} from '../creative/plan.mjs';
 import {sanitizeProcessTelemetry} from '../core/process-telemetry.mjs';
-import {RESIDENT_MEMORY_LIMIT,RESIDENT_MEMORY_RETENTION_MS,buildResidentMemoryEvents,isResidentId} from '../core/resident-memory.mjs';
 export class CloudQueueError extends Error {
  constructor(message,status=400){super(message);this.status=status;}
 }
@@ -21,7 +21,7 @@ function publicJob(row){
 }
 function contextWindow(rows){
  const result=[];let size=0;
- for(const row of rows){if(result.length>=15||size+row.content.length>10000)break;result.unshift({role:row.role,content:row.content});size+=row.content.length;}
+ for(const row of rows){if(result.length>=48||size+row.content.length>48000)break;result.unshift({role:row.role,content:row.content});size+=row.content.length;}
  while(result[0]?.role==='assistant')result.shift();
  return result;
 }
@@ -127,9 +127,9 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    WHERE id=(SELECT id FROM cloud_jobs WHERE (status='queued' OR (status='running' AND lease_until<?)) AND attempts<2 ORDER BY created_at,id LIMIT 1)
    AND (status='queued' OR (status='running' AND lease_until<?)) RETURNING id,conversation_id,question,internet,kind,parameters`,leaseToken,at+LEASE_MS,input.agentId,at,at,at).first();
   if(!row)return {job:null};
-  const messages=await all('SELECT role,content FROM cloud_messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 15',row.conversation_id);
+  const messages=await all('SELECT role,content FROM cloud_messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 48',row.conversation_id);
   let transport=contextWindow(messages);
-  if(typeof enrichMessages==='function'&&row.kind==='chat')try{const enriched=await enrichMessages(structuredClone(transport),{kind:row.kind,internet:row.internet===1});if(Array.isArray(enriched)&&enriched.length===transport.length&&enriched.every((item,i)=>item?.role===transport[i].role&&typeof item.content==='string'&&(i===transport.length-1?item.content.startsWith(transport[i].content):item.content===transport[i].content)&&item.content.length<=(item.role==='user'?6000:16000))&&enriched.reduce((n,item)=>n+item.content.length,0)<=10000)transport=enriched.map(({role,content})=>({role,content}));}catch{}
+  if(typeof enrichMessages==='function'&&row.kind==='chat')try{const enriched=await enrichMessages(structuredClone(transport),{kind:row.kind,internet:row.internet===1});if(Array.isArray(enriched)&&enriched.length===transport.length&&enriched.every((item,i)=>item?.role===transport[i].role&&typeof item.content==='string'&&(i===transport.length-1?item.content.startsWith(transport[i].content):item.content===transport[i].content)&&item.content.length<=(item.role==='user'?6000:26000))&&enriched.reduce((n,item)=>n+item.content.length,0)<=48000)transport=enriched.map(({role,content})=>({role,content}));}catch{}
   const reservation=await one('SELECT status,lease_token FROM cloud_jobs WHERE id=?',row.id);
   if(reservation?.status!=='running'||reservation.lease_token!==leaseToken)return {job:null};
   return {job:{id:row.id,conversationId:row.conversation_id,messages:transport,kind:row.kind,parameters:JSON.parse(row.parameters||'{}'),internet:row.internet===1,leaseToken}};
@@ -137,8 +137,10 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
  async function complete(input){
   if(typeof input?.jobId!=='string'||!validId(input.leaseToken))fail('Resultado sin reserva válida.');
   const result=input.result;
-  if(!result||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>16000||!['atlas-local','atlas-coordinator'].includes(result.model))fail('El resultado local no es válido.');
+  if(!result||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>26000||!['atlas-local','atlas-coordinator','atlas-cloud','atlas-tools'].includes(result.model))fail('El resultado no es válido.');
   const value={answer:result.answer,model:result.model,modelName:typeof result.modelName==='string'?result.modelName.slice(0,120):'Qwen local'};
+  if(result.model==='atlas-tools'&&result.execution?.tool==='atlas-program-tools-1'&&['sort','dedupe','stats','counts','intervals'].includes(result.execution.operation)&&Number.isInteger(result.execution.passed)&&result.execution.passed===result.execution.total&&result.execution.total===3)value.execution={tool:result.execution.tool,operation:result.execution.operation,passed:3,total:3};
+  if(Array.isArray(result.agents))value.agents=result.agents.slice(0,3).filter(a=>a&&['programmer','researcher','reasoner','conversation','reviewer'].includes(a.role)&&['qwen/qwen3.8-27b','openai/gpt-oss-120b','openai/gpt-oss-20b'].includes(a.model)&&['completed','unavailable','skipped'].includes(a.status)).map(({role,model,status})=>({role,model,status}));
   const at=now();
   const row=await one('SELECT conversation_id,user_id,question,kind,status,lease_token,lease_until,result FROM cloud_jobs WHERE id=?',input.jobId);
   if(!row||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
@@ -154,11 +156,16 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    const mode=row.kind==='game'?'game':'3d';let plan;
    try{plan=validateCreativePlan(result.creative?.plan,mode);}catch{fail('El diseño no superó la validación geométrica.');}
    if(typeof compileCreative!=='function')fail('El compilador 3D no está disponible.',503);
-   const generated=compileCreative(row.question,mode,{plan});
+   const generated=await compileCreative(row.question,mode,{plan});
    const h=input.jobId.slice(4),projectId=`${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-8${h.slice(17,20)}-${h.slice(20,32)}`;
    const date=new Date(at).toISOString(),content=JSON.stringify({brief:generated.brief,code:generated.code});
    value.answer=`He creado ${mode==='game'?'un prototipo 3D jugable':'un entorno 3D'} con un plan de Qwen validado y geometría procedural. [Abrir en el taller](/taller?project=${projectId}). Puedes recorrerlo, modificarlo y exportar sus archivos. La revisión es otra pasada del mismo Qwen; no acredita calidad AAA.`;
-   value.creative={projectId,plan,review:{roles:['Arquitecto Qwen','Revisor Qwen'],independentModels:false,geometryValidated:true}};
+   value.creative={projectId,plan,review:{roles:result.model==='atlas-cloud'?['Arquitecto Qwen en Groq','Validador geométrico']:['Arquitecto Qwen','Revisor Qwen'],independentModels:false,geometryValidated:true}};
+   if(result.model==='atlas-cloud'){
+    const designer=value.agents?.find(a=>a.status==='completed')?.model||value.modelName;
+    value.creative.review.roles=['Diseño: '+designer,'Compilador y validador geométrico'];
+    value.answer=`He creado ${mode==='game'?'un prototipo 3D jugable':'un entorno 3D'} con una composición de ${designer} y validación geométrica. [Abrir en el taller](/taller?project=${projectId}). Puedes recorrerlo, modificarlo y exportarlo. La calidad visual y la jugabilidad necesitan comprobarse en el dispositivo.`;
+   }
    extra.push(statement(`INSERT OR IGNORE INTO studio_projects(id,user_id,title,mode,revision,created_at,updated_at) SELECT ?,user_id,?,?,1,?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,projectId,plan.title,mode,date,date,input.jobId,input.leaseToken,at),statement(`INSERT OR IGNORE INTO studio_versions(id,project_id,version,content,created_at) SELECT ?,?,1,?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,projectId+'-v1',projectId,content,date,input.jobId,input.leaseToken,at));
   }
   if(row.kind==='video'){
@@ -182,10 +189,20 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   if(typeof input?.jobId!=='string'||!validId(input.leaseToken))fail('Resultado sin reserva válida.');
   const row=await one('SELECT status,lease_token FROM cloud_jobs WHERE id=?',input.jobId);
   if(!row||row.status!=='running'||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
-  await statement("UPDATE cloud_jobs SET status='failed',error='El motor local no pudo completar la respuesta. Puedes intentarlo de nuevo.',lease_until=0,updated_at=? WHERE id=? AND lease_token=? AND status='running'",now(),input.jobId,input.leaseToken).run();
+  const error=input.code==='quota'?'Cuota de inferencia agotada. Espera a su renovación; no se activa ningún plan de pago.':'El motor no pudo completar la respuesta. Puedes intentarlo de nuevo.';
+  await statement("UPDATE cloud_jobs SET status='failed',error=?,lease_until=0,updated_at=? WHERE id=? AND lease_token=? AND status='running'",error,now(),input.jobId,input.leaseToken).run();
   return {ok:true,status:'failed'};
  }
+ async function claimOwned(userId,id){
+  await ownedJob(userId,id);const at=now(),leaseToken=uuid();
+  await statement("UPDATE cloud_jobs SET status='failed',error='La inferencia no terminó tras dos intentos. Puedes volver a enviar el mensaje.',lease_token=NULL,lease_until=0,updated_at=? WHERE id=? AND user_id=? AND status='running' AND lease_until<? AND attempts>=2",at,id,userId,at).run();
+  const row=await statement("UPDATE cloud_jobs SET status='running',lease_token=?,lease_until=?,agent_id='sites-groq',attempts=attempts+1,updated_at=? WHERE id=? AND user_id=? AND (status='queued' OR (status='running' AND lease_until<? AND attempts<2)) RETURNING id,conversation_id,kind,question,internet,parameters",leaseToken,at+45000,at,id,userId,at).first();
+  if(!row)return {job:null};
+  const messages=await all('SELECT role,content FROM cloud_messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 48',row.conversation_id);
+  return {job:{id:row.id,conversationId:row.conversation_id,messages:contextWindow(messages),kind:row.kind,question:row.question,internet:row.internet===1,parameters:JSON.parse(row.parameters||'{}'),leaseToken}};
+ }
  async function observeResidentEvents(telemetry){
+  await db.prepare('CREATE TABLE IF NOT EXISTS resident_memories(id TEXT PRIMARY KEY,resident_id TEXT NOT NULL,process_id TEXT NOT NULL,state TEXT NOT NULL,phase TEXT,event_key TEXT NOT NULL UNIQUE,text TEXT NOT NULL,at TEXT NOT NULL,created_at INTEGER NOT NULL)').run();
   const events=buildResidentMemoryEvents(telemetry,{now:now()});
   if(!events.length)return {observed:0};
   // One read avoids twelve no-op writes on every ten-second house poll.
@@ -203,8 +220,9 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
  }
  async function residentMemories(residentId){
   if(!isResidentId(residentId))fail('Habitante no válido.',404);
+  await db.prepare('CREATE TABLE IF NOT EXISTS resident_memories(id TEXT PRIMARY KEY,resident_id TEXT NOT NULL,process_id TEXT NOT NULL,state TEXT NOT NULL,phase TEXT,event_key TEXT NOT NULL UNIQUE,text TEXT NOT NULL,at TEXT NOT NULL,created_at INTEGER NOT NULL)').run();
   const rows=await all('SELECT id,process_id,state,phase,text,at,created_at FROM resident_memories WHERE resident_id=? ORDER BY created_at DESC,id LIMIT ?',residentId,RESIDENT_MEMORY_LIMIT);
   return {residentId,memories:rows.map(row=>({id:row.id,processId:row.process_id,state:row.state,phase:row.phase||null,text:row.text,at:row.at,observedAt:new Date(row.created_at).toISOString()}))};
  }
- return {enqueue,status,conversations,conversation,getJob,cancel,heartbeat,claim,complete,fail:failJob,observeResidentEvents,residentMemories};
+ return {enqueue,status,conversations,conversation,getJob,cancel,heartbeat,claim,claimOwned,complete,fail:failJob,observeResidentEvents,residentMemories};
 }

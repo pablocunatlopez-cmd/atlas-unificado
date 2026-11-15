@@ -2,9 +2,10 @@
 import {useEffect,useRef,useState} from 'react';
 import AtlasStudio from './atlas-studio';
 import styles from './workspace-tools.module.css';
+import {housePrototypeHref} from '../public/house/house-quest.js';
 type Props={mode:'3d'|'game';ready:boolean};
 type Work={id:string;status:string;progress?:number;stage?:string;error?:string;result?:{answer:string;creative?:{projectId:string}}};
-const stages:Record<string,string>={architect:'Qwen está diseñando el entorno',critic:'El revisor está buscando problemas',repair:'Corrigiendo la geometría',revision:'Revisando el plan',queued:'Esperando a la GPU',completed:'Proyecto guardado'};
+const stages:Record<string,string>={architect:'El modelo está diseñando el entorno',critic:'Revisando el diseño',repair:'Corrigiendo la geometría',revision:'Revisando el plan',queued:'Esperando turno de generación',completed:'Proyecto guardado'};
 export default function WorldWorkshop({mode,ready}:Props){
  const[prompt,setPrompt]=useState(mode==='game'?'Un videojuego 3D de exploración en un bosque, con luces para recoger y una misión que se pueda ganar':'Una casa minimalista blanca con un laboratorio, vegetación y luz de atardecer');
  const[job,setJob]=useState<Work|null>(null),[projectId,setProjectId]=useState<string>(),[busy,setBusy]=useState(false),[error,setError]=useState('');const alive=useRef(true);
@@ -20,11 +21,12 @@ export default function WorldWorkshop({mode,ready}:Props){
   catch(problem){if(alive.current){setBusy(false);setError(problem instanceof Error?problem.message:'No se pudo conectar.');}}
  }
  async function cancel(){if(!job)return;const response=await fetch('/api/cloud/jobs/'+job.id,{method:'DELETE'});if(response.ok){setJob(await response.json());setBusy(false);}}
- return <section className={styles.panel}><div className={styles.eyebrow}>{mode==='game'?'Taller de mundos':'Laboratorio creativo'}</div><h2>{mode==='game'?'De una idea a un mundo jugable.':'Describe un lugar. Empieza a construirlo.'}</h2><p>Un arquitecto Qwen propone el diseño, una segunda pasada lo critica y un validador comprueba sus límites antes de generar geometría ejecutable.</p>
+ return <section className={styles.panel}><div className={styles.eyebrow}>{mode==='game'?'Taller de mundos':'Laboratorio creativo'}</div><h2>{mode==='game'?'De una idea a un mundo jugable.':'Describe un lugar. Empieza a construirlo.'}</h2><p>Un modelo disponible diseña la composición y los materiales desde tu descripción. El compilador valida el plan y genera geometría 3D editable; no se trata de un modelo neuronal de mallas orgánicas.</p>
  {!ready&&<p className={styles.card}><a className={styles.button} href="/signin-with-chatgpt?return_to=%2F" target="_top">Iniciar sesión para guardar mis proyectos</a></p>}
  <label htmlFor="world-prompt">Tu {mode==='game'?'videojuego':'entorno 3D'}</label><textarea id="world-prompt" aria-label="Descripción del entorno" maxLength={4000} value={prompt} onChange={event=>setPrompt(event.target.value)} disabled={busy}/>
  <div className={styles.row}><button onClick={()=>void create()} disabled={!ready||busy||!prompt.trim()}>{busy?'Creando…':mode==='game'?'Crear videojuego 3D':'Generar entorno 3D'}</button>{busy&&<button className={styles.secondary} onClick={()=>void cancel()}>Detener</button>}<span className={styles.small}>Geometría procedural · archivo HTML y glTF</span></div>
- {job&&<p className={styles.status}>{stages[job.stage||'']||({queued:'En cola: esperando al PC',running:'Arquitecto y revisor trabajando',completed:'Entorno creado y guardado',cancelled:'Trabajo detenido',failed:'El trabajo no terminó'}[job.status]||job.status)}</p>}{error&&<p role="alert" className={styles.error}>{error}</p>}
- <details><summary>Cómo se construye y qué límites tiene</summary><p>El plan controla iluminación, materiales y objetos dentro de escenas soportadas. Qwen no escribe JavaScript que se ejecute en tu PC. Los dos roles usan el mismo modelo; la crítica es una opinión, no una prueba independiente. El primer motor admite formas básicas y prototipos, con un máximo de 40 objetos.</p></details>
+ {mode==='game'&&<p><a className={styles.button} href={housePrototypeHref(prompt)} target="_blank" rel="noopener noreferrer">Jugar un prototipo con la casa de Lía ↗</a><small> Misma arquitectura, personajes, colisiones y misión de cuatro etapas. Sin consulta de IA adicional.</small></p>}
+ {job&&<p className={styles.status}>{stages[job.stage||'']||({queued:'En cola en Atlas',running:'Diseño y compilación en curso',completed:'Entorno creado y guardado',cancelled:'Trabajo detenido',failed:'El trabajo no terminó'}[job.status]||job.status)}</p>}{error&&<p role="alert" className={styles.error}>{error}</p>}
+ <details><summary>Cómo se construye y qué límites tiene</summary><p>El modelo diseña una composición propia con hasta 32 objetos, materiales, agrupaciones y cámara. El compilador admite cajas, esferas, cilindros y conos y valida los datos antes de construir el archivo. En videojuegos mantiene los controles y objetivos del prototipo. La validación comprueba estructura y límites; la calidad visual necesita revisarse en la vista 3D. No equivale a un generador neuronal de personajes o mallas orgánicas.</p></details>
  <div className={styles.studioPane}><AtlasStudio request={null} ready={ready} initialProjectId={projectId}/></div></section>;
 }

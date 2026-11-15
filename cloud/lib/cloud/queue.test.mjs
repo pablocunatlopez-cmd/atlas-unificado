@@ -48,6 +48,32 @@ test('live learning summaries survive heartbeat storage while private tool detai
  assert.equal(live.online,true);assert.equal(learning.approvedTools,1);assert.equal(learning.tools[0].name,'Planificar dependencias de proyectos');assert.equal(learning.pendingTask.name,'Resolver referencias JSON Pointer');assert.equal(learning.running,true);assert.doesNotMatch(JSON.stringify(learning),/private|999/);
  advance(46000);assert.equal((await queue.status()).online,false);
 });
+
+test('Icarus consultation receipts cross heartbeat storage without private dialogue or invented learning',async t=>{
+ const {queue,advance,now}=fixture(t),startedAt=new Date(now()).toISOString();
+ const active={id:'icarus-1',phase:'consulting',processId:'creative',focus:'3d',at:startedAt,startedAt,sourceCount:0,usedReferenceCount:0,outcome:'in-progress',question:'PRIVATE-QUESTION',dialogue:'PRIVATE-DIALOGUE',sourceRoom:'PRIVATE-ROOM',destinationRoom:'PRIVATE-DESTINATION',sources:[{url:'https://private.invalid/PRIVATE-URL'}]};
+ const experience={enabled:true,running:true,phase:'ion',experiences:4,learningChanges:1,icarus:{schema:1,total:1,completed:0,blocked:0,active,recent:[],token:'PRIVATE-TOKEN'}};
+ const send=async value=>queue.heartbeat({...bridge,capabilities:{processTelemetry:{at:new Date(now()).toISOString(),experience:value}}});
+ await send(experience);
+ let live=await queue.status(),observed=live.capabilities.processTelemetry.experience;
+ assert.equal(live.online,true);assert.equal(observed.icarus.active.phase,'consulting');assert.equal(observed.icarus.active.sourceRoom,'games');assert.equal(observed.icarus.active.destinationRoom,'constellation');assert.equal(observed.icarus.completed,0);assert.equal(observed.learningChanges,1);
+ assert.doesNotMatch(JSON.stringify(live),/PRIVATE|private\.invalid/);
+
+ advance(1000);
+ const receipt={...active,phase:'returning',at:new Date(now()).toISOString(),sourceCount:3,usedReferenceCount:2,outcome:'references-available',acceptedChange:true};
+ const returned={...experience,icarus:{schema:1,total:1,completed:1,blocked:0,active:null,recent:[receipt]}};
+ await send(returned);await send(returned);
+ observed=(await queue.status()).capabilities.processTelemetry.experience;
+ assert.equal(observed.icarus.total,1);assert.equal(observed.icarus.completed,1);assert.equal(observed.icarus.recent.length,1);assert.equal(observed.icarus.recent[0].usedReferenceCount,2);
+ assert.equal(observed.learningChanges,1,'a returned reference and repeated heartbeat do not promote an improvement');assert.equal(Object.hasOwn(observed.icarus.recent[0],'acceptedChange'),false);
+ assert.doesNotMatch(JSON.stringify(observed),/PRIVATE|private\.invalid/);
+
+ advance(1000);
+ const blocked={...active,id:'icarus-2',phase:'blocked',at:new Date(now()).toISOString(),outcome:'lookup-failed'};
+ await send({...experience,icarus:{schema:1,total:2,completed:1,blocked:1,active:null,recent:[receipt,blocked]}});
+ observed=(await queue.status()).capabilities.processTelemetry.experience;
+ assert.equal(observed.icarus.completed,1);assert.equal(observed.icarus.blocked,1);assert.equal(observed.icarus.recent.at(-1).phase,'blocked');assert.equal(observed.icarus.recent.at(-1).sourceCount,0);assert.equal(observed.learningChanges,1);
+});
 test('actual migrations support isolated conversations, atomic claim and exactly-once completion',async t=>{
  const {queue}=fixture(t);const input=next('El motor se llama Zafiro.');const accepted=await queue.enqueue('pablo',input);
  assert.equal(accepted.status,'queued');await assert.rejects(queue.getJob('otro',accepted.jobId),error=>error.status===404);await assert.rejects(queue.conversation('otro',accepted.conversationId),error=>error.status===404);
@@ -97,13 +123,58 @@ test('database gates enforce per-user hourly and global queue limits',async t=>{
  const {job}=await queue.claim(bridge);await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result});await assert.rejects(queue.enqueue('pablo',next('Todavía limitado')),error=>error.status===429);
  advance(3600001);assert.equal((await queue.enqueue('pablo',next('Nueva hora'))).status,'queued');
 });
-test('context is bounded to current user conversation and result cannot smuggle credentials',async t=>{
+test('context keeps an expanded bounded window and result cannot smuggle credentials',async t=>{
  const {queue,sqlite,now}=fixture(t);const accepted=await queue.enqueue('pablo',next('Última pregunta'));await queue.cancel('pablo',accepted.jobId);
- for(let i=0;i<20;i++)sqlite.prepare('INSERT INTO cloud_messages(id,conversation_id,role,content,created_at) VALUES(?,?,?,?,?)').run('old-'+i,accepted.conversationId,i%2?'assistant':'user','x'.repeat(2000),now());
+ for(let i=0;i<60;i++)sqlite.prepare('INSERT INTO cloud_messages(id,conversation_id,role,content,created_at) VALUES(?,?,?,?,?)').run('old-'+i,accepted.conversationId,i%2?'assistant':'user','x'.repeat(2000),now());
  const pending=await queue.enqueue('pablo',next('Pregunta actual',{conversationId:accepted.conversationId,internet:true}));const {job}=await queue.claim(bridge);
- assert.equal(job.id,pending.jobId);assert.equal(job.messages.at(-1).content,'Pregunta actual');assert.ok(job.messages.length<=15);assert.ok(job.messages.reduce((sum,message)=>sum+message.content.length,0)<=10000);assert.equal(job.internet,true);
- await assert.rejects(queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,model:'fabricated-provider'}}));await assert.rejects(queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,answer:'x'.repeat(16001)}}));
- await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,secret:'private-value',sources:['private-memory']}});const response=await queue.getJob('pablo',job.id);assert.equal(response.result.secret,undefined);assert.equal(response.result.sources,undefined);
+ assert.equal(job.id,pending.jobId);assert.equal(job.messages.at(-1).content,'Pregunta actual');assert.equal(job.messages.length,23);assert.ok(job.messages.length<=48);assert.ok(job.messages.reduce((sum,message)=>sum+message.content.length,0)<=48000);assert.equal(job.internet,true);
+ await assert.rejects(queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,model:'fabricated-provider'}}));await assert.rejects(queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,answer:'x'.repeat(26001)}}));
+ await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,answer:'x'.repeat(26000),secret:'private-value',sources:['private-memory']}});const response=await queue.getJob('pablo',job.id);assert.equal(response.result.answer.length,26000);assert.equal(response.result.secret,undefined);assert.equal(response.result.sources,undefined);
+});
+
+test('local and cloud claims use the same chronological history and transport limits',async t=>{
+ for(const contentSize of [100,2000]){
+  let localMessages;
+  for(const mode of ['local','cloud']){
+   const {queue,sqlite,now}=fixture(t),accepted=await queue.enqueue('alice',next('Inicio'));
+   await queue.cancel('alice',accepted.jobId);
+   for(let i=0;i<60;i++)sqlite.prepare('INSERT INTO cloud_messages(id,conversation_id,role,content,created_at) VALUES(?,?,?,?,?)').run('history-'+i,accepted.conversationId,i%2?'assistant':'user',String(i).padStart(3,'0')+':'+'.'.repeat(contentSize-4),now());
+   const pending=await queue.enqueue('alice',next('Continúa desde aquí',{conversationId:accepted.conversationId}));
+   const {job}=mode==='local'?await queue.claim(bridge):await queue.claimOwned('alice',pending.jobId);
+   assert.equal(job.messages.length,contentSize===100?47:23,'retain recent whole user turns within the active message or character budget');
+   assert.equal(job.messages[0].role,'user');assert.equal(job.messages.at(-1).content,'Continúa desde aquí');
+   assert.ok(job.messages.length<=48);assert.ok(job.messages.reduce((sum,message)=>sum+message.content.length,0)<=48000);
+   const historical=job.messages.slice(0,-1).map(message=>Number(message.content.slice(0,3)));
+   assert.deepEqual(historical,[...historical].sort((a,b)=>a-b));
+   if(mode==='local')localMessages=job.messages;else assert.deepEqual(job.messages,localMessages);
+  }
+ }
+});
+
+test('cloud history preserves a twelve-turn preference and a long answer without another user\'s history',async t=>{
+ const preference='Prefiero que me hables en español y que la música de Lía sea jazz tranquilo.';
+ const longAnswer='Respuesta extensa comprobada: '+'.'.repeat(24000-'Respuesta extensa comprobada: '.length);
+ let localMessages;
+ for(const mode of ['local','cloud']){
+  const {queue}=fixture(t),other=await queue.enqueue('bob',next('SECRETO DE OTRA PERSONA'));
+  const otherJob=(await queue.claimOwned('bob',other.jobId)).job;
+  await queue.complete({jobId:otherJob.id,leaseToken:otherJob.leaseToken,result:{answer:'Respuesta privada de Bob.',model:'atlas-cloud'}});
+  let conversationId;
+  for(let turn=0;turn<12;turn++){
+   const accepted=await queue.enqueue('alice',next(turn===0?preference:'Paso '+turn,{...(conversationId?{conversationId}:{})}));conversationId=accepted.conversationId;
+   const {job}=await queue.claimOwned('alice',accepted.jobId);
+   await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{answer:turn===0?longAnswer:'Respuesta al paso '+turn,model:'atlas-cloud'}});
+  }
+  const pending=await queue.enqueue('alice',next('¿Cómo seguimos con mi música?',{conversationId}));
+  await assert.rejects(queue.claimOwned('bob',pending.jobId),error=>error.status===404);
+  await assert.rejects(queue.conversation('bob',conversationId),error=>error.status===404);
+  const {job}=mode==='local'?await queue.claim(bridge):await queue.claimOwned('alice',pending.jobId);
+  assert.equal(job.messages.length,25);assert.equal(job.messages[0].content,preference);assert.equal(job.messages[1].content,longAnswer);assert.equal(job.messages[1].content.length,24000);
+  assert.equal(job.messages.at(-1).content,'¿Cómo seguimos con mi música?');
+  assert.doesNotMatch(JSON.stringify(job.messages),/SECRETO DE OTRA PERSONA|Respuesta privada de Bob/);
+  assert.doesNotMatch(JSON.stringify((await queue.conversation('bob',other.conversationId)).messages),/jazz tranquilo|Respuesta extensa comprobada/);
+  if(mode==='local')localMessages=job.messages;else assert.deepEqual(job.messages,localMessages);
+ }
 });
 test('errors are generic and bridge liveness never exposes authentication material',async t=>{
  const {queue,advance}=fixture(t);assert.equal((await queue.status()).online,false);await queue.heartbeat(bridge);assert.equal((await queue.status()).online,true);advance(45001);assert.equal((await queue.status()).online,false);
@@ -186,4 +257,50 @@ test('process telemetry is independently whitelisted before persistence and cann
  const status=await queue.status(),telemetry=status.capabilities.processTelemetry;
  assert.equal(telemetry.processes.length,1);assert.equal(telemetry.processes[0].label,'Observación de fuentes');assert.equal(telemetry.processes[0].room,'mind');assert.deepEqual(telemetry.processes[0].counters,{observations:17});assert.equal(telemetry.core.generation,2);assert.equal(telemetry.core.qwenWeightsChanged,false);assert.equal(telemetry.core.method,'StrategyPolicy');assert.equal(telemetry.lor.verdict,'REFUTED');
  assert.doesNotMatch(sqlite.prepare('SELECT capabilities FROM cloud_bridge').get().capabilities,/private-room|private prompt|private-token|private-code|C:\/private/);
+});
+
+test('cloud inference reserves only the requested owned job and cannot duplicate or revive cancellation',async t=>{
+ const {queue}=fixture(t),a=await queue.enqueue('alice',next('Mi pregunta')),b=await queue.enqueue('bob',next('Otra pregunta'));
+ await assert.rejects(queue.claimOwned('alice',b.jobId),e=>e.status===404);
+ const claims=await Promise.all([queue.claimOwned('alice',a.jobId),queue.claimOwned('alice',a.jobId)]);
+ assert.equal(claims.filter(c=>c.job).length,1);const job=claims.find(c=>c.job).job;
+ assert.equal(job.messages.at(-1).content,'Mi pregunta');
+ await queue.cancel('alice',a.jobId);
+ await assert.rejects(queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{answer:'tarde',model:'atlas-cloud'}}),e=>e.status===409);
+ assert.equal((await queue.claimOwned('alice',a.jobId)).job,null);
+ assert.equal((await queue.getJob('bob',b.jobId)).status,'queued');
+});
+test('cloud answers preserve histories and a quota failure records a useful generic error',async t=>{
+ const {queue}=fixture(t),a=await queue.enqueue('alice',next()),{job}=await queue.claimOwned('alice',a.jobId);
+ await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{answer:'Respuesta en la nube.',model:'atlas-cloud',modelName:'Qwen en Groq'}});
+ assert.equal((await queue.conversation('alice',a.conversationId)).messages.at(-1).content,'Respuesta en la nube.');
+ const b=await queue.enqueue('alice',next('Segundo mensaje',{conversationId:a.conversationId})),claim=await queue.claimOwned('alice',b.jobId);
+ await queue.fail({jobId:b.jobId,leaseToken:claim.job.leaseToken,code:'quota',error:'secret'});
+ const failed=await queue.getJob('alice',b.jobId);assert.match(failed.error,/Cuota/);assert.doesNotMatch(failed.error,/secret/);
+});
+
+ test('cloud leases recover once and fail visibly after a second interrupted request',async t=>{
+ const {queue,advance}=fixture(t),a=await queue.enqueue('alice',next());
+ const first=await queue.claimOwned('alice',a.jobId);advance(45001);
+ const second=await queue.claimOwned('alice',a.jobId);assert.notEqual(first.job.leaseToken,second.job.leaseToken);advance(45001);
+ assert.equal((await queue.claimOwned('alice',a.jobId)).job,null);assert.equal((await queue.getJob('alice',a.jobId)).status,'failed');
+ });
+
+test('a calculator result is saved as a tool result rather than attributed to Qwen',async t=>{
+ const {queue}=fixture(t),a=await queue.enqueue('alice',next('Calcula (31*16)-(31+16)')),{job}=await queue.claimOwned('alice',a.jobId);
+ await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{answer:'449 · calculadora de Atlas',model:'atlas-tools',modelName:'Calculadora de Atlas · sin inferencia'}});
+ const saved=await queue.getJob('alice',a.jobId);assert.equal(saved.result.model,'atlas-tools');assert.match(saved.result.modelName,/sin inferencia/);
+ assert.match((await queue.conversation('alice',a.conversationId)).messages.at(-1).content,/449/);
+});
+
+test('agent traces keep only actual role, authorized model and status without prompt material',async t=>{
+ const {queue}=fixture(t),a=await queue.enqueue('alice',next('Depura código')),{job}=await queue.claimOwned('alice',a.jobId);
+ await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{answer:'Propuesta revisada.',model:'atlas-cloud',modelName:'Atlas',agents:[{role:'programmer',model:'qwen/qwen3.8-27b',status:'completed',secret:'never',prompt:'private'},{role:'reviewer',model:'openai/gpt-oss-120b',status:'unavailable'},{role:'admin',model:'other',status:'completed'}]}});
+ const saved=await queue.getJob('alice',a.jobId);assert.equal(saved.result.agents.length,2);assert.equal(saved.result.agents[1].status,'unavailable');assert.doesNotMatch(JSON.stringify(saved.result.agents),/never|private|admin/);
+});
+
+test('execution receipts preserve bounded verified library metadata without private input',async t=>{
+ const {queue}=fixture(t),a=await queue.enqueue('alice',next('Deduplica [1,1,2]')),{job}=await queue.claimOwned('alice',a.jobId);
+ await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{answer:'[1,2]',model:'atlas-tools',execution:{tool:'atlas-program-tools-1',operation:'dedupe',passed:3,total:3,input:'private'}}});
+ const saved=await queue.getJob('alice',a.jobId);assert.deepEqual(saved.result.execution,{tool:'atlas-program-tools-1',operation:'dedupe',passed:3,total:3});assert.doesNotMatch(JSON.stringify(saved.result.execution),/private/);
 });

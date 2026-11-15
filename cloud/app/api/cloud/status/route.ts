@@ -1,11 +1,5 @@
+import {agentEvaluations} from '@/lib/cloud/agent-registry';
+import {cloudConfigured,CLOUD_MODEL} from '@/lib/cloud/inference';
 import {cloudError,cloudJson,queue} from '@/lib/cloud/http';
 export const dynamic='force-dynamic';
-export async function GET(){
- try{
-  const service=queue(),status=await service.status();
-  // The house forms memories autonomously while it polls the bridge. This is a
-  // best-effort side effect: a missing migration must not hide live status.
-  try{await service.observeResidentEvents((status as {capabilities?:{processTelemetry?:unknown}}).capabilities?.processTelemetry);}catch{}
-  return cloudJson(status);
- }catch(error){return cloudError(error);}
-}
+export async function GET(){try{if(cloudConfigured()){const models=(await agentEvaluations()).filter(e=>e.status==='qualified');return cloudJson({online:true,configured:true,provider:'groq',modelName:models.length>1?'Atlas · agentes en Groq':models[0]?.model||CLOUD_MODEL,inference:'Groq · sin PC',sessionRequired:true,capabilities:{calculator:true,worlds:true,music:{composition:true,synthesis:'browser'},video:{ready:false,directedCapture:true},independentModels:Math.max(0,models.length-1)}});}return cloudJson(await queue().status());}catch(error){return cloudError(error);}}

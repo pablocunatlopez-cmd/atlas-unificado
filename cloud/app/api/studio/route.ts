@@ -3,8 +3,10 @@ import {z} from 'zod';
 import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {allowedOrigin,privateHeaders} from '@/lib/server-state';
 import {generateProject} from '@/lib/studio/generator';
+import {studioRebuildOptions,StudioRedesignRequiredError} from '@/lib/studio/rebuild';
 import type {Brief,StudioMode} from '@/lib/studio/scene';
 import {STUDIO_SQL} from '@/lib/studio/storage-sql';
+import {researchPayload} from '@/lib/research/server';
 export const dynamic='force-dynamic';
 const schema=z.object({id:z.string().uuid().optional(),revision:z.number().int().min(1).optional(),prompt:z.string().trim().min(1).max(4000).optional(),mode:z.enum(['code','image','3d','game']).optional(),code:z.string().min(30).max(240000).optional(),seed:z.number().int().min(0).max(4294967295).optional(),quality:z.enum(['balanced','high']).optional(),lighting:z.enum(['day','sunset','night']).optional(),palette:z.enum(['Titanio','Oro','Azul','Rojo','Verde','Rosa','Blanco','Negro']).optional()});
 type Row={id:string;user_id:string;title:string;mode:StudioMode;revision:number;created_at:string;updated_at:string};
@@ -27,8 +29,8 @@ export async function POST(request:Request){
   const raw=await request.text();if(raw.length>300000)return Response.json({error:'El proyecto supera el tamaño admitido.'},{status:413,headers:privateHeaders});const parsed=schema.safeParse(JSON.parse(raw));if(!parsed.success)return Response.json({error:'El proyecto no pasa la validación.'},{status:400,headers:privateHeaders});const input=parsed.data;
   let brief:Brief,code:string;const existing=input.id?await getProject(user.userId,input.id):null;
   if(input.id&&(!existing||input.revision!==existing.revision))return Response.json({error:'El proyecto cambió en otro lugar. Recárgalo antes de guardar.'},{status:409,headers:privateHeaders});
-  if(input.code!==undefined){if(!existing)return Response.json({error:'Abre un proyecto antes de guardar código.'},{status:400,headers:privateHeaders});brief=existing.brief;code=input.code;}
-  else{if(!input.prompt||!input.mode)return Response.json({error:'Describe qué quieres crear y elige un modo.'},{status:400,headers:privateHeaders});const generated=generateProject(input.prompt,input.mode,{seed:input.seed,quality:input.quality,lighting:input.lighting,palette:input.palette});brief=generated.brief;code=generated.code;}
+  if(input.code!==undefined){if(!existing)return Response.json({error:'Abre un proyecto antes de guardar código.'},{status:400,headers:privateHeaders});brief={...existing.brief,preview:'html'};code=input.code;}
+  else{if(!input.prompt||!input.mode)return Response.json({error:'Describe qué quieres crear y elige un modo.'},{status:400,headers:privateHeaders});const options=studioRebuildOptions({...input,prompt:input.prompt,mode:input.mode},existing);const profiles=(await researchPayload()).control.spiral?.profiles;const generated=generateProject(input.prompt,input.mode,{meshRows:profiles?.meshRows,...options});brief={...generated.brief,preview:input.mode==='code'?'html':'eras'};code=generated.code;}
   const id=existing?.id||crypto.randomUUID(),revision=(existing?.revision||0)+1,date=new Date().toISOString(),content=JSON.stringify({brief,code});
   if(existing){const results=await env.DB.batch([
    env.DB.prepare(STUDIO_SQL.appendVersion).bind(crypto.randomUUID(),revision,content,date,id,user.userId,input.revision),
@@ -36,5 +38,5 @@ export async function POST(request:Request){
   ]);if(!results[1].meta.changes)return Response.json({error:'Hay una versión más reciente. Tus cambios siguen en el editor.'},{status:409,headers:privateHeaders});}
   else await env.DB.batch([env.DB.prepare('INSERT INTO studio_projects (id,user_id,title,mode,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)').bind(id,user.userId,brief.title,brief.mode,1,date,date),env.DB.prepare('INSERT INTO studio_versions (id,project_id,version,content,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),id,1,content,date)]);
   return Response.json({project:await getProject(user.userId,id)},{headers:privateHeaders});
- }catch{return Response.json({error:'No se completó la creación o el guardado. La versión anterior sigue disponible.'},{status:503,headers:privateHeaders});}
+ }catch(error){if(error instanceof StudioRedesignRequiredError)return Response.json({error:error.message,code:error.code,href:error.href},{status:409,headers:privateHeaders});return Response.json({error:'No se completó la creación o el guardado. La versión anterior sigue disponible.'},{status:503,headers:privateHeaders});}
 }

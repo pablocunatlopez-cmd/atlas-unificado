@@ -1,3 +1,4 @@
+import {cloudConfigured} from '@/lib/cloud/inference';
 import {body,bridgeAuthorized,cloudError,cloudJson,queue} from '@/lib/cloud/http';
 import {CloudQueueError} from '@/lib/cloud/queue.mjs';
 import {env} from 'cloudflare:workers';
@@ -7,7 +8,7 @@ export async function POST(request:Request){
   await bridgeAuthorized(request);const input=await body(request,80000),service=queue();
   switch(input.action){
    case 'heartbeat':return cloudJson(await service.heartbeat(input));
-   case 'claim':return cloudJson(await service.claim(input));
+   case 'claim':return cloudJson(cloudConfigured()?{job:null,mode:'cloud'}:await service.claim(input));
    case 'complete':{
     const video=(input.result as {video?:{artifactId?:string}}|undefined)?.video;
     if(video){

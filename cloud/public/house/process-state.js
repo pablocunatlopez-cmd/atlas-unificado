@@ -1,11 +1,12 @@
+import {normalizeHouseWork} from './work-courier.js';
 import {ROOM_IDS} from './layout.js';
+import {normalizeIcarusJourneys} from './sky-journeys.js';
 
 export const PROCESS_PHASES=Object.freeze(['observe','understand','connect','apply','refute','retain']);
 export const PROCESS_STATES=Object.freeze(['idle','running','passed','failed','waiting']);
 export const TELEMETRY_FRESH_MS=75000;
 export const TELEMETRY_CONTRACT_VERSION=1;
 export const PHASE_LABELS=Object.freeze({observe:'Observar',understand:'Comprender',connect:'Conectar',apply:'Aplicar',refute:'Refutar',retain:'Conservar'});
-// These are coordinator-reported outcomes, not independent evidence or integration claims.
 export const STATE_LABELS=Object.freeze({idle:'En reposo',running:'En ejecución',passed:'Resultado reportado',failed:'Fallo reportado',waiting:'En espera'});
 // Explicit reasons so the UI never invents activity from a missing or stale signal (P2).
 export const REASON_LABELS=Object.freeze({
@@ -29,7 +30,7 @@ export function normalizeProcessState(value){
  if(Array.isArray(value?.processes))for(const raw of value.processes.slice(0,32)){
   if(!raw||!identifier(raw.id)||!PROCESS_STATES.includes(raw.state))continue;
   const room=ROOM_IDS.includes(raw.room)?raw.room:ROOM_IDS.includes(raw.id)?raw.id:Object.hasOwn(aliases,raw.id)?aliases[raw.id]:null;if(!room)continue;
-  const item={id:raw.id,room,state:raw.state};
+  const item={id:raw.id,room,state:raw.state};if(typeof raw.actorId==='string'&&/^[a-z0-9-]{1,64}$/.test(raw.actorId))item.actorId=raw.actorId;
   if(typeof raw.label==='string'&&raw.label.trim())item.label=raw.label.replace(/\s+/g,' ').trim().slice(0,64);
   if(PROCESS_PHASES.includes(raw.phase))item.phase=raw.phase;
   if(raw.counters&&typeof raw.counters==='object'){
@@ -39,10 +40,8 @@ export function normalizeProcessState(value){
   processes.push(item);
  }
  const at=typeof value?.at==='string'&&Number.isFinite(Date.parse(value.at))?new Date(value.at).toISOString():null;
- return {at,connected:value?.connected!==false,processes,contractVersion:TELEMETRY_CONTRACT_VERSION};
+ return {contractVersion:TELEMETRY_CONTRACT_VERSION,at,connected:value?.connected!==false,processes,...(value?.icarus?{icarus:normalizeIcarusJourneys(value.icarus)}:{}),...(value?.houseWork?{houseWork:normalizeHouseWork(value.houseWork)}:{})};
 }
-// A future-dated or malformed timestamp is not evidence of a fresh signal.
-// Callers that need freshness must fail closed instead of accepting a negative age.
 export function telemetryAge(at,{now=Date.now()}={}){
  if(typeof at!=='string'||!Number.isFinite(now))return null;
  const timestamp=Date.parse(at);
@@ -52,9 +51,9 @@ export function telemetryAge(at,{now=Date.now()}={}){
  return age;
 }
 export function telemetryFreshness(value,{ageMs,now=Date.now(),maxAgeMs=TELEMETRY_FRESH_MS}={}){
- const age=Number.isFinite(ageMs)?ageMs:telemetryAge(value?.at,{now});
+ const computed=telemetryAge(value?.at,{now});const age=ageMs===undefined?computed:ageMs;
  if(value?.connected===false)return {fresh:false,reason:'disconnected',ageMs:age};
- if(age===null)return {fresh:false,reason:'invalid_time',ageMs:null};
+ if(computed===null||age===null||Number.isNaN(age)||age<0)return {fresh:false,reason:'invalid_time',ageMs:null};
  if(age>maxAgeMs)return {fresh:false,reason:'stale',ageMs:age};
  return {fresh:true,reason:'fresh',ageMs:age};
 }
@@ -79,11 +78,9 @@ export function creatureArchetype(process,room){
  if(['body','games','cinema','refutation'].includes(room))return 'robot';
  return 'human';
 }
-export function measuredChanges(value,{now=Date.now(),maxAgeMs=TELEMETRY_FRESH_MS}={}){
- // Counters are coordinator-reported; do not keep displaying them as current
- // after the telemetry expires or when its timestamp is invalid/future-dated.
- const age=telemetryAge(value?.at,{now});
- if(value?.connected===false||age===null||age>maxAgeMs)return null;
+export function measuredChanges(value,{now=Date.now(),maxAgeMs=75000}={}){
+ const timestamp=typeof value?.at==='string'?Date.parse(value.at):NaN,age=now-timestamp;
+ if(!Number.isFinite(maxAgeMs)||maxAgeMs<0||value?.connected===false||!Number.isFinite(timestamp)||!Number.isFinite(age)||age<0||age>maxAgeMs)return null;
  const accepted=value?.processes?.find(item=>item.id==='experience')?.counters?.accepted;
  return counter(accepted)?accepted:null;
 }

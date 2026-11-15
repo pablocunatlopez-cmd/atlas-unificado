@@ -1,0 +1,333 @@
+{
+  "version": 1,
+  "fps": 30,
+  "bones": [
+    "root",
+    "spine05",
+    "spine04",
+    "spine03",
+    "spine02",
+    "spine01",
+    "neck01",
+    "neck02",
+    "neck03",
+    "head",
+    "clavicle.L",
+    "shoulder01.L",
+    "upperarm01.L",
+    "lowerarm01.L",
+    "wrist.L",
+    "upperleg01.L",
+    "lowerleg01.L",
+    "foot.L",
+    "clavicle.R",
+    "shoulder01.R",
+    "upperarm01.R",
+    "lowerarm01.R",
+    "wrist.R",
+    "upperleg01.R",
+    "lowerleg01.R",
+    "foot.R"
+  ],
+  "stride": 105,
+  "format": "int16-quaternion-pelvis",
+  "clips": {
+    "Idle_Loop": {
+      "duration": 2.5,
+      "frames": 76,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 0,
+          "phase": 0.7733333333333333,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 176400,
+          "phase": 0.7866666666666666,
+          "stride": 0.65
+        }
+      }
+    },
+    "Walk_Loop": {
+      "duration": 1.3333333730697632,
+      "frames": 42,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 15960,
+          "phase": 0,
+          "stride": 1.3879549631721688
+        },
+        "male": {
+          "offset": 192360,
+          "phase": 0,
+          "stride": 1.457496554691481
+        }
+      }
+    },
+    "Jog_Fwd_Loop": {
+      "duration": 0.9333333373069763,
+      "frames": 30,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 24780,
+          "phase": 0.9310344827586207,
+          "stride": 2.437425026827657
+        },
+        "male": {
+          "offset": 201180,
+          "phase": 0.9310344827586207,
+          "stride": 2.559892708110346
+        }
+      }
+    },
+    "Sprint_Loop": {
+      "duration": 0.6666666865348816,
+      "frames": 22,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 31080,
+          "phase": 0.8571428571428571,
+          "stride": 2.280898290693215
+        },
+        "male": {
+          "offset": 207480,
+          "phase": 0.8571428571428571,
+          "stride": 2.395516370942703
+        }
+      }
+    },
+    "Crouch_Idle_Loop": {
+      "duration": 2.933333396911621,
+      "frames": 90,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 35700,
+          "phase": 0.4943820224719101,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 212100,
+          "phase": 0.4943820224719101,
+          "stride": 0.65
+        }
+      }
+    },
+    "Crouch_Fwd_Loop": {
+      "duration": 2,
+      "frames": 61,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 54600,
+          "phase": 0,
+          "stride": 1.642366856873624
+        },
+        "male": {
+          "offset": 231000,
+          "phase": 0,
+          "stride": 1.7252710055541443
+        }
+      }
+    },
+    "Jump_Start": {
+      "duration": 1.3333333730697632,
+      "frames": 42,
+      "loop": false,
+      "sex": {
+        "female": {
+          "offset": 67410,
+          "phase": 0,
+          "stride": 0.7096013225774029
+        },
+        "male": {
+          "offset": 243810,
+          "phase": 0,
+          "stride": 0.7590673258246985
+        }
+      }
+    },
+    "Jump_Loop": {
+      "duration": 2.5,
+      "frames": 76,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 76230,
+          "phase": 0.9066666666666666,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 252630,
+          "phase": 0.92,
+          "stride": 0.65
+        }
+      }
+    },
+    "Jump_Land": {
+      "duration": 1.2666666507720947,
+      "frames": 39,
+      "loop": false,
+      "sex": {
+        "female": {
+          "offset": 92190,
+          "phase": 0,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 268590,
+          "phase": 0,
+          "stride": 0.65
+        }
+      }
+    },
+    "Roll": {
+      "duration": 1.4666666984558105,
+      "frames": 46,
+      "loop": false,
+      "sex": {
+        "female": {
+          "offset": 100380,
+          "phase": 0,
+          "stride": 3.1000602966937088
+        },
+        "male": {
+          "offset": 276780,
+          "phase": 0,
+          "stride": 3.1104533449301233
+        }
+      }
+    },
+    "Hit_Chest": {
+      "duration": 0.3333333432674408,
+      "frames": 12,
+      "loop": false,
+      "sex": {
+        "female": {
+          "offset": 110040,
+          "phase": 0,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 286440,
+          "phase": 0,
+          "stride": 0.65
+        }
+      }
+    },
+    "Death01": {
+      "duration": 2.4000000953674316,
+      "frames": 74,
+      "loop": false,
+      "sex": {
+        "female": {
+          "offset": 112560,
+          "phase": 0,
+          "stride": 1.2682176831498475
+        },
+        "male": {
+          "offset": 288960,
+          "phase": 0,
+          "stride": 1.3307287236510632
+        }
+      }
+    },
+    "Sword_Idle": {
+      "duration": 1.6666666269302368,
+      "frames": 51,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 128100,
+          "phase": 0.5,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 304500,
+          "phase": 0.5,
+          "stride": 0.65
+        }
+      }
+    },
+    "Sword_Attack": {
+      "duration": 1.5333333015441895,
+      "frames": 47,
+      "loop": false,
+      "sex": {
+        "female": {
+          "offset": 138810,
+          "phase": 0,
+          "stride": 1.8857306762771788
+        },
+        "male": {
+          "offset": 315210,
+          "phase": 0,
+          "stride": 1.96501122049665
+        }
+      }
+    },
+    "Pistol_Idle_Loop": {
+      "duration": 1.6666666269302368,
+      "frames": 51,
+      "loop": true,
+      "sex": {
+        "female": {
+          "offset": 148680,
+          "phase": 0.58,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 325080,
+          "phase": 0.58,
+          "stride": 0.65
+        }
+      }
+    },
+    "Pistol_Shoot": {
+      "duration": 0.6333333253860474,
+      "frames": 20,
+      "loop": false,
+      "sex": {
+        "female": {
+          "offset": 159390,
+          "phase": 0,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 335790,
+          "phase": 0,
+          "stride": 0.65
+        }
+      }
+    },
+    "Interact": {
+      "duration": 2,
+      "frames": 61,
+      "loop": false,
+      "sex": {
+        "female": {
+          "offset": 163590,
+          "phase": 0,
+          "stride": 0.65
+        },
+        "male": {
+          "offset": 339990,
+          "phase": 0,
+          "stride": 0.65
+        }
+      }
+    }
+  },
+  "source": {
+    "author": "Quaternius / Gonzalo Furnier",
+    "license": "CC0-1.0",
+    "page": "https://opengameart.org/content/universal-animation-library",
+    "sha256": "1b7bf67866360665426bb99e4c71bd619f19b408453c24e30f0c3071601eee5c"
+  },
+  "bytes": 352800,
+  "binarySha256": "fcebba62c45fa708da7b3934e9f9523c7d230bdc34b6051c2280398f5f0ede7d"
+}

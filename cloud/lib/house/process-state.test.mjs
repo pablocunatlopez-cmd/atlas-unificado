@@ -15,16 +15,17 @@ import {
 
 test('process display accepts bounded evidence and rejects unknown states, counters and executable fields',()=>{
  const value=normalizeProcessState({at:'2026-10-31T12:00:00Z',secret:'ignored',processes:[{id:'library',state:'running',phase:'observe',label:'Repositorios\n públicos',counters:{observations:14,accepted:0,rejected:-1,trials:1e30},script:'run()'},{id:'__proto__',state:'running'},{id:'bad',room:'missing',state:'passed'},{id:'core',state:'superintelligent'},{id:'custom',room:'language',state:'passed',counters:{accepted:2}}]});
- assert.equal(value.at,'2026-10-31T12:00:00.000Z');
- assert.equal(value.contractVersion,TELEMETRY_CONTRACT_VERSION);
- assert.equal(value.processes.length,2);
- assert.deepEqual(value.processes[0],{id:'library',room:'mind',state:'running',label:'Repositorios públicos',phase:'observe',counters:{observations:14,accepted:0}});
- assert.equal(value.secret,undefined);
- assert.equal(value.processes[0].script,undefined);
+ assert.equal(value.at,'2026-10-31T12:00:00.000Z');assert.equal(value.processes.length,2);assert.deepEqual(value.processes[0],{id:'library',room:'mind',state:'running',label:'Repositorios públicos',phase:'observe',counters:{observations:14,accepted:0}});assert.equal(value.secret,undefined);assert.equal(value.processes[0].script,undefined);
  assert.match(processCaption(value.processes[0]),/Observar.*En ejecución.*Aceptados reportados 0/);
  assert.equal(normalizeProcessState({processes:Array.from({length:100},()=>({id:'chat',state:'idle'}))}).processes.length,32);
 });
 
+test('the scene preserves only closed Icarus consultation state without inventing learning or exposing text',()=>{
+ const event={id:'icarus-12',processId:'creative',focus:'3d',phase:'returning',at:'2026-11-04T09:00:00Z',startedAt:'2026-11-04T08:59:50Z',sourceCount:2,usedReferenceCount:1,outcome:'references-available',question:'PRIVATE QUESTION',url:'https://private.invalid'};
+ const value=normalizeProcessState({at:event.at,connected:false,processes:[{id:'experience',state:'waiting',counters:{accepted:3}}],icarus:{schema:1,total:12,completed:9,blocked:3,active:null,recent:[event],secret:'PRIVATE TOKEN'}});
+ assert.equal(value.connected,false);assert.equal(value.icarus.recent[0].id,event.id);assert.equal(value.icarus.recent[0].usedReferenceCount,1);assert.equal(measuredChanges(value),null);assert.doesNotMatch(JSON.stringify(value),/PRIVATE|private\.invalid/);
+ assert.equal(normalizeProcessState({processes:[],icarus:{schema:99}}).icarus,null);
+});
 test('fresh running state drives work, stale or absent telemetry becomes waiting without inventing learning',()=>{
  const data=normalizeProcessState({at:'2026-11-01T12:00:00Z',processes:[{id:'library',state:'running',phase:'observe',counters:{observations:8}}]});
  const live=processForRoom(data,'mind',{ageMs:74000});
@@ -77,27 +78,19 @@ test('missing, future or offline evidence cannot authorize work, and phases prod
  for(const ageMs of [-1,Infinity,76000])assert.equal(processForRoom(data,'mind',{ageMs}).workVerified,false);
  assert.equal(processMotion({state:'running'},1).working,false);
  const live=processForRoom(data,'mind',{ageMs:1000}),poses=['observe','understand','connect','apply','refute','retain'].map(phase=>processMotion({...live,phase},1));
- assert.equal(new Set(poses.map(pose=>JSON.stringify(pose))).size,6);
- assert.match(processCaption({...live,phase:'retain'}),/Conservar.*Cambios reportados 2/);
- assert.equal(measuredChanges(data,{now:Date.parse('2026-11-01T12:00:00Z')+1000}),2);
- assert.equal(measuredChanges(data,{now:Date.parse('2026-11-01T12:01:16Z')}),null);
- assert.equal(measuredChanges({processes:[{id:'tools',counters:{accepted:99}}]}),null);
- assert.equal(creatureArchetype({id:'experience'},'mind'),'human');
- assert.equal(creatureArchetype({id:'agents'},'constellation'),'bird');
- assert.equal(creatureArchetype({id:'research'},'mind'),'human');
- assert.equal(creatureArchetype({id:'external'},'constellation'),'bird');
- assert.equal(creatureArchetype({id:'lab',state:'waiting'},'lab'),'animal');
- assert.equal(creatureArchetype({id:'creative',state:'running'},'lab'),'animal');
- assert.equal(creatureArchetype({id:'tools'},'body'),'robot');
+ assert.equal(new Set(poses.map(pose=>JSON.stringify(pose))).size,6);assert.match(processCaption({...live,phase:'retain'}),/Conservar.*Cambios reportados 2/);
+ assert.equal(measuredChanges(data,{now:Date.parse(data.at)+1000}),2);assert.equal(measuredChanges({processes:[{id:'tools',counters:{accepted:99}}]}),null);
+ assert.equal(creatureArchetype({id:'experience'},'mind'),'human');assert.equal(creatureArchetype({id:'agents'},'constellation'),'bird');assert.equal(creatureArchetype({id:'research'},'mind'),'human');assert.equal(creatureArchetype({id:'external'},'constellation'),'bird');
+ assert.equal(creatureArchetype({id:'lab',state:'waiting'},'lab'),'animal');assert.equal(creatureArchetype({id:'creative',state:'running'},'lab'),'animal');assert.equal(creatureArchetype({id:'tools'},'body'),'robot');
 });
 
 test('refuted and passed evidence have distinct labels while their creatures never walk as if still working',()=>{
  const data=normalizeProcessState({processes:[{id:'tools',state:'passed',counters:{trials:12,accepted:3}},{id:'review',state:'failed',phase:'refute',counters:{rejected:2}}]});
- const pass=processForRoom(data,'body'),fail=processForRoom(data,'refutation');
- assert.match(processCaption(pass),/Resultado reportado.*Aceptados reportados 3/);
- assert.match(processCaption(fail),/Refutar.*Fallo reportado.*Rechazados reportados 2/);
- for(const record of [pass,fail])for(let time=0;time<8;time+=.5){
-  assert.equal(processMotion(record,time).limb,0);
-  assert.equal(processMotion(record,time).travel,0);
- }
+ const pass=processForRoom(data,'body'),fail=processForRoom(data,'refutation');assert.match(processCaption(pass),/Resultado reportado.*Aceptados reportados 3/);assert.match(processCaption(fail),/Refutar.*Fallo reportado.*Rechazados reportados 2/);
+ for(const record of [pass,fail])for(let time=0;time<8;time+=.5){assert.equal(processMotion(record,time).limb,0);assert.equal(processMotion(record,time).travel,0);}
+});
+
+test('reported counters expire and invalid clocks never promote stale coordinator data',()=>{
+ const at='2026-11-14T20:00:00Z',now=Date.parse(at),sample={at,connected:true,processes:[{id:'experience',counters:{accepted:3}}]};
+ assert.equal(measuredChanges(sample,{now:now+75000}),3);assert.equal(measuredChanges(sample,{now:now+75001}),null);assert.equal(measuredChanges(sample,{now:now-1}),null);assert.equal(measuredChanges({...sample,at:'invalid'},{now}),null);assert.equal(measuredChanges({...sample,connected:false},{now}),null);assert.equal(measuredChanges(sample,{now,maxAgeMs:NaN}),null);
 });
