@@ -1,3 +1,4 @@
+import {houseFunction} from './functional-world.js';
 import {validateFilmShots,filmCameraAt} from './film-shots.js';
 import {createAdaptiveQuality} from './adaptive-quality.js?v=people1';
 import * as THREE from './vendor/three.module.js';
@@ -5,7 +6,7 @@ import {createRenderEngine} from './render-engine.js';
 import {CircularJoystick,showTouchControls} from './mobile-input.js';
 import {ROOMS,roomById,roomAt,movePlayer,navigationVector,blocked} from './layout.js';
 import {WORKSTATIONS,residentById} from './residents.js';
-import {buildHouse} from './scene.js?v=housework1';
+import {buildHouse} from './scene.js?v=functions1';
 import {normalizeProcessState,processForRoom,processCaption} from './process-state.js?v=housework1';
 
 const $=id=>document.getElementById(id),canvas=$('scene'),callbacks=[],urls=new Set();
@@ -54,7 +55,7 @@ function applyCreative(value,source='coordinator'){
  send('creative',{value:{...result,source:creativeSource}});
 }
 function focusWork(id){const room=roomById(id);if(!room)return;const x=(room.bounds[0]+room.bounds[2])/2,z=(room.bounds[1]+room.bounds[3])/2;teleport(id);yaw=Math.atan2(x-player.x,-(z-player.z));pitch=Math.atan2(2.35-1.64,Math.max(.2,Math.hypot(x-player.x,z-player.z)));void readLiving().then(()=>{if(!disposed)send('workinteraction',{value:house?.activateLiving(id)});});}
-function interact(){if(!overview)send('interact',{room:currentRoom});}
+function interact(){if(overview)return;raycaster.setFromCamera(new THREE.Vector2(0,0),camera);const hit=raycaster.intersectObjects(house?.interactive||[],false).find(hit=>hit.object.userData.functionId&&hit.distance<3.5);if(hit&&houseFunction(hit.object.userData.functionId)){send('function',{id:hit.object.userData.functionId});return;}send('interact',{room:currentRoom});}
 function resize(){if(!renderer)return;const width=innerWidth,height=innerHeight;camera.aspect=width/height;camera.fov=overview?46:(width<height?67:58);camera.updateProjectionMatrix();renderer.setSize(width,height,false);}
 function cameraFrame(time){
  const p=camera.position;
@@ -101,7 +102,7 @@ listen($('overview'),'click',()=>{setOverview(true);resize();});listen($('walk')
 listen(window,'resize',resize);
 listen(canvas,'pointerdown',event=>{if(drag||event.button>0)return;canvas.focus();canvas.setPointerCapture(event.pointerId);drag={id:event.pointerId,x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,moved:false};});
 listen(canvas,'pointermove',event=>{if(!drag||drag.id!==event.pointerId||paused)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>6)drag.moved=true;drag.x=event.clientX;drag.y=event.clientY;if(overview){orbit-=dx*.006;elevation=Math.max(.4,Math.min(1.1,elevation+dy*.004));}else{yaw-=dx*.005;pitch=Math.max(-.9,Math.min(.9,pitch-dy*.004));}transition=null;});
-listen(canvas,'pointerup',event=>{if(!drag||drag.id!==event.pointerId)return;const clicked=!drag.moved;drag=null;if(clicked&&house&&!paused){raycaster.setFromCamera(new THREE.Vector2(event.clientX/innerWidth*2-1,-event.clientY/innerHeight*2+1),camera);const hit=raycaster.intersectObjects(house.interactive,false)[0];if(hit){const id=hit.object.userData.room;if(!overview&&currentRoom===id)interact();else{teleport(id);resize();}}}});
+listen(canvas,'pointerup',event=>{if(!drag||drag.id!==event.pointerId)return;const clicked=!drag.moved;drag=null;if(clicked&&house&&!paused){raycaster.setFromCamera(new THREE.Vector2(event.clientX/innerWidth*2-1,-event.clientY/innerHeight*2+1),camera);const hit=raycaster.intersectObjects(house.interactive,false)[0];if(hit){if(houseFunction(hit.object.userData.functionId)){send('function',{id:hit.object.userData.functionId});return;}const id=hit.object.userData.room;if(!overview&&currentRoom===id)interact();else{teleport(id);resize();}}}});
 for(const type of ['pointercancel','lostpointercapture'])listen(canvas,type,()=>drag=null);
 listen(document,'keydown',event=>{const key=event.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key))event.preventDefault();if(paused)return;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)&&overview){teleport(currentRoom);resize();}keys.add(key);if(key==='e'&&!event.repeat)interact();if(key==='h'&&!event.repeat){setOverview(!overview);resize();}});
 listen(document,'keyup',event=>keys.delete(event.key.toLowerCase()));listen(window,'blur',()=>{keys.clear();joystick?.reset();drag=null;});listen(document,'visibilitychange',()=>{last=0;keys.clear();joystick?.reset();drag=null;});

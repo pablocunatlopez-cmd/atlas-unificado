@@ -1,4 +1,5 @@
 'use client';
+import {houseFunction} from '../public/house/functional-world.js';
 
 import {useEffect,useMemo,useRef,useState} from 'react';
 import styles from './house-scene.module.css';
@@ -40,7 +41,7 @@ export type HouseAPI={
  pause:(value:boolean)=>void;
  setProcessState:(value:HouseProcessState)=>void;
 };
-type Props={onPeopleStatus?:(value:HousePeopleStatus)=>void;creative?:PublicCreativePreview|null;onCreativeApplied?:(value:HouseInstallation)=>void;onResidentFocus?:(id:string)=>void;activeRoom?:HouseRoom;processState?:HouseProcessState;paused?:boolean;embedded?:boolean;className?:string;onRoomChange?:(room:HouseRoom)=>void;onInteract?:(room:HouseRoom)=>void;onReady?:(api:HouseAPI)=>void;onPerformance?:(value:HousePerformance)=>void;onError?:(message:string)=>void};
+type Props={onFunction?:(id:string)=>void;onPeopleStatus?:(value:HousePeopleStatus)=>void;creative?:PublicCreativePreview|null;onCreativeApplied?:(value:HouseInstallation)=>void;onResidentFocus?:(id:string)=>void;activeRoom?:HouseRoom;processState?:HouseProcessState;paused?:boolean;embedded?:boolean;className?:string;onRoomChange?:(room:HouseRoom)=>void;onInteract?:(room:HouseRoom)=>void;onReady?:(api:HouseAPI)=>void;onPerformance?:(value:HousePerformance)=>void;onError?:(message:string)=>void};
 const validRoom=(value:unknown):value is HouseRoom=>typeof value==='string'&&HOUSE_ROOMS.some(room=>room.id===value);
 
 export function HouseScene(props:Props){
@@ -69,6 +70,7 @@ export function HouseScene(props:Props){
    const data=event.data;
    if(data.type==='atlas:house:people'&&data.value&&typeof data.value==='object'&&typeof data.value.enabled==='boolean'){const v=data.value;latest.current.onPeopleStatus?.({enabled:v.enabled,active:Array.isArray(v.active)?Math.min(2,v.active.length):0,loading:Array.isArray(v.loading)&&v.loading.length>0,failed:Array.isArray(v.failed)&&v.failed.length>0,limit:v.limit===0?0:v.limit===1?1:2});}
    if(data.type==='atlas:house:ready'){stopHello();setReady(true);setError(null);api.pause(latest.current.paused===true);latest.current.onReady?.(api);}
+   if(data.type==='atlas:house:function'&&typeof data.id==='string'&&houseFunction(data.id))latest.current.onFunction?.(data.id);
    if(data.type==='atlas:house:room'&&validRoom(data.room)){currentRoom.current=data.room;latest.current.onRoomChange?.(data.room);}
    if(data.type==='atlas:house:interact'&&validRoom(data.room))latest.current.onInteract?.(data.room);
    if(data.type==='atlas:house:performance'&&[data.fps,data.frames,data.drawCalls,data.triangles].every(value=>typeof value==='number'&&Number.isFinite(value)))latest.current.onPerformance?.({fps:data.fps,frames:data.frames,drawCalls:data.drawCalls,triangles:data.triangles,backend:String(data.backend)});
@@ -90,7 +92,7 @@ export function HouseScene(props:Props){
  useEffect(()=>{if(ready&&props.processState)api.setProcessState(props.processState);},[api,props.processState,ready]);
  useEffect(()=>{if(ready)api.setCreativeState(props.creative||null);},[api,props.creative,ready]);
  return <div className={[styles.scene,props.className||''].join(' ')} data-house-ready={ready} aria-busy={!ready&&!error}>
-  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=quality1'+(props.embedded===false?'':'&embedded=1')} allow="fullscreen; autoplay" className={styles.frame} />
+  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=functions1'+(props.embedded===false?'':'&embedded=1')} allow="fullscreen; autoplay" className={styles.frame} />
  </div>;
 }
 

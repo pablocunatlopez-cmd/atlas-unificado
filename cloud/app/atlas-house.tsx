@@ -1,4 +1,5 @@
 'use client';
+import {HOUSE_FUNCTIONS,houseFunction} from '../public/house/functional-world.js';
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowUpRight,AudioLines,Brain,Clapperboard,FlaskConical,Gamepad2,Home,Languages,Menu,MessageCircle,Orbit,Share2,ShieldCheck,Wrench,X,type LucideIcon} from 'lucide-react';
@@ -51,6 +52,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null);
  const charterDialog=useRef<HTMLDialogElement>(null);const [capturing,setCapturing]=useState(false),[hudHidden,setHudHidden]=useState(false);
  const captureView=async()=>{if(!api||capturing)return;setCapturing(true);try{const url=await api.capture();const link=document.createElement('a');link.href=url;link.download='lia-casa.png';link.click();}catch(e){setNotice(e instanceof Error?e.message:'No se pudo capturar.');}finally{setCapturing(false);}};
+ const [activeFunction,setActiveFunction]=useState<ReturnType<typeof houseFunction>>(null);
  const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|null>(null),[status,setStatus]=useState<Status|null>(null),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState(''),[sceneError,setSceneError]=useState('');
  const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),previousFocus=useRef<HTMLElement|null>(null),lastRequested=useRef<HouseRoom|null>(null),pollBusy=useRef(false),roomNavigation=useRef<HTMLElement>(null);
  const active=rooms[room],ActiveIcon=active.icon;
@@ -63,8 +65,9 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  },[]);
  const ready=useCallback((value:HouseAPI)=>{setApi(value);setSceneError('');if(lastRequested.current)value.teleport(lastRequested.current);},[]);
  const walk=useCallback((next:HouseRoom)=>{setRoomDetailsOpen(false);setEntered(true);setRoom(next);setSelectedResident(null);setResidentsOpen(false);setMenu(false);lastRequested.current=next;api?.teleport(next);},[api]);
- const open=useCallback((next:HouseRoom)=>{setRoomDetailsOpen(false);setRoom(next);setEntered(true);setMenu(false);previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setWorkspace(next);},[]);
- const close=useCallback(()=>setWorkspace(null),[]);
+ const open=useCallback((next:HouseRoom)=>{setActiveFunction(null);setRoomDetailsOpen(false);setRoom(next);setEntered(true);setMenu(false);previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setWorkspace(next);},[]);
+ const activateFunction=(id:string)=>{const fn=houseFunction(id);if(!fn)return;api?.teleport(fn.room as HouseRoom);open(fn.room as HouseRoom);setActiveFunction(fn);};
+ const close=useCallback(()=>{setActiveFunction(null);setWorkspace(null);},[]);
  const deepLinkHandled=useRef(false);
  useEffect(()=>{if(deepLinkHandled.current||!api)return;deepLinkHandled.current=true;const requested=new URLSearchParams(location.search).get('room');if(requested&&Object.hasOwn(rooms,requested)){const next=requested as HouseRoom;lastRequested.current=next;api.teleport(next);open(next);}},[api,open]);
  useEffect(()=>{
@@ -105,7 +108,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const consultationLabel=!processState.connected?'Sin señal reciente':!latestConsultation?'Esperando una consulta registrada':latestConsultation.phase==='seeking'?`${traveler?.name||'Atlas'} prepara su consulta`:latestConsultation.phase==='consulting'?`${traveler?.name||'Atlas'} consulta a Ícaro`:latestConsultation.phase==='returning'?`${traveler?.name||'Atlas'} vuelve con referencias`:'La consulta necesita otro intento';
 
  return <main className={styles.house+(hudHidden?' '+styles.cleanView:'')}>
-  <div className={styles.scene}><HouseScene onPeopleStatus={setPeopleStatus} creative={creative} onCreativeApplied={setInstallation} onResidentFocus={setSelectedResident} processState={processState} paused={false} onRoomChange={next=>{setRoomDetailsOpen(false);setRoom(next);}} onInteract={open} onReady={ready} onPerformance={setPerformance} onError={message=>{setSceneError(message);setPerformance(null);}}/></div>
+  <div className={styles.scene}><HouseScene onFunction={activateFunction} onPeopleStatus={setPeopleStatus} creative={creative} onCreativeApplied={setInstallation} onResidentFocus={setSelectedResident} processState={processState} paused={false} onRoomChange={next=>{setRoomDetailsOpen(false);setRoom(next);}} onInteract={open} onReady={ready} onPerformance={setPerformance} onError={message=>{setSceneError(message);setPerformance(null);}}/></div>
   <div className={styles.vignette}/>
   <header className={styles.topbar}>
    <a className={styles.brand} href="/" aria-label="Lía, la casa de ideas"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="22" stroke="currentColor" opacity=".23"/><path d="m24 9 16 28H8L24 9Z" stroke="currentColor" opacity=".6"/><path d="M12 25q12-14 24 0-12 14-24 0Z" stroke="currentColor"/><circle cx="24" cy="25" r="4" fill="currentColor"/></svg><span>Lía<small>ATLAS · ION · ÍCARO</small></span></a>
@@ -134,6 +137,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
    <div className={styles.roomDetails} id="atlas-house-room-details" data-expanded={roomDetailsOpen}>
    {entered&&<details className={styles.mirrorLegend}><summary>Su espiral en Sites <span>{memory?.reflections||0} reflexiones</span></summary><p>{entity?.personality}</p><p>{memory?.consultation?`${memory.consultation.question} · ${memory.consultation.sourceIds.length} fuentes leídas · ${memory.consultation.status}`:memory?.conclusion||'Memoria preparada; todavía no tiene una consulta registrada en Sites.'}</p>{memory?.question&&<p>Pregunta pendiente: {memory.question}</p>}<a href="/espiral">Abrir memorias de salas, habitantes y módulos →</a></details>}
    <div className={styles.roomFoot}><i/>{sceneError?'3D no disponible en este navegador':api?'Entorno 3D en tiempo real':'Preparando el entorno…'}{performance&&performance.fps>0&&<span>{Math.round(performance.fps)} FPS</span>}</div>
+   {entered&&HOUSE_FUNCTIONS.some(fn=>fn.room===room)&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}} aria-label="Herramientas del mobiliario">{HOUSE_FUNCTIONS.filter(fn=>fn.room===room).map(fn=><button key={fn.id} onClick={()=>activateFunction(fn.id)}>{fn.label} →</button>)}</div>}
    <p className={styles.compactChanges}>Cambios reportados: {acceptedChanges===null?'—':acceptedChanges.toLocaleString('es-ES')}</p>
    <details className={styles.mirrorLegend}>
     <summary>Espejo de procesos <span>{processState.connected?`${activeProcesses} en acción`:'Sin señal reciente'}</span></summary>
@@ -165,13 +169,13 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   {notice&&<div className={styles.toast} role="status">{notice}</div>}
 
   <dialog ref={dialog} className={styles.workspace} aria-labelledby="atlas-house-workspace-title" onCancel={event=>{event.preventDefault();close();}} onClick={event=>{if(event.target===event.currentTarget)close();}}>
-   {workspace&&<><div className={styles.workspaceHeader}><div><span>ATLAS / {rooms[workspace].short.toUpperCase()}</span><h2 id="atlas-house-workspace-title">{rooms[workspace].title}</h2></div><div>{workspace==='salon'&&<a href="/chat/" target="_blank" rel="noopener noreferrer" aria-label="Abrir chat en otra pestaña"><ArrowUpRight size={17}/></a>}<button ref={closeButton} type="button" onClick={close} aria-label="Cerrar espacio y volver a la casa"><X size={20}/><span>Volver a la casa</span></button></div></div><div className={styles.workspaceBody} data-room={workspace}>
-    {workspace==='salon'&&<iframe className={styles.chatFrame} title="Conversar con Lía" src="/chat/" allow="clipboard-write"/>}
-    {workspace==='body'&&<p style={{padding:20}}><a href="/eras/">Abrir ERAS · motor gráfico de Ion →</a></p>}{workspace==='music'&&<MusicStudio ready={signedIn} signInPath={signInPath}/>}
-    {(workspace==='lab'||workspace==='games')&&<WorldWorkshop mode={workspace==='lab'?'3d':'game'} ready={signedIn}/>}
-    {workspace==='cinema'&&<CinemaPanel houseApi={api} ready={signedIn}/>}
-    {workspace==='constellation'&&<ConstellationPanel ready={signedIn} onFollow={id=>{setWorkspace(null);visitResident(id);}}/>}
-    {(workspace==='mind'||workspace==='body'||workspace==='refutation'||workspace==='language')&&<CoreObservatory mode={workspace} telemetry={status?.capabilities?.processTelemetry} connected={connected} ready={signedIn} gpuMode={status?.capabilities?.gpuMode}/>}
+   {workspace&&<><div className={styles.workspaceHeader}><div><span>ATLAS / {rooms[workspace].short.toUpperCase()}</span><h2 id="atlas-house-workspace-title">{activeFunction?.label||rooms[workspace].title}</h2></div><div>{!activeFunction&&workspace==='salon'&&<a href="/chat/" target="_blank" rel="noopener noreferrer" aria-label="Abrir chat en otra pestaña"><ArrowUpRight size={17}/></a>}<button ref={closeButton} type="button" onClick={close} aria-label="Cerrar espacio y volver a la casa"><X size={20}/><span>Volver a la casa</span></button></div></div><div className={styles.workspaceBody} data-room={workspace}>
+    {activeFunction&&<><p style={{padding:'12px 24px'}}>{activeFunction.utility}</p><iframe className={styles.chatFrame} style={{minHeight:'65vh'}} title={activeFunction.label} src={activeFunction.kind==='cabinet'?'/origen?view=memory&scope='+encodeURIComponent(activeFunction.scope!):'/eras'}/><nav style={{display:'flex',gap:12,padding:16}} aria-label="Funciones relacionadas">{activeFunction.links.map(id=>{const next=houseFunction(id)!;return <button key={id} onClick={()=>{api?.teleport(next.room as HouseRoom);setRoom(next.room as HouseRoom);setWorkspace(next.room as HouseRoom);setActiveFunction(next);}}>{next.label} →</button>;})}</nav></>}{!activeFunction&&workspace==='salon'&&<iframe className={styles.chatFrame} title="Conversar con Lía" src="/chat/" allow="clipboard-write"/>}
+    {!activeFunction&&workspace==='body'&&<p style={{padding:20}}><a href="/eras/">Abrir ERAS · motor gráfico de Ion →</a></p>}{!activeFunction&&workspace==='music'&&<MusicStudio ready={signedIn} signInPath={signInPath}/>}
+    {!activeFunction&&(workspace==='lab'||workspace==='games')&&<WorldWorkshop mode={workspace==='lab'?'3d':'game'} ready={signedIn}/>}
+    {!activeFunction&&workspace==='cinema'&&<CinemaPanel houseApi={api} ready={signedIn}/>}
+    {!activeFunction&&workspace==='constellation'&&<ConstellationPanel ready={signedIn} onFollow={id=>{setWorkspace(null);visitResident(id);}}/>}
+    {!activeFunction&&(workspace==='mind'||workspace==='body'||workspace==='refutation'||workspace==='language')&&<CoreObservatory mode={workspace} telemetry={status?.capabilities?.processTelemetry} connected={connected} ready={signedIn} gpuMode={status?.capabilities?.gpuMode}/>}
    </div></>}
   </dialog>
  <dialog ref={charterDialog} className={styles.charterDialog}><LiaEvolution onClose={()=>charterDialog.current?.close()}/></dialog></main>;
