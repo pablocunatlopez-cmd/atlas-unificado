@@ -1,3 +1,4 @@
+import {createSitesTaskLedger} from './sites-task-ledger.mjs';
 /**
  * Portable, versioned Sites ledger snapshots. Storage is host-managed.
  * Never use a caller-supplied owner as authentication: the Sites host must
@@ -40,7 +41,12 @@ export function exportSitesLedgerSnapshot(ledger,{owner}={}){
 }
 export function restoreSitesLedgerSnapshot(snapshot,{owner,maxTasks=200}={}){
  const safe=validateSitesLedgerSnapshot(snapshot,{owner,maxTasks});
- // Returns validated data, not a live ledger: host must atomically replace its
- // persisted state and rehydrate a ledger under the verified principal.
- return safe;
+ const ledger=createSitesTaskLedger({maxTasks});
+ for(const task of safe.tasks){
+   ledger.create({id:task.id,owner:task.owner,goal:task.goal});
+   for(const event of task.history.slice(1)){
+     ledger.transition({id:task.id,owner,to:event.status});
+   }
+ }
+ return ledger;
 }
