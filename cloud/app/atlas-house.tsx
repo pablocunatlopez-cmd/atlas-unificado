@@ -165,7 +165,32 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
     </div>
    </section>
 
-   {/* NOTE: remainder of JSX (room dock, residents panel, workspaces, dialogs) restored from original full file */}
-   <LiaEvolution onClose={()=>setCharterOpen(false)}/>
+   <nav ref={roomNavigation} className={styles.roomDock} id="atlas-house-room-menu" aria-label="Salas de Lía">
+    {HOUSE_ROOMS.map(id=>{const meta=rooms[id];const Icon=meta.icon;return <button key={id} type="button" data-room={id} className={room===id?styles.roomActive:undefined} onClick={()=>walk(id)} aria-current={room===id?'true':undefined}><Icon size={15}/><span>{meta.short}</span></button>;})}
+   </nav>
+
+   <aside ref={residentsPanel} id="atlas-house-residents" className={`${styles.residentsPanel} ${residentsOpen?styles.residentsOpen:''}`} tabIndex={-1} aria-label="Habitantes de Lía">
+    <div className={styles.residentsHead}><strong>Habitantes</strong><button type="button" onClick={()=>setResidentsOpen(false)} aria-label="Cerrar panel de habitantes"><X size={16}/></button></div>
+    <ul className={styles.residentsList}>{residentRuntime.map(person=><li key={person.id}><button type="button" onClick={()=>visitResident(person.id)} data-tone={person.statusTone}><span>{person.name}</span><small>{person.role}</small><em>{person.status}</em></button></li>)}</ul>
+    <button type="button" className={styles.evolutionLink} onClick={visitEvolution}>Carta de evolución de Lía</button>
+   </aside>
+
+   {menu&&<div className={styles.mobileMenu} role="dialog" aria-label="Navegación"><button type="button" onClick={()=>setMenu(false)}>Cerrar</button>{HOUSE_ROOMS.map(id=><button key={id} type="button" onClick={()=>walk(id)}>{rooms[id].short}</button>)}</div>}
+
+   {notice&&<div className={styles.notice} role="status">{notice}</div>}
+
+   <dialog ref={dialog} className={styles.workspace} aria-labelledby="atlas-house-workspace-title" onCancel={event=>{event.preventDefault();close();}} onClick={event=>{if(event.target===event.currentTarget)close();}}>
+    {workspace&&<><div className={styles.workspaceHeader}><div><span>ATLAS / {rooms[workspace].short.toUpperCase()}</span><h2 id="atlas-house-workspace-title">{rooms[workspace].title}</h2></div><button type="button" className={styles.closeWorkspace} onClick={close} aria-label="Cerrar espacio"> <X size={16}/> </button></div>
+     {workspace==='salon'&&<iframe className={styles.chatFrame} title="Conversar con Atlas" src="/chat/" allow="clipboard-write"/>}
+     {workspace==='music'&&<MusicStudio/>}
+     {(workspace==='lab'||workspace==='games')&&<WorldWorkshop mode={workspace==='lab'?'3d':'game'} ready={signedIn}/>} 
+     {workspace==='cinema'&&<CinemaPanel houseApi={api} ready={signedIn}/>} 
+     {workspace==='constellation'&&<ConstellationPanel/>}
+     {(workspace==='mind'||workspace==='body'||workspace==='refutation'||workspace==='language')&&<CoreObservatory mode={workspace} telemetry={status?.capabilities?.processTelemetry} connected={connected} ready={signedIn} gpuMode={status?.capabilities?.gpuMode}/>}
+    </>}
+   </dialog>
+   <dialog ref={charterDialog} className={styles.charterDialog} aria-labelledby="lia-charter-title" onCancel={event=>{event.preventDefault();setCharterOpen(false);}} onClick={event=>{if(event.target===event.currentTarget)setCharterOpen(false);}}>
+    <LiaEvolution onClose={()=>setCharterOpen(false)}/>
+   </dialog>
   </main>;
 }
