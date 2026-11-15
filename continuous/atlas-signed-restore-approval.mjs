@@ -1,4 +1,4 @@
-import {createPublicKey,verify} from 'node:crypto';
+import {createPublicKey,verify,KeyObject} from 'node:crypto';
 /**
  * Verify an externally signed approval using a trusted Ed25519 public key.
  * Trust in the key owner and their authorization is the host's responsibility.
@@ -27,7 +27,8 @@ export function verifyAtlasSignedApproval({
   approval.actorId!==expectedActorId)
   throw Error('Invalid signed approval');
  const message=atlasApprovalMessage(approval);
- const key=createPublicKey(publicKey);
+ const key=publicKey instanceof KeyObject&&publicKey.type==='public' 
+  ?publicKey:createPublicKey(publicKey);
  if(key.asymmetricKeyType!=='ed25519')
   throw Error('Ed25519 key required');
  const signature=Buffer.from(approval.signature,'base64');
