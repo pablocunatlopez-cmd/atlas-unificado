@@ -37,7 +37,7 @@ export function createErasThreeAdapter({THREE,scene,resolveAsset}={}){
    else {
      const parentObject=objects.get(parent);
      if(!parentObject)throw Error('Parent not created');
-     parentObject.add(object);
+     parentObject.object.add(object);
    }
  };
  const disposeOwned=object=>{
