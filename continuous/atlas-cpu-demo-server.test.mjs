@@ -27,3 +27,33 @@ test('demo serves UI and requires an explicit POST to diagnose',async()=>{
 test('demo rejects remote bind configuration',()=>{
  assert.throws(()=>createAtlasCpuDemoServer({host:'0.0.0.0'}));
 });
+
+test('local inference requires explicit POST and returns mocked answer',async()=>{
+ const port=19092;
+ let calls=0;
+ const demo=createAtlasCpuDemoServer({port,
+  fetchImpl:async(url)=>{
+   calls++;
+   assert.equal(url,'http://127.0.0.1:8080/v1/chat/completions');
+   return {ok:true,text:async()=>JSON.stringify({
+    choices:[{message:{content:'Respuesta local'}}]})};
+  }
+ });
+ await demo.listen();
+ try{
+  const before=await fetch('http://127.0.0.1:'+port+'/infer');
+  assert.equal(before.status,404);
+  assert.equal(calls,0);
+  const denied=await fetch('http://127.0.0.1:'+port+'/infer',{
+   method:'POST',headers:{'content-type':'application/json',origin:'https://evil.example'},
+   body:JSON.stringify({prompt:'Hola'})});
+  assert.equal(denied.status,403);
+  assert.equal(calls,0);
+  const response=await fetch('http://127.0.0.1:'+port+'/infer',{
+   method:'POST',headers:{'content-type':'application/json'},
+   body:JSON.stringify({prompt:'Hola'})});
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).answer,'Respuesta local');
+  assert.equal(calls,1);
+ }finally{await demo.close();}
+});
