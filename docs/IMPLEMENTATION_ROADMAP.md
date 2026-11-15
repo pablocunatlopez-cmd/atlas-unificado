@@ -1,23 +1,54 @@
-# Implementation roadmap — Atlas / Lía
+# Atlas ΩΣ → Lía: implementation roadmap
 
-This file is the working plan for the unified repository. It is not a claim that live autonomous improvement is running.
+This roadmap turns the vision in [ATLAS_MASTER_OVERVIEW.md](ATLAS_MASTER_OVERVIEW.md) and [LIA_TRIAD_RUNTIME.md](LIA_TRIAD_RUNTIME.md) into a sequence of verifiable engineering work. The roadmap does not claim that planned behavior already exists.
 
-## Priority order
+## First: protect the current application
 
-### P0 — Baseline honesty
-Ship surfaces that never invent online status, learning, or integrated improvement without coordinator-backed signals.
+### P0 — Recover and validate the frontend baseline
 
-### P1 — Route and identity clarity
-Canonical routes (`/`, `/chat/`, `/actividad/`), inventory, and character catalog without false “agent is working” claims.
+A prior edit replaced `cloud/app/globals.css` with a short generic stylesheet. That removed most of the original global styles for the legacy workspace, learning/research pages, and shared UI. Restore the complete stylesheet from the known-good Git history before making further global-style changes.
+
+A previous broad rewrite of `cloud/app/atlas-house.tsx` also needs a build/typecheck review against the actual interfaces in `cloud/app/house-scene.tsx`, `cloud/app/core-observatory.tsx`, and the CSS module. Do not treat the rewrite as verified: it introduced callback/prop assumptions that must be checked, and it may not compile against the current components.
+
+Acceptance:
+
+- Restore the original global stylesheet without dropping any of its existing sections.
+- Run the Cloud app TypeScript check and production build.
+- Run the existing house, process-state, creative, and UI-related tests.
+- Check the home page and the existing `/chat/`, `/actividad/`, `/taller/`, music, video, research, and legacy workspace entry points.
+- Record command output and distinguish a successful build from a browser QA pass.
+
+## Product model
+
+Keep these roles distinct in UI, code, and docs:
+
+- **Atlas / Mente:** observes, interprets, remembers, asks and plans.
+- **Ion / Cuerpo:** carries out typed, authorized actions and returns results.
+- **Dios / Ícaro / Cielo / Constelación:** the horizon that connects allowed sources, collaborators and perspectives. The current resident catalog specifically describes **Ícaro** as agents and **Alba** as references.
+- **Lía:** the integrated character/environment all vertices and specialists serve.
+- **Specialists:** named residents such as Nora, Vera, Nilo, Talo, Zuri, Noa, Ritmo, Faro, Ada, Cota, Sol, Sigma and Ema. Their declared role does not imply a separate model or autonomous worker.
+
+Do not assign Saggy/Siggy a role until Atlas's canonical identity/configuration or a direct, attributable session establishes it. A name match alone is not evidence.
+
+## Incremental delivery
+
+### P1 — Canonical identity and information architecture
+
+1. Inventory all routes and classify them as product, deep-link, legacy, or API.
+2. Keep `/` as Lía's canonical home; preserve `/origen/` as legacy without branding it as the default.
+3. Publish a character catalog for the 24 residents with process assignments that never invent work.
 
 ### P2 — Truthful runtime visibility
+
 1. Define a typed, versioned process event/status contract with task ID, owner scope, specialist ID, phase, timestamp, expiry, status, evidence/artefact reference, and bounded counters.
 2. Fail closed on stale or missing telemetry (freshness window + hard request timeout).
 3. Explicit reason codes for disconnected / stale / no process — UI must not invent activity.
 4. Typed evidence for “improvement integrated” claims; absence = unknown.
 
 ### P3 — Session-bound improvement cycle
+
 Only after P0–P2 pass:
+
 - Opt-in + visible tab heartbeats
 - Server `liveCycleEnabled` flag
 - PC gate before autonomous review work
@@ -30,7 +61,7 @@ Only after P0–P2 pass:
 
 ## Status notes
 
-This roadmap is a plan. The Lía identity documents are in the repository, but the live job loop described in P3 is not enabled until operators set environment flags and publish Sites.
+This roadmap is a plan. The Lía identity documents are in the repository, but the live job loop described in P3 is not implemented.
 
 P2 has partial, verified progress as of 2026-11-15:
 
