@@ -87,8 +87,24 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
   const artifact=await request(localBase+'/media/artifact?id='+encodeURIComponent(result.id),{redirect:'error',signal:jobSignal});
   const length=Number(artifact.headers?.get('content-length'));
   if(!artifact.ok||length>10*1024*1024)throw Error('El archivo de vídeo no está disponible.');
-  const bytes=new Uint8Array(await artifact.arrayBuffer());
-  if(bytes.length<32||bytes.length>10*1024*1024||String.fromCharCode(...bytes.subarray(4,8))!=='ftyp')throw Error('El resultado no es un MP4 permitido.');
+  // Enforce the size cap while streaming: Content-Length may be absent or false.
+  const maxArtifactBytes=10*1024*1024;
+  if(!artifact.body?.getReader)throw Error('El vídeo no permite lectura controlada.');
+  const reader=artifact.body.getReader(),chunks=[];let total=0;
+  try{
+   for(;;){
+    jobSignal.throwIfAborted();
+    const {done,value}=await reader.read();
+    if(done)break;
+    total+=value.byteLength;
+    if(total>maxArtifactBytes)throw Error('El archivo de vídeo supera el límite permitido.');
+    chunks.push(value);
+   }
+  }catch(error){await reader.cancel().catch(()=>{});throw error;}
+  finally{reader.releaseLock();}
+  const bytes=new Uint8Array(total);let offset=0;
+  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+  if(bytes.length<32||String.fromCharCode(...bytes.subarray(4,8))!=='ftyp')throw Error('El resultado no es un MP4 permitido.');
   const uploaded=await request(site.origin+'/api/cloud/artifacts/'+job.id,{method:'POST',redirect:'error',signal:combined(120000,jobSignal),headers:{Authorization:'Bearer '+token,'X-Atlas-Lease':job.leaseToken,'Content-Type':'video/mp4','Content-Length':String(bytes.length)},body:bytes});
   if(!uploaded.ok)throw Error('No se pudo guardar el vídeo en la nube.');
   return {answer:'He generado un clip de vídeo local. Puedes abrirlo y descargarlo desde tu biblioteca privada.',model:'atlas-coordinator',modelName:'Wan2.1 · GPU local',video:{artifactId:job.id,provider:'wan21-comfy'}};
