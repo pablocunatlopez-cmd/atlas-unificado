@@ -12,3 +12,26 @@
 @media(max-width:950px){.atlas-shell{grid-template-columns:74px minmax(0,1fr)}.atlas-sidebar{padding:20px 10px;align-items:center}.atlas-side-label,.atlas-side-item,.atlas-sidebar-bottom{display:none}.atlas-hero{min-height:285px}.atlas-orbit{right:-245px}}
 @media(max-width:650px){.atlas-shell{display:block}.atlas-sidebar{height:68px;flex-direction:row;border-right:0;border-bottom:1px solid var(--atlas-line);justify-content:start}.atlas-mark{height:40px;width:40px;border-radius:12px;font-size:22px}.atlas-content{padding:20px 16px}.atlas-topbar{padding-bottom:18px}.atlas-hero{padding:26px 22px;min-height:280px}.atlas-hero h1{font-size:42px}.atlas-hero p{font-size:13px}.atlas-orbit{opacity:.5}.atlas-overview{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:30px}.atlas-metric{padding:17px}.atlas-metric strong{font-size:26px}.atlas-tasks{grid-template-columns:1fr}.atlas-section-head>span{display:none}}
 @media(prefers-reduced-motion:reduce){.atlas-shell *{animation:none!important;transition:none!important}}
+
+/* Atlas visual refinement v2: precise depth, accessible focus and polished surfaces */
+.atlas-shell{--atlas-highlight:#d7e6ff;--atlas-hairline:rgba(190,209,244,.095);background:radial-gradient(ellipse 65% 55% at 92% -10%,rgba(67,105,164,.13),transparent 70%),var(--atlas-bg);font-feature-settings:"ss01" on}
+.atlas-sidebar{box-shadow:inset -1px 0 rgba(255,255,255,.018)}
+.atlas-mark{background:linear-gradient(145deg,rgba(157,194,255,.14),rgba(157,194,255,.025));text-shadow:0 0 24px rgba(156,190,255,.35)}
+.atlas-side-active{box-shadow:inset 3px 0 0 #9ebfff,0 8px 30px rgba(0,0,0,.1)}
+.atlas-topbar{border-bottom:1px solid var(--atlas-hairline);margin-bottom:25px}
+.atlas-hero{isolation:isolate;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 70px rgba(0,0,0,.19)}
+.atlas-hero:before{content:"";pointer-events:none;position:absolute;inset:0;z-index:0;background:linear-gradient(135deg,rgba(255,255,255,.065),transparent 32%,transparent 72%,rgba(115,165,242,.06))}
+.atlas-hero:after{content:"";pointer-events:none;position:absolute;inset:0;background-image:radial-gradient(rgba(207,225,255,.19) .6px,transparent .8px);background-size:22px 22px;opacity:.13;mask-image:linear-gradient(90deg,transparent 20%,#000 100%)}
+.atlas-orbit{filter:drop-shadow(0 0 55px rgba(115,159,235,.18))}
+.atlas-hero h1{background:linear-gradient(180deg,#fff 12%,#d4e0f2 96%);background-clip:text;-webkit-background-clip:text;color:transparent}
+.atlas-hero h1 span{color:#a8c8ff;-webkit-text-fill-color:#a8c8ff}
+.atlas-metric{position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+.atlas-metric:before{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(194,219,255,.28),transparent)}
+.atlas-metric strong{font-variant-numeric:tabular-nums;color:#e9f1ff}
+.atlas-task{transition:border-color .2s ease,background .2s ease,transform .2s ease;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+.atlas-task:hover{border-color:rgba(166,202,255,.27);background:#172132;transform:translateY(-2px)}
+.atlas-task-icon{min-width:39px;text-align:center;border:1px solid rgba(170,202,255,.13)}
+.atlas-status{background:rgba(172,202,255,.035)}
+.atlas-empty{grid-column:1/-1;padding:30px;border:1px dashed rgba(168,200,255,.2);border-radius:14px;text-align:center}
+@media(max-width:650px){.atlas-topbar{margin-bottom:16px}.atlas-hero{border-radius:20px}.atlas-metric{border-radius:13px}.atlas-task:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){.atlas-task{transition:none}}
