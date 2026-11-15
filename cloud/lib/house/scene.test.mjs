@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import * as THREE from '../../public/house/vendor/three.module.js';
 import {buildHouse} from '../../public/house/scene.js';
 import {ROOMS,blocked} from '../../public/house/layout.js';
 
@@ -11,9 +12,18 @@ test('ten-room geometry builds with clear furniture spawns and finite animated i
  let house;
  try{
   house=buildHouse();for(const room of ROOMS)assert.equal(blocked(...room.spawn,.25,house.solids),false,'furniture leaves '+room.id+' spawn clear');
-  assert.equal(house.interactive.length,10);assert.equal(house.ceilings.children.length,10);
+  assert.equal(house.interactive.length,30);assert.equal(house.ceilings.children.length,10);
+  const residentMeshes=house.interactive.filter(item=>item.userData.residentPartCount);
+  assert.equal(residentMeshes.length,2);assert.ok(residentMeshes.every(item=>item.userData.residentRoster.length===24));
+  assert.ok(house.interactive.some(item=>item.userData.residentId==='lab-bench'));
   house.setProcessState({at:new Date().toISOString(),processes:[{id:'library',state:'running',phase:'observe',counters:{observations:7}},{id:'review',state:'failed',phase:'refute',counters:{rejected:1}}]});
-  house.update(performance.now()/1000);
+  const camera=new THREE.PerspectiveCamera();camera.position.set(0,25,30);
+  house.update(performance.now()/1000,camera,720);
+  assert.ok(house.interactive.filter(item=>item.userData.room).every(item=>item.visible));
+  assert.ok(residentMeshes.every(item=>item.visible));
+  camera.position.set(0,1.64,4);camera.lookAt(0,1,0);house.update(performance.now()/1000,camera,720);
+  assert.ok(house.interactive.filter(item=>item.userData.room).every(item=>!item.visible));
+  assert.ok(residentMeshes.every(item=>item.visible));
   let instances=0,vertices=0,staticMeshes=0;
   house.scene.traverse(object=>{if(object.isInstancedMesh){instances+=object.count;assert.ok([...object.instanceMatrix.array].every(Number.isFinite));}else if(object.isMesh&&object.geometry?.getAttribute('position')){vertices+=object.geometry.getAttribute('position').count;staticMeshes++;}});
   assert.ok(instances>=70,'each room has real 3D body parts');assert.ok(vertices<600000,'static geometry stays within the mobile mesh budget');assert.ok(staticMeshes<100,'static materials remain batched rather than a mesh per item');

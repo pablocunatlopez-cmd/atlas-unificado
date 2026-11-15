@@ -52,9 +52,9 @@ export function telemetryAge(at,{now=Date.now()}={}){
  return age;
 }
 export function telemetryFreshness(value,{ageMs,now=Date.now(),maxAgeMs=TELEMETRY_FRESH_MS}={}){
- const age=Number.isFinite(ageMs)?ageMs:telemetryAge(value?.at,{now});
+ const sourceAge=telemetryAge(value?.at,{now}),age=Number.isFinite(ageMs)?ageMs:sourceAge;
  if(value?.connected===false)return {fresh:false,reason:'disconnected',ageMs:age};
- if(age===null)return {fresh:false,reason:'invalid_time',ageMs:null};
+ if(sourceAge===null||age<0)return {fresh:false,reason:'invalid_time',ageMs:null};
  if(age>maxAgeMs)return {fresh:false,reason:'stale',ageMs:age};
  return {fresh:true,reason:'fresh',ageMs:age};
 }

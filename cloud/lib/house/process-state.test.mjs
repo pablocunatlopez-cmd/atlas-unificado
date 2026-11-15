@@ -54,6 +54,7 @@ test('telemetryFreshness classifies disconnected, invalid and stale signals',()=
  assert.deepEqual(telemetryFreshness({at,connected:true},{now}),{fresh:true,reason:'fresh',ageMs:1000});
  assert.equal(telemetryFreshness({at,connected:false},{now}).reason,'disconnected');
  assert.equal(telemetryFreshness({at:'not-a-date',connected:true},{now}).reason,'invalid_time');
+ assert.equal(telemetryFreshness({at,connected:true},{ageMs:-1,now}).reason,'invalid_time');
  assert.equal(telemetryFreshness({at,connected:true},{now:now+80000}).reason,'stale');
  assert.equal(REASON_LABELS.stale,'Sin señal reciente');
  assert.equal(REASON_LABELS.disconnected,'Puente desconectado');

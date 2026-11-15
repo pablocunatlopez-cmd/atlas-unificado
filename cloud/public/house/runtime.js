@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {createRenderEngine} from './render-engine.js';
 import {CircularJoystick,showTouchControls} from './mobile-input.js';
 import {ROOMS,roomById,roomAt,movePlayer,navigationVector,blocked} from './layout.js';
-import {WORKSTATIONS,residentById} from './residents.js';
+import {WORKSTATIONS,residentById,residentIdFromHit} from './residents.js';
 import {buildHouse} from './scene.js';
 import {normalizeProcessState,processForRoom,processCaption} from './process-state.js';
 
@@ -94,7 +94,7 @@ listen($('overview'),'click',()=>{setOverview(true);resize();});listen($('walk')
 listen(window,'resize',resize);
 listen(canvas,'pointerdown',event=>{if(drag||event.button>0)return;canvas.focus();canvas.setPointerCapture(event.pointerId);drag={id:event.pointerId,x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,moved:false};});
 listen(canvas,'pointermove',event=>{if(!drag||drag.id!==event.pointerId||paused)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>6)drag.moved=true;drag.x=event.clientX;drag.y=event.clientY;if(overview){orbit-=dx*.006;elevation=Math.max(.4,Math.min(1.1,elevation+dy*.004));}else{yaw-=dx*.005;pitch=Math.max(-.9,Math.min(.9,pitch-dy*.004));}transition=null;});
-listen(canvas,'pointerup',event=>{if(!drag||drag.id!==event.pointerId)return;const clicked=!drag.moved;drag=null;if(clicked&&house&&!paused){raycaster.setFromCamera(new THREE.Vector2(event.clientX/innerWidth*2-1,-event.clientY/innerHeight*2+1),camera);const hit=raycaster.intersectObjects(house.interactive,false)[0];if(hit){const id=hit.object.userData.room;if(!overview&&currentRoom===id)interact();else{teleport(id);resize();}}}});
+listen(canvas,'pointerup',event=>{if(!drag||drag.id!==event.pointerId)return;const clicked=!drag.moved;drag=null;if(clicked&&house&&!paused){raycaster.setFromCamera(new THREE.Vector2(event.clientX/innerWidth*2-1,-event.clientY/innerHeight*2+1),camera);const hits=raycaster.intersectObjects(house.interactive,false);for(const hit of hits){const residentId=residentIdFromHit(hit);if(residentId){focusResident(residentId);return;}}const hit=hits.find(item=>typeof item.object.userData.room==='string');if(hit){const id=hit.object.userData.room;if(!overview&&currentRoom===id)interact();else{teleport(id);resize();}}}});
 for(const type of ['pointercancel','lostpointercapture'])listen(canvas,type,()=>drag=null);
 listen(document,'keydown',event=>{const key=event.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key))event.preventDefault();if(paused)return;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)&&overview){teleport(currentRoom);resize();}keys.add(key);if(key==='e'&&!event.repeat)interact();if(key==='h'&&!event.repeat){setOverview(!overview);resize();}});
 listen(document,'keyup',event=>keys.delete(event.key.toLowerCase()));listen(window,'blur',()=>{keys.clear();joystick?.reset();drag=null;});listen(document,'visibilitychange',()=>{last=0;keys.clear();joystick?.reset();drag=null;});
