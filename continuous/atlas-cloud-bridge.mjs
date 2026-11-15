@@ -6,6 +6,7 @@ import {planCreativeWorld} from './creative-plan.mjs';
 import {sanitizeProcessTelemetry} from './process-telemetry.mjs';
 import {readSessionLiveWork} from './session-live-work-gate.mjs';
 import {publishEvidence} from './evidence-publish.mjs';
+import {publishReportEvidence} from './publish-report-evidence.mjs';
 const ROOT=path.dirname(fileURLToPath(import.meta.url)),DATA=path.join(ROOT,'data');
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const VIDEO_ID=/^video-\d{13}-[a-f0-9]{8}$/;
@@ -26,7 +27,7 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
  const local=new URL(localBase);
  if(local.protocol!=='http:'||!['127.0.0.1','localhost','[::1]'].includes(local.hostname)||local.username||local.password||local.search||local.hash||local.pathname!=='/')throw Error('El coordinador debe estar en un origen de bucle local.');
  localBase=local.origin;
- const endpoint=site.origin+'/api/cloud/bridge';let active=false;
+ const endpoint=site.origin+'/api/cloud/bridge';let active=false;let lastPublishedEvidenceAt=null;
  const emit=value=>onState({at:new Date().toISOString(),...value});
  const combined=(timeout,extra)=>AbortSignal.any([AbortSignal.timeout(timeout),...(signal?[signal]:[]),...(extra?[extra]:[])]);
  async function cloud(action,values={}){
@@ -94,6 +95,15 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
    signal?.throwIfAborted();const health=await localReady();if(!health){const snapshot=await capabilities();if(['video','training'].includes(snapshot.gpuMode)){const state=await cloud('heartbeat',{modelName:'Qwen · GPU reservada',capabilities:snapshot});if(snapshot.gpuMode==='training'&&state.queuedCount>0)await localPost('/evolution/yield',{},combined(10000));emit({status:'gpu_reserved',mode:snapshot.gpuMode});return {status:'busy'};}emit({status:'waiting_for_local_model'});return {status:'offline'};}
    const modelName=health.modelName||'Qwen local';let publicCapabilities=await capabilities();
    const sessionLiveWork=await readSessionLiveWork(siteUrl,{request,signal:combined(8000)});
+   try{
+    const autonomy=JSON.parse(await fs.readFile(path.join(DATA,'autonomous-review.json'),'utf8'));
+    const report=autonomy.history?.at(-1);
+    const reportAt=typeof report?.at==='string'?report.at:null;
+    if(report&&reportAt&&reportAt!==lastPublishedEvidenceAt&&(report.typedEvidence?.length||report.candidate||report.checks)){
+     const published=await publishReportEvidence(report,{request,signal:combined(10000)});
+     if(published.ok||published.saved){lastPublishedEvidenceAt=reportAt;emit({status:'online',modelName,sessionLiveWork,typedEvidence:published});}
+    }
+   }catch{/* no autonomy history yet */}
    emit({status:'online',modelName,sessionLiveWork});
    const {job}=await cloud('claim',{modelName,capabilities:publicCapabilities});
    if(!job){emit({status:'online',modelName,sessionLiveWork});return {status:'idle'};}
