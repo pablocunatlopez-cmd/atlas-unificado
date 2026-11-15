@@ -67,6 +67,7 @@ Los IDs de sala deben coincidir con `HOUSE_ROOMS` / `ROOM_IDS`. Un `room` descon
 | `/api/technical-reading` | api | Lectura técnica / paneles | Acotado |
 | `/api/web` | api | Utilidades web | Acotado |
 | `/api/cloud/evidence` | api | **Esqueleto** de evidencia tipada (contrato v1) | Lectura; vacío = unknown |
+| `/api/cloud/session-heartbeat` | api | **Preparación P3**: latido de sesión opt-in | No arranca trabajos; `liveCycleEnabled: false` |
 
 ## Reglas de coherencia
 
@@ -84,3 +85,4 @@ Los 24 habitantes viven en `/` (ver `docs/CHARACTER_CATALOG.md`). Los procesos (
 
 - Estado operativo por residente (activo / en espera / decorativo) enlazado a telemetría en tiempo real en documentación viva.
 - Publicación Sites de esta revisión (sigue siendo un paso de despliegue distinto de GitHub).
+- Activar el ciclo de mejora con heartbeat solo cuando P2 esté cerrado y el usuario opte de forma explícita.
