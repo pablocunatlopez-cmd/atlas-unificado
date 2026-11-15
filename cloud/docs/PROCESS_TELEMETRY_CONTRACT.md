@@ -6,6 +6,8 @@ Este documento define cómo interpretar la telemetría que la casa ya consulta d
 
 La UI puede decir **En ejecución** solo si el proceso declara `running`, existe una marca de tiempo válida, la señal no está desconectada y el dato tiene menos de 75 segundos. La falta de datos, una marca de tiempo futura o una señal antigua deben mostrarse como **En espera / Sin señal reciente**. Una animación nunca autoriza el estado.
 
+**Versión de contrato cliente:** `TELEMETRY_CONTRACT_VERSION = 1` en `cloud/public/house/process-state.js`.
+
 ## Esquema recibido actualmente
 
 El normalizador de `cloud/public/house/process-state.js` acepta hasta 32 procesos con:
@@ -14,6 +16,7 @@ El normalizador de `cloud/public/house/process-state.js` acepta hasta 32 proceso
 type ProcessState = {
   at: string | null;
   connected: boolean;
+  contractVersion?: number;
   processes: Array<{
     id: string;
     room: string;
@@ -32,6 +35,23 @@ type ProcessState = {
 
 Los identificadores y salas se limitan a valores conocidos, las etiquetas se acotan y los contadores deben ser enteros seguros dentro del rango permitido. No se admiten instrucciones, scripts ni URLs de la telemetría como contenido ejecutable.
 
+## Razones explícitas (P2)
+
+`telemetryFreshness()` y `processForRoom` / `processForResident` devuelven un `reason` cerrado:
+
+| reason | Presentación | Cuándo |
+| --- | --- | --- |
+| `fresh` | Señal reciente | Edad ≤ 75 s y puente conectado |
+| `stale` | Sin señal reciente | Edad > 75 s |
+| `invalid_time` | Señal con hora no válida | Timestamp ausente, malformado o futuro |
+| `disconnected` | Puente desconectado | `connected === false` |
+| `no_process` | Sin telemetría | No hay proceso para la sala/residente |
+| `wrong_phase` | En espera de su fase | `running` pero fase no aplica al puesto |
+| `local_only` | Disponible · local | Puesto sin `processIds` (p. ej. música) |
+| `reported` | Estado reportado | Estado no-running con señal usable |
+
+La UI debe preferir `displayState` / `REASON_LABELS[reason]` frente a inventar texto. `workVerified` solo es true con `running` + señal fresca (+ fase pertinente en residentes).
+
 ## Interpretación de estados
 
 | Estado | Presentación | Significado permitido |
@@ -39,8 +59,8 @@ Los identificadores y salas se limitan a valores conocidos, las etiquetas se aco
 | `idle` | En reposo | El coordinador reporta que no hay tarea activa. |
 | `waiting` | En espera | No hay tarea activa o el proceso espera una condición. |
 | `running` | En ejecución | Solo con señal conectada, marca temporal válida y reciente, y fase pertinente para el residente. |
-| `passed` | Prueba superada (reportada) | El coordinador reporta un resultado satisfactorio; no equivale a integración ni a verificación independiente. |
-| `failed` | Refutado (reportado) | El coordinador reporta un fallo/refutación; mostrarlo como registro comunicado, no como prueba independiente sin artefacto. |
+| `passed` | Resultado reportado | El coordinador reporta un resultado satisfactorio; no equivale a integración ni a verificación independiente. |
+| `failed` | Fallo reportado | El coordinador reporta un fallo/refutación; mostrarlo como registro comunicado, no como prueba independiente sin artefacto. |
 
 Si el proceso desaparece de la telemetría o la señal expira, no se debe inferir actividad a partir de la animación, del último estado recibido o de un contador acumulado.
 
@@ -64,7 +84,7 @@ El servicio que ejecuta y valida la tarea debe ser la fuente de esos datos. La U
 
 Mantener el formato actual mientras la API del coordinador no publique evidencia. Al extenderlo:
 
-1. versionar el esquema;
+1. versionar el esquema (`TELEMETRY_CONTRACT_VERSION`);
 2. validar el objeto en el servidor y volver a limitar su representación en cliente;
 3. añadir expiración, límites y pruebas de datos ausentes, antiguos, futuros, malformados y de estado cruzado;
 4. no convertir `passed` en `verified` hasta que exista evidencia tipada y se compruebe su procedencia;

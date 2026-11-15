@@ -40,15 +40,36 @@ export function normalizeProcessState(value){
   processes.push(item);
  }
  const at=typeof value?.at==='string'&&Number.isFinite(Date.parse(value.at))?new Date(value.at).toISOString():null;
- return {at,connected:value?.connected!==false,processes,...(value?.icarus?{icarus:normalizeIcarusJourneys(value.icarus)}:{}),...(value?.houseWork?{houseWork:normalizeHouseWork(value.houseWork)}:{})};
+ return {contractVersion:TELEMETRY_CONTRACT_VERSION,at,connected:value?.connected!==false,processes,...(value?.icarus?{icarus:normalizeIcarusJourneys(value.icarus)}:{}),...(value?.houseWork?{houseWork:normalizeHouseWork(value.houseWork)}:{})};
+}
+export function telemetryAge(at,{now=Date.now()}={}){
+ if(typeof at!=='string'||!Number.isFinite(now))return null;
+ const timestamp=Date.parse(at);
+ if(!Number.isFinite(timestamp))return null;
+ const age=now-timestamp;
+ if(!Number.isFinite(age)||age<0)return null;
+ return age;
+}
+export function telemetryFreshness(value,{ageMs,now=Date.now(),maxAgeMs=TELEMETRY_FRESH_MS}={}){
+ const computed=telemetryAge(value?.at,{now});const age=ageMs===undefined?computed:ageMs;
+ if(value?.connected===false)return {fresh:false,reason:'disconnected',ageMs:age};
+ if(computed===null||age===null||Number.isNaN(age)||age<0)return {fresh:false,reason:'invalid_time',ageMs:null};
+ if(age>maxAgeMs)return {fresh:false,reason:'stale',ageMs:age};
+ return {fresh:true,reason:'fresh',ageMs:age};
 }
 const priorities={running:5,failed:4,waiting:3,passed:2,idle:1};
 export function processForRoom(value,room,{ageMs=0}={}){
  const process=value.processes.filter(item=>item.room===room).sort((a,b)=>priorities[b.state]-priorities[a.state])[0];
- if(!process)return {id:room,room,state:'waiting',label:'Sin telemetría',workVerified:false};
- const fresh=value.connected!==false&&!!value.at&&Number.isFinite(ageMs)&&ageMs>=0&&ageMs<=75000;
- if(!fresh&&process.state==='running')return {...process,state:'waiting',label:value.connected===false?'Puente desconectado':'Sin señal reciente',workVerified:false};
- return {...process,workVerified:fresh&&process.state==='running'};
+ if(!process)return {id:room,room,state:'waiting',label:'Sin telemetría',workVerified:false,reason:'no_process',displayState:REASON_LABELS.no_process};
+ const freshness=telemetryFreshness(value,{ageMs});
+ if(!freshness.fresh&&process.state==='running'){
+  const reason=freshness.reason;
+  return {...process,state:'waiting',label:REASON_LABELS[reason]||REASON_LABELS.stale,workVerified:false,reason,displayState:REASON_LABELS[reason]||REASON_LABELS.stale};
+ }
+ // workVerified here means only that recent running telemetry was received.
+ // It does not mean the task result or an artifact was independently verified.
+ const workVerified=freshness.fresh&&process.state==='running';
+ return {...process,workVerified,reason:workVerified?'fresh':'reported',displayState:STATE_LABELS[process.state]||REASON_LABELS.reported};
 }
 export function creatureArchetype(process,room){
  // Residents keep their identity when a different process visits the room.

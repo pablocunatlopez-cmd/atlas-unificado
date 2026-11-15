@@ -9,7 +9,7 @@ export function selectPersonalMemories(content:string|undefined|null,question:st
  if(!state||typeof state!=='object'||Array.isArray(state))return [];
  const query=words(question),candidates:Array<{memory:PersonalMemory;score:number}>=[];
  for(const m of (Array.isArray(state.memories)?state.memories:[]).slice(0,200)){
-  if(!m||typeof m!=='object'||!['Preferencia','Regla','Contexto','Objetivo'].includes(m.kind)||!['Aportado','Por revisar','Confirmado'].includes(m.status)||typeof m.title!=='string'||typeof m.text!=='string'||!m.text.trim())continue;
+  if(!m||typeof m!=='object'||(m.scope!==undefined&&m.scope!=='global'&&m.scope!=='module:chat')||!['Preferencia','Regla','Contexto','Objetivo'].includes(m.kind)||!['Aportado','Por revisar','Confirmado'].includes(m.status)||typeof m.title!=='string'||typeof m.text!=='string'||!m.text.trim())continue;
   const overlap=[...words(m.title+' '+m.text)].filter(w=>query.has(w)).length;
   const priority=m.kind==='Regla'||m.kind==='Preferencia';
   if(!priority&&!overlap)continue;

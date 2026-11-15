@@ -41,7 +41,7 @@ export default function AtlasApp(){
  const [modal,setModal]=useState<Modal>(null);const [mobile,setMobile]=useState(false);
  const [ready,setReady]=useState(false);const [signedIn,setSignedIn]=useState(true);const [configured,setConfigured]=useState(false);const [model,setModel]=useState("");
  const [saveStatus,setSaveStatus]=useState("Abriendo espacio…");const [notice,setNotice]=useState("");const [loadError,setLoadError]=useState("");
- const [filter,setFilter]=useState("");const [memTab,setMemTab]=useState("Todo");const [decisionFilter,setDecisionFilter]=useState("Todas");
+ const [memScopeFilter,setMemScopeFilter]=useState("all");const [filter,setFilter]=useState("");const [memTab,setMemTab]=useState("Todo");const [decisionFilter,setDecisionFilter]=useState("Todas");
  const [archive,setArchive]=useState<{id:string;title:string;date:string;characters:number}[]>([]);const [archiveMatches,setArchiveMatches]=useState<{id:string;text:string;title:string}[]>([]);
  const [document,setDocument]=useState<{id:string;title:string;date:string;text:string}|null>(null);const [archiveBusy,setArchiveBusy]=useState(false);
  const [greeting,setGreeting]=useState("Hola");const [budget,setBudget]=useState<Record<string,string>>({base:"",variable:"",essential:"",transport:"",leisure:"",debt:"",cushion:"",housing:""});

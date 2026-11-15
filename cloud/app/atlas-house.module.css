@@ -80,3 +80,5 @@
 }
 @media(max-width:390px){.triadBadge strong{font-size:9px}.triadBadge small{font-size:7px}.house .roomCard{top:124px}}
 @media(max-height:620px) and (min-width:651px){.house .roomCard{top:138px;max-height:calc(100dvh - 255px)}}
+
+.cleanView .roomCard,.cleanView .dock,.cleanView .sceneStats{display:none}.charterDialog{border:0;padding:0;border-radius:24px;width:min(1100px,95vw);max-height:90dvh;overflow:auto}.charterDialog::backdrop{background:#10282499}

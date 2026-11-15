@@ -68,7 +68,7 @@ export function HouseScene(props:Props){
    if(event.origin!==location.origin||event.source!==frame.current?.contentWindow||!event.data||typeof event.data!=='object')return;
    const data=event.data;
    if(data.type==='atlas:house:people'&&data.value&&typeof data.value==='object'&&typeof data.value.enabled==='boolean'){const v=data.value;latest.current.onPeopleStatus?.({enabled:v.enabled,active:Array.isArray(v.active)?Math.min(2,v.active.length):0,loading:Array.isArray(v.loading)&&v.loading.length>0,failed:Array.isArray(v.failed)&&v.failed.length>0,limit:v.limit===0?0:v.limit===1?1:2});}
-   if(data.type==='atlas:house:ready'){setReady(true);setError(null);api.pause(latest.current.paused===true);latest.current.onReady?.(api);}
+   if(data.type==='atlas:house:ready'){stopHello();setReady(true);setError(null);api.pause(latest.current.paused===true);latest.current.onReady?.(api);}
    if(data.type==='atlas:house:room'&&validRoom(data.room)){currentRoom.current=data.room;latest.current.onRoomChange?.(data.room);}
    if(data.type==='atlas:house:interact'&&validRoom(data.room))latest.current.onInteract?.(data.room);
    if(data.type==='atlas:house:performance'&&[data.fps,data.frames,data.drawCalls,data.triangles].every(value=>typeof value==='number'&&Number.isFinite(value)))latest.current.onPerformance?.({fps:data.fps,frames:data.frames,drawCalls:data.drawCalls,triangles:data.triangles,backend:String(data.backend)});

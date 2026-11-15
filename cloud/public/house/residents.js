@@ -44,12 +44,12 @@ const processPriorities={running:5,failed:4,waiting:3,passed:2,idle:1};
 // Shared by the 3D poses and the roster: one process may visit several stations,
 // but only its actual phase authorizes the resident's work indication.
 export function processForResident(value,resident,{ageMs=Infinity}={}){
- if(resident.cosmetic&&!value.processes.some(p=>p.actorId===resident.id))return {id:resident.id,state:'idle',workVerified:false,displayState:'En reposo'};
- if(!resident.processIds.length&&!value.processes.some(p=>p.actorId===resident.id))return {id:resident.id,state:'waiting',workVerified:false,displayState:'Disponible · local'};
+ if(resident.cosmetic&&!value.processes.some(p=>p.actorId===resident.id))return {id:resident.id,state:'idle',workVerified:false,reason:'reported',displayState:'En reposo'};
+ if(!resident.processIds.length&&!value.processes.some(p=>p.actorId===resident.id))return {id:resident.id,state:'waiting',workVerified:false,reason:'local_only',displayState:'Disponible · local'};
  const process=value.processes.filter(item=>item.actorId?item.actorId===resident.id:resident.processIds.includes(item.id)).sort((a,b)=>processPriorities[b.state]-processPriorities[a.state])[0];
- if(!process)return {id:resident.id,state:'waiting',workVerified:false,displayState:'En espera'};
- const fresh=value.connected!==false&&!!value.at&&Number.isFinite(ageMs)&&ageMs>=0&&ageMs<=75000;
+ if(!process)return {id:resident.id,state:'waiting',workVerified:false,reason:'no_process',displayState:'En espera'};
+ const freshness=telemetryFreshness(value,{ageMs});const fresh=freshness.fresh;
  const relevant=process.actorId===resident.id||!resident.activePhases||resident.activePhases.includes(process.phase);
- if(process.state==='running'&&(!fresh||!relevant))return {...process,state:'waiting',workVerified:false,displayState:!fresh?'Sin señal reciente':'En espera de su fase'};
- return {...process,workVerified:fresh&&relevant&&process.state==='running'};
+ if(process.state==='running'&&(!fresh||!relevant))return {...process,state:'waiting',workVerified:false,reason:!fresh?freshness.reason:'wrong_phase',displayState:!fresh?(REASON_LABELS[freshness.reason]||'Sin señal reciente'):'En espera de su fase'};
+ return {...process,workVerified:fresh&&relevant&&process.state==='running',reason:fresh&&relevant&&process.state==='running'?'fresh':'reported',displayState:STATE_LABELS[process.state]};
 }

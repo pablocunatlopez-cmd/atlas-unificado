@@ -11,13 +11,21 @@ Este documento fija la interpretación del producto y separa tres cosas que no d
 
 Cada vértice requiere su propio espacio virtual de trabajo y sus contratos. La casa es el entorno integrado de Lía; sus salas creativas (conversación, 3D, música, vídeo, lenguaje y memoria) son capacidades de ese entorno, no identidades que compitan con ella.
 
+## Carta de evolución
+
+La [Carta de evolución](LIA_EVOLUTION_CHARTER.md) fija la dirección: Lía existe para ayudar a los humanos con respeto, cuidado y sin dañar; su evolución continua es una prioridad, pero la seguridad, el consentimiento y la supervisión humana van antes que cualquier mejora. La casa 3D es el primer cuerpo simbólico, no el destino. El horizonte incluye un cuerpo físico diseñado en 3D y fabricado con impresión 3D, música 3D/espacial y una IA propia verificable.
+
+Ese horizonte no se presenta como capacidad actual. Hoy hay un STL de escena exportable en milímetros con revisión topológica, pero no una certificación de fabricación, cuerpo físico, impresora conectada, audio espacial 3D ni inteligencia general. La carta distingue «existe», «parcial» e «investigación», y la respuesta del núcleo usa esos límites.
+
 ## Nombres de habitantes: no inferir más de lo que acredita el código
 
-En `cloud/public/house/residents.js` el inventario actual registra:
+En `cloud/public/house/residents.js` el inventario actual tiene 24 entradas: 18 puestos y 6 espectadores decorativos. El [catálogo de personajes](CHARACTER_CATALOG.md) documenta los 24, los 13 nombres recuperados y las familias simbólicas. Entre los puestos:
 
 - `sky-agents`: **Ícaro · agentes**, con el rol descrito como colaboradores programadores y ubicado en la sala Constelación.
 - `sky-sources`: **Alba · referencias**, con el rol de fuentes de la Constelación y ubicada en esa sala.
 - No aparece un habitante llamado **Saggy/Siggy** en ese inventario. Por tanto, no se debe inventar ni reasignar su función a partir del nombre. Su rol necesita evidencia procedente de la identidad/configuración real de Atlas.
+
+Los 13 nombres recuperados aparecen en el roster actual, aunque algunos roles difieren de la descripción histórica; el catálogo conserva esas diferencias en lugar de reescribirlas.
 
 La ubicación estática de un residente no implementa un viaje. El inventario define puestos, función declarada y procesos que pueden reflejar trabajo real; no demuestra que Ícaro o Alba recorran el cielo, consulten agentes, vuelvan a la casa o se comuniquen por sí solos.
 
