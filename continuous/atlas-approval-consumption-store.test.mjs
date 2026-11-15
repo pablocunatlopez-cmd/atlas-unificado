@@ -23,3 +23,21 @@ test('rejects invalid approval IDs before writing',async()=>{
   await assert.rejects(consumeAtlasApprovalOnce({directory,approvalId:'../escape'}));
  }finally{await rm(directory,{recursive:true,force:true});}
 });
+
+test('refuses an approval directory accessible by other users',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'atlas-approval-public-'));
+ try{
+  const {chmod}=await import('node:fs/promises');
+  await chmod(directory,0o755);
+  await assert.rejects(consumeAtlasApprovalOnce({directory,approvalId}),
+   /directory must be private/);
+ }finally{await rm(directory,{recursive:true,force:true});}
+});
+test('existing marker remains consumed after a new call',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'atlas-approval-restart-'));
+ try{
+  assert.equal((await consumeAtlasApprovalOnce({directory,approvalId})).consumed,true);
+  const again=await consumeAtlasApprovalOnce({directory,approvalId});
+  assert.equal(again.status,'already_consumed');
+ }finally{await rm(directory,{recursive:true,force:true});}
+});
