@@ -11,15 +11,15 @@ export const ATLAS_NEURAL_BACKENDS=Object.freeze([
  {id:'demucs',domain:'audio',tasks:['source_separation'],runtime:'local',gpu:'optional',license:'MIT',source:'https://github.com/facebookresearch/demucs',status:'archived_research_only'}
 ]);
 const TASKS=new Set(ATLAS_NEURAL_BACKENDS.flatMap(x=>x.tasks));
-export function planAtlasNeuralTask({task,availableBackends=[],commercial=false,allowResearch=false,preferredGpu='optional'}={}){
- if(!TASKS.has(task)||!Array.isArray(availableBackends)||availableBackends.some(x=>typeof x!=='string'))
+export function planAtlasNeuralTask({task,availableBackends=[],commercial=false,allowResearch=false,preferredGpu='cpu'}={}){
+ if(!['cpu','cuda','optional'].includes(preferredGpu)||!TASKS.has(task)||!Array.isArray(availableBackends)||availableBackends.some(x=>typeof x!=='string'))
   throw Error('Invalid neural routing request');
  const available=new Set(availableBackends);
  const candidates=ATLAS_NEURAL_BACKENDS.filter(x=>x.tasks.includes(task)&&available.has(x.id))
   .map(x=>({...x,blockedReasons:[
     ...(x.status!=='integration_required'&&!allowResearch?['research_only']:[]),
     ...(commercial&&x.license.includes('NC')?['noncommercial_weights']:[]),
-    ...(x.gpu==='cuda'&&preferredGpu==='cpu'?['requires_cuda']:[])
+    ...(x.gpu==='cuda'&&preferredGpu!=='cuda'?['requires_cuda']:[])
    ]}));
  const eligible=candidates.filter(x=>x.blockedReasons.length===0)
   .sort((a,b)=>Number(b.gpu===preferredGpu)-Number(a.gpu===preferredGpu)||a.id.localeCompare(b.id));
