@@ -1,3 +1,4 @@
+import {hybridRerank} from './neural-hybrid-retrieval.mjs';
 import {TinyLanguageModel, encode, validateSnapshot,random,config as modelConfig} from '../public/core/language-model.mjs';
 import {createHash} from 'node:crypto';
 import {retrievalContext,selectRetrievalDocuments,retrievalProvenance} from './retrieval-policy.mjs';
@@ -63,7 +64,7 @@ export function searchDocuments(documents,query,limit=5,options={}){
   }));
   const weightTotal=[...idf.values()].reduce((sum,value)=>sum+value,0)||1;
   const phrase=terms.join(' ');
-  return rows.map(row=>{
+  const hits=rows.map(row=>{
     const matched=terms.filter(term=>row.freq.has(term));
     if(!matched.length)return null;
     let score=0;
@@ -77,7 +78,10 @@ export function searchDocuments(documents,query,limit=5,options={}){
     const firstPosition=Math.min(...matched.map(term=>text.indexOf(term)).filter(position=>position>=0));
     const start=Math.max(0,(Number.isFinite(firstPosition)?firstPosition:0)-180);
     return {url:row.doc.url,fetchedAt:row.doc.fetchedAt,score,matchedTerms:matched,excerpt:row.doc.text.slice(start,start+850),...retrievalProvenance(row.doc)};
-  }).filter(Boolean).sort((a,b)=>b.score-a.score||a.url.localeCompare(b.url)).slice(0,limit);
+  }).filter(Boolean).sort((a,b)=>b.score-a.score||a.url.localeCompare(b.url)).slice(0,options?.semanticScores?Math.min(50,limit*4):limit);
+  // Optional, precomputed scores from an explicitly installed embedding encoder.
+  // No encoder available => preserve the original lexical ranking and results.
+  return options?.semanticScores?hybridRerank(hits,options.semanticScores,{alpha:options.semanticAlpha??0.7,limit}):hits;
 }
 export function replayIndices(length,steps,offset=0){
   if(length<1)throw Error('No hay documentos de entrenamiento.');
