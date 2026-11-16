@@ -1,3 +1,4 @@
+import {buildLiaHypothesisLedger} from '../../../continuous/lia-hypothesis-ledger.mjs';
 /** D1-backed, user-isolated handoff to the owner's local inference worker. */
 import {validateCreativePlan} from '../creative/plan.mjs';
 import {sanitizeProcessTelemetry} from '../core/process-telemetry.mjs';
@@ -105,7 +106,7 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    let result=null;
    if(row.status==='completed'&&row.result){try{result=JSON.parse(row.result);}catch{}}
    return {id:row.id,kind:row.kind||'chat',status:row.status,stage:row.stage||null,createdAt:new Date(row.created_at).toISOString(),updatedAt:new Date(row.updated_at).toISOString(),
-    checks:Object.freeze({answerStored:typeof result?.answer==='string'&&result.answer.length>0,modelReported:typeof result?.model==='string'?result.model:null}),audit:result?.liaExecutionAudit||null,
+    checks:Object.freeze({answerStored:typeof result?.answer==='string'&&result.answer.length>0,modelReported:typeof result?.model==='string'?result.model:null}),audit:result?.liaExecutionAudit||null,hypotheses:result?.liaHypotheses||[],
     evidence:'cloud_jobs',verifiedExecution:row.status==='completed',hypothesis:null,revision:null};
   })};
  }
@@ -154,6 +155,7 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    const audit=result.liaExecutionAudit;
    value.liaExecutionAudit={schema:1,source:'local-chat-result',review:['completed','failed','not-recorded'].includes(audit.review)?audit.review:'not-recorded',reviewAttempted:audit.reviewAttempted===true,citationAuditRecorded:audit.citationAuditRecorded===true,unknownCitationLabels:Array.isArray(audit.unknownCitationLabels)?audit.unknownCitationLabels.filter(x=>typeof x==='string').slice(0,12).map(x=>x.slice(0,100)):[],sourcesReturned:Number.isInteger(audit.sourcesReturned)&&audit.sourcesReturned>=0?Math.min(audit.sourcesReturned,100):null,webRead:audit.webRead===true,hypothesis:'not-recorded',revision:audit.review==='completed'?'answer-revised-without-diff':'not-recorded',factualAccuracyVerified:false};
   }
+  if(Array.isArray(result.liaHypotheses))value.liaHypotheses=buildLiaHypothesisLedger(result.liaHypotheses);
   const at=now();
   const row=await one('SELECT conversation_id,user_id,question,kind,status,lease_token,lease_until,result FROM cloud_jobs WHERE id=?',input.jobId);
   if(!row||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
