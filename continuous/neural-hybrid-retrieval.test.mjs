@@ -19,3 +19,10 @@ test('Atlas retrieval accepts optional semantic scores without replacing lexical
  assert.match(source,/hybridRerank\(hits,options.semanticScores/);
  assert.match(source,/searchDocuments\(documents,query/);
 });
+
+test('partial neural scores never penalize lexical-only documents',()=>{
+ const hits=[{url:'a',score:0.8},{url:'b',score:0.7}];
+ const result=hybridRerank(hits,new Map([['b',1]]),{alpha:0.1});
+ assert.deepEqual(result.map(x=>x.url),['a','b']);
+ assert.ok(result.every(x=>x.rankingMethod==='lexical-only'));
+});
