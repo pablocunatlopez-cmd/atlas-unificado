@@ -9,7 +9,7 @@ export async function auditAtlasCodingTransaction({directory,transactionId,
  proposalId,readHeadCommit,atMs}={}){
  if(!Number.isSafeInteger(atMs)||atMs<0)
   throw Error('Trusted audit observation time required');
- const recovery=await reconcileAtlasCodingIntent({directory,transactionId,readHeadCommit});
+ const recovery=await reconcileAtlasCodingIntent({directory,transactionId,readHeadCommit,expectedProposalId:proposalId});
  const status=recovery.status==='base_still_visible'?'intent_recorded':
   'manual_review_required';
  const report=buildAtlasCodingAuditReport({proposalId,transactionId,
