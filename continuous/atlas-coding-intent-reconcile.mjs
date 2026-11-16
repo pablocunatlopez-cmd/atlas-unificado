@@ -1,5 +1,6 @@
-import {readFile,stat} from 'node:fs/promises';
+import {lstat,open} from 'node:fs/promises';
 import {join} from 'node:path';
+import {constants} from 'node:fs';
 const ID=/^[a-zA-Z0-9_-]{1,100}$/;
 const SHA=/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 const DIGEST=/^[a-f0-9]{64}$/;
@@ -11,11 +12,18 @@ export async function reconcileAtlasCodingIntent({directory,transactionId,readHe
  if(typeof directory!=='string'||!directory.trim()||!ID.test(transactionId||'')||
     typeof readHeadCommit!=='function')
   throw Error('Trusted coding reconciliation context required');
- const info=await stat(directory);
+ const info=await lstat(directory);
  if(!info.isDirectory()||(info.mode&0o077)!==0)
   throw Error('Coding intent directory must be private');
  let raw;
- try{raw=await readFile(join(directory,transactionId+'.intent.json'),'utf8');}
+ try{
+  const path=join(directory,transactionId+'.intent.json');
+  const fileInfo=await lstat(path);
+  if(!fileInfo.isFile()||(fileInfo.mode&0o077)!==0)
+   return Object.freeze({status:'unsafe_intent_file',retrySafe:false,action:'manual_review'});
+  const file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
+  try{raw=await file.readFile('utf8');}finally{await file.close();}
+ }
  catch(e){
   if(e?.code==='ENOENT')return Object.freeze({status:'intent_not_found',retrySafe:false,action:'manual_review'});
   throw e;
