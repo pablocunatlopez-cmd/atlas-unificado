@@ -4,6 +4,7 @@ import {constants} from 'node:fs';
 const ID=/^[a-zA-Z0-9_-]{1,100}$/;
 const SHA=/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 const DIGEST=/^[a-f0-9]{64}$/;
+const MAX_INTENT_BYTES=2048;
 /**
  * Private local append-only intent markers. The host must coordinate all
  * writers, and must not mistake this for a distributed transaction log.
@@ -31,15 +32,19 @@ export async function recordAtlasCodingIntent({directory,transactionId,proposalI
    let existing;
    try{
     const existingInfo=await lstat(path);
-    if(!existingInfo.isFile()||(existingInfo.mode&0o077)!==0)
+    if(!existingInfo.isFile()||(existingInfo.mode&0o077)!==0||existingInfo.size>MAX_INTENT_BYTES)
      return Object.freeze({status:'unsafe_intent_file',transactionId,applied:false});
     const file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
     try{
      const opened=await file.stat();
-     if(!opened.isFile()||(opened.mode&0o077)!==0||
+     if(!opened.isFile()||(opened.mode&0o077)!==0||opened.size>MAX_INTENT_BYTES||
         opened.dev!==existingInfo.dev||opened.ino!==existingInfo.ino)
       return Object.freeze({status:'unsafe_intent_file',transactionId,applied:false});
      existing=JSON.parse(await file.readFile('utf8'));
+     if(!existing||Object.keys(existing).sort().join(',')!==
+        'baseCommit,diffDigest,proposalId,schemaVersion,status,transactionId'||
+        existing.schemaVersion!==1||existing.status!=='intent_recorded_no_commit_claim')
+      return Object.freeze({status:'invalid_intent',transactionId,applied:false});
     }finally{await file.close();}
    }
    catch{return Object.freeze({status:'corrupt_or_partial_intent',transactionId,applied:false});}
