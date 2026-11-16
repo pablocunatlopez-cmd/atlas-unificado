@@ -20,3 +20,11 @@ test('untrusted journal imports reject malformed and duplicate records',()=>{
  const a=spiralEvent({id:'a',time:1});
  assert.throws(()=>spiralJournalImport([a,a]));
 });
+
+test('revision links cannot point to missing or future events',()=>{
+ const a=spiralEvent({id:'a',time:1,revisionOf:'missing'});
+ assert.throws(()=>spiralJournalImport([a]));
+ const first=spiralEvent({id:'first',time:1});
+ const second=spiralEvent({id:'second',time:2,revisionOf:'first'});
+ assert.equal(spiralJournalImport([first,second]).events.length,2);
+});
