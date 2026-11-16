@@ -2,8 +2,12 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {atlasSensoryWorld,projectAtlasSensoryWorld} from './atlas-sensory-world.mjs';
 import {atlasCharacterCapabilityMap} from './atlas-character-capabilities.mjs';
-test('Lía is the entire sensory circle, never a fourth triangle vertex',()=>{
- assert.equal(atlasSensoryWorld.whole.id,'lia');
+test('Lía is unified chat AI; sensory world is separate and contains the triangle',()=>{
+ assert.equal(atlasSensoryWorld.lia.id,'lia');
+ assert.equal(atlasSensoryWorld.lia.isSensoryWorld,false);
+ assert.equal(atlasSensoryWorld.lia.role,'unified-conversational-ai');
+ assert.equal(atlasSensoryWorld.whole.id,'sensory-world');
+ assert.equal(atlasSensoryWorld.inhabitantsAccess,'visit-and-converse-directly-from-lia-house');
  assert.equal(atlasSensoryWorld.whole.shape,'circle');
  assert.equal(atlasSensoryWorld.whole.isSeparateVertex,false);
  assert.deepEqual(atlasSensoryWorld.vertices.map(x=>x.id),['atlas','ion','constelacion']);
