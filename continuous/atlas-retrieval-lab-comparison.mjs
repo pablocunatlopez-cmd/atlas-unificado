@@ -29,8 +29,10 @@ export function compareRetrievalLabStrategies(lab,cases,{
   return {id:c.id,retrievedIds,latencyMs,memoryMb,citationCorrect:label};
  });
  const baselineRuns=measure(baselineMethod),candidateRuns=measure(candidateMethod);
+ if(typeof lab.corpusHash!=='string'||!/^[a-f0-9]{64}$/.test(lab.corpusHash))throw new TypeError('Missing actual document corpus fingerprint');
+ const documentCorpusHash='sha256:'+lab.corpusHash;
  return Object.freeze({baselineMethod,candidateMethod,
-  ...evaluatePairedRetrieval(gold,baselineRuns,candidateRuns,{minimumQueries,protocol}),
+  ...evaluatePairedRetrieval(gold,baselineRuns,candidateRuns,{minimumQueries,protocol,documentCorpusHash}),
   measurementScope:'Local retrieval calls only; includes process RSS and cold/warm scheduling noise; excludes generation and embeddings.',
   citationLabelScope:'Externally supplied labels, not independently verified by this module',
   corpusSource:'caller-provided-lab',networkCalls:0,modelDownloads:0});
