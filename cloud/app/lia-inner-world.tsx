@@ -1,8 +1,10 @@
 'use client';
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {initialLiaPerspective,transitionLiaPerspective,liaPerspectiveLevels} from '../../continuous/lia-perspective-state.mjs';
 import LiaAvatar from './lia-avatar';
 type Level={depth:number;label:string;focus:string};
+type Conversation={id:string;title:string};
+type HistoryEvent={id:string;role:string;summary:string;vertex:string;verified:boolean;provenance:string;time:string|null};
 const MAX_DEPTH=6;
 const VERTICES=[
  {name:'Mundo Mental · Atlas',detail:'Hipótesis, recuerdos y simulaciones. No son observaciones verificadas.'},
@@ -11,6 +13,30 @@ const VERTICES=[
 ] as const;
 export default function LiaInnerWorld(){
  const [perspective,setPerspective]=useState(initialLiaPerspective);
+ const [conversations,setConversations]=useState<Conversation[]>([]);
+ const [selectedConversation,setSelectedConversation]=useState('');
+ const [history,setHistory]=useState<HistoryEvent[]>([]);
+ const [historyError,setHistoryError]=useState('');
+ const [historyLoading,setHistoryLoading]=useState(false);
+ useEffect(()=>{
+  let active=true;
+  fetch('/api/cloud/conversations',{credentials:'same-origin',cache:'no-store'})
+   .then(async response=>{if(!response.ok)throw Error(response.status===401?'Inicia sesión para ver tus conversaciones.':'No se pudo consultar el historial.');return response.json()})
+   .then(data=>{if(active)setConversations(Array.isArray(data.conversations)?data.conversations:[])})
+   .catch(error=>{if(active)setHistoryError(error.message)});
+  return ()=>{active=false};
+ },[]);
+ useEffect(()=>{
+  if(!selectedConversation){setHistory([]);return;}
+  const controller=new AbortController();
+  setHistoryLoading(true);setHistoryError('');setHistory([]);
+  fetch('/api/lia-world/conversations/'+encodeURIComponent(selectedConversation),{credentials:'same-origin',cache:'no-store',signal:controller.signal})
+   .then(async response=>{if(!response.ok)throw Error('No se pudo recuperar la conversación seleccionada.');return response.json()})
+   .then(data=>setHistory(Array.isArray(data.events)?data.events:[]))
+   .catch(error=>{if(!controller.signal.aborted)setHistoryError(error.message)})
+   .finally(()=>{if(!controller.signal.aborted)setHistoryLoading(false)});
+  return ()=>controller.abort();
+ },[selectedConversation]);
  const depth=perspective.depth;
  const focus=(['mental','physical','god'] as const).indexOf(perspective.focus as 'mental'|'physical'|'god');
  const yaw=perspective.yaw;
@@ -47,6 +73,20 @@ export default function LiaInnerWorld(){
    <button type="button" onClick={()=>dispatch({type:'reset'})}>Restablecer vista</button>
   </div>
   <p aria-live="polite">Profundidad: {depth} de {MAX_DEPTH}. Todos los niveles comparten identidad y foco. El límite evita recursión ilimitada.</p>
+  <div style={{marginTop:20,borderTop:'1px solid #8885',paddingTop:16}}>
+   <h2>Memoria conversacional real</h2>
+   <p>Estos acontecimientos proceden del historial del chat de Atlas, no de una simulación. No representan pensamientos internos ni observaciones físicas verificadas.</p>
+   <label htmlFor="lia-history-conversation">Conversación</label>{' '}
+   <select id="lia-history-conversation" value={selectedConversation} onChange={event=>setSelectedConversation(event.target.value)}>
+    <option value="">Selecciona una conversación</option>
+    {conversations.map(conversation=><option key={conversation.id} value={conversation.id}>{conversation.title}</option>)}
+   </select>
+   {historyLoading&&<p role="status">Cargando historial…</p>}
+   {historyError&&<p role="alert">{historyError}</p>}
+   {selectedConversation&&!historyLoading&&!historyError&&<ol style={{maxHeight:260,overflowY:'auto',paddingLeft:22}}>
+    {history.map(event=><li key={event.id} style={{marginBottom:12}}><strong>{event.role==='assistant'?'Lía · respuesta':'Usuario · mensaje'}</strong>{' '}<small>· {event.time||'fecha desconocida'} · no verificado</small><div>{event.summary}</div></li>)}
+   </ol>}
+  </div>
   <p style={{fontSize:13,opacity:.8}}>Prototipo espacial CSS 3D sin WebGL, sin sensores y sin avatar robótico. La memoria persistente y la conexión con Ion siguen pendientes.</p>
  </section>;
 }
