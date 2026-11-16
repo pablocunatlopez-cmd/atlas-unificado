@@ -41,3 +41,9 @@ test('replayed nonce is blocked by host consumption',async()=>{
 test('missing trusted callbacks fail closed',async()=>{
  await assert.rejects(()=>verifyAtlasCodingApproval(options(signed(),{consumeNonce:null})));
 });
+
+test('PEM encoded Ed25519 public key is accepted',async()=>{
+ const pem=publicKey.export({type:'spki',format:'pem'});
+ const r=await verifyAtlasCodingApproval(options(signed(),{publicKey:pem}));
+ assert.equal(r.status,'verified_for_final_review');
+});
