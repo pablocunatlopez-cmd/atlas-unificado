@@ -1,3 +1,4 @@
+import {sanitizeLiaExecutionAudit} from './lia-execution-audit.mjs';
 // Outbound-only worker: the public Site never gets access to the PC's network.
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -61,7 +62,7 @@ export function createCloudBridge({siteUrl,token,request=fetch,onState=()=>{},lo
   const response=await localPost('/chat/message',{messages,sharedSession:true,internet:internet===true,tools:false,external:false,...(json?{json:true}:{}),...(['world','game'].includes(creativeMode)?{creativeMode}:{})},jobSignal);
   const result=await response.json();
   if(!response.ok||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>16000||!['atlas-local','atlas-coordinator'].includes(result.model))throw Error('Respuesta local inválida.');
-  return {answer:result.answer,model:result.model,modelName:typeof result.modelName==='string'?result.modelName.slice(0,160):'Qwen local'};
+  return {answer:result.answer,model:result.model,modelName:typeof result.modelName==='string'?result.modelName.slice(0,160):'Qwen local',...(sanitizeLiaExecutionAudit(result)?{liaExecutionAudit:sanitizeLiaExecutionAudit(result)}:{})};
  }
  async function video(job,jobSignal,onProgress){
   if(!CLOUD_JOB_ID.test(job.id))throw Error('Identificador de vídeo de nube inválido.');
