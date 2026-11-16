@@ -1,5 +1,5 @@
 import {cloudError,cloudJson,cloudUser,queue} from '@/lib/cloud/http';
-import {projectLiaConversation} from '../../../../../continuous/lia-conversation-projection.mjs';
+import {projectLiaConversation} from '../../../../../../continuous/lia-conversation-projection.mjs';
 export const dynamic='force-dynamic';
 export async function GET(_request:Request,context:{params:Promise<{id:string}>}){
  try{
