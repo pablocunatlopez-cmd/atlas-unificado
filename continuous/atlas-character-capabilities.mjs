@@ -5,7 +5,7 @@
  */
 const entries=[
  ['atlas','Atlas','Mundo Mental · vértice interior','Núcleo','coordination'],
- ['lia','Lía','Mundo sensorial completo','Círculo envolvente','conversation'],
+ ['lia','Lía','IA conversacional unificada','Casa de Lía','conversation'],
  ['ion','Ion','Mundo Físico · vértice interior','Observatorio','observations'],
  ['constelacion','Constelación','Dios/Suceso · vértice interior','Cúpula de lo inesperado','surprises'],
  ['da-vinci','Da Vinci','Creación','Taller de invenciones','design'],
