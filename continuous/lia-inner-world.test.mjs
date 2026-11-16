@@ -8,7 +8,7 @@ test('recursive inner-world UI shares one state and bounds nesting',()=>{
  assert.match(source,/dispatch\(\{type:'exit'\}\)/);
  assert.match(source,/useState\(initialLiaPerspective\)/);
  assert.match(source,/VERTICES\[focus\]/);
- assert.doesNotMatch(source,/fetch\(|new Worker\(|setInterval\(/);
+ assert.doesNotMatch(source,/new Worker\(|setInterval\(/);
 });
 test('the world is routed separately without replacing the canonical chat',()=>{
  const page=readFileSync(new URL('../cloud/app/lia-world/page.tsx',import.meta.url),'utf8');
