@@ -18,3 +18,9 @@ test('spiral review requires permission for observations and promotion',()=>{
  assert.equal(plan.steps[1].requiresApproval,true);
  assert.equal(plan.autoPromote,false);
 });
+
+test('A/B requires comparable cohorts and non-bypassable thresholds',()=>{
+ assert.equal(evaluateAtlasCandidate(base,{...base,queries:101}).verdict,'reject');
+ assert.equal(evaluateAtlasCandidate(base,{...base,latencyP95Ms:500},{maxLatencyRegression:Infinity}).verdict,'insufficient-evidence');
+ assert.equal(evaluateAtlasCandidate(base,{...base,memoryMb:2000},{maxMemoryRegression:-1}).verdict,'insufficient-evidence');
+});
