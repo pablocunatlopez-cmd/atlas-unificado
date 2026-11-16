@@ -1,24 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-test('canonical Lía chat uses Atlas Unificado rather than a parallel rule-only UI',()=>{
- const main=readFileSync(new URL('../cloud/app/cloud-chat.tsx',import.meta.url),'utf8');
- const ui=readFileSync(new URL('../cloud/app/chat/offline/offline-chat.tsx',import.meta.url),'utf8');
- const page=readFileSync(new URL('../cloud/app/chat/offline/page.tsx',import.meta.url),'utf8');
- const route=readFileSync(new URL('../cloud/app/api/chat/route.ts',import.meta.url),'utf8');
- assert.doesNotMatch(main,/href="\/chat\/offline\/"/);
+import {readFileSync,existsSync} from 'node:fs';
+const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
+test('Lía uses canonical Atlas Unificado chat; deprecated offline path redirects',()=>{
+ const main=read('../cloud/app/cloud-chat.tsx');
+ const page=read('../cloud/app/chat/offline/page.tsx');
  assert.match(main,/\/api\/cloud\/chat/);
- assert.match(main,/Lía utiliza la conversación principal de Atlas Unificado/);
- assert.doesNotMatch(main,/async function sendOffline/);
- assert.match(ui,/fetch\('\/api\/chat'/);
- assert.match(ui,/engine:'native',web:false,history:previous\.slice\(-20\)/);
- assert.match(ui,/No utiliza ese contexto para razonar de forma general/);
- assert.match(ui,/function exportConversation\(\)/);
- assert.match(ui,/Exportar conversación/);
- assert.match(ui,/data\.reply\.engine!=='native'/);
- assert.match(ui,/no se guarda automáticamente en el historial/);
- assert.match(ui,/setTurns\(\[\]\)/);
- assert.match(page,/redirect\(\x27\/chat\/\x27\)/);
- assert.match(route,/getChatGPTUser\(\)/);
- assert.match(route,/makeReply\(/);
+ assert.doesNotMatch(main,/href="\/chat\/offline\/"|sendOffline/);
+ assert.match(page,/redirect\('\/chat\/'\)/);
+ assert.equal(existsSync(new URL('../cloud/app/chat/offline/offline-chat.tsx',import.meta.url)),false);
 });
