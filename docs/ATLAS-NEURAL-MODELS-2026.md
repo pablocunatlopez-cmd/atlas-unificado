@@ -10,7 +10,7 @@
 | Capa | Candidato | Integración |
 |---|---|---|
 | Atlas / Mundo Mental | Qwen3.5 4B; 9B como alternativa con RAM suficiente | catálogo consultivo `continuous/neural-model-catalog.mjs`; no reemplaza el motor local actual |
-| Memoria y documentación | Horizon-Labs multilingual-embedding-small (ONNX); BGE-M3 para comparar | `continuous/neural-hybrid-retrieval.mjs` + `searchDocuments`; necesita similitudes generadas realmente |
+| Memoria y documentación | BGE-M3 (requiere adaptador de embeddings verificado) | `continuous/neural-hybrid-retrieval.mjs` + `searchDocuments`; necesita similitudes generadas realmente |
 | Evaluación y contradicción | Phi-4-mini | candidato para revisiones contrastadas, sin aprobación automática de cambios |
 | Ion / Mundo Físico | Herramientas verificadas, no un LLM con permisos ilimitados | no ejecutar acciones nuevas ni ampliar permisos |
 | Dios / Suceso | Registro de sorpresas y revisión append-only | `continuous/atlas-spiral-time.mjs`; un modelo no determina por sí solo la verdad del suceso |
@@ -31,10 +31,12 @@
 
 ## Fuentes de candidatos
 - https://huggingface.co/collections/Qwen/qwen35
-- https://huggingface.co/Horizon-Labs/multilingual-embedding-small
 - https://huggingface.co/BAAI/bge-m3
 - https://huggingface.co/microsoft/Phi-4-mini-instruct
 - https://www.sbert.net/docs/sentence_transformer/usage/efficiency.html
 
 ## Estado honesto
 Catálogo y fusionador de puntuaciones: implementados. Modelo neuronal instalado: **no comprobado**. Inferencia de embeddings: **no conectada**. Validación CI de la rama: pendiente de resultado del último commit. No hay despliegue ni modificación de `main`.
+
+## Revisión de auditoría
+Se retiró una entrada de embeddings cuya identidad upstream no estaba verificada. El catálogo no garantiza que las etiquetas Ollama coincidan con el registro disponible en el equipo. Se incorporó `continuous/atlas-evaluation-gate.mjs`: evaluación A/B conservadora con aprobación humana obligatoria y sin promoción automática.
