@@ -1,10 +1,10 @@
+import {isAtlasCodingIntentRecord,isAtlasCodingIntentFileInfo} from './atlas-coding-intent-schema.mjs';
 import {lstat,open} from 'node:fs/promises';
 import {join} from 'node:path';
 import {constants} from 'node:fs';
 const ID=/^[a-zA-Z0-9_-]{1,100}$/;
 const SHA=/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 const DIGEST=/^[a-f0-9]{64}$/;
-const MAX_INTENT_BYTES=2048;
 /**
  * Read-only recovery report. An intent marker is not proof of a commit.
  * Never automatically retries, deletes markers, or authorizes writes.
@@ -20,12 +20,12 @@ export async function reconcileAtlasCodingIntent({directory,transactionId,readHe
  try{
   const path=join(directory,transactionId+'.intent.json');
   const fileInfo=await lstat(path);
-  if(!fileInfo.isFile()||(fileInfo.mode&0o077)!==0||fileInfo.size>MAX_INTENT_BYTES)
+  if(!isAtlasCodingIntentFileInfo(fileInfo))
    return Object.freeze({status:'unsafe_intent_file',retrySafe:false,action:'manual_review'});
   const file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
   try{
    const opened=await file.stat();
-   if(!opened.isFile()||(opened.mode&0o077)!==0||opened.size>MAX_INTENT_BYTES||
+   if(!isAtlasCodingIntentFileInfo(opened)||
       opened.dev!==fileInfo.dev||opened.ino!==fileInfo.ino)
     return Object.freeze({status:'unsafe_intent_file',retrySafe:false,action:'manual_review'});
    raw=await file.readFile('utf8');
@@ -38,10 +38,7 @@ export async function reconcileAtlasCodingIntent({directory,transactionId,readHe
  let record;
  try{record=JSON.parse(raw);}
  catch{return Object.freeze({status:'corrupt_or_partial_intent',retrySafe:false,action:'manual_review'});}
- if(!record||Object.keys(record).sort().join(',')!==
-    'baseCommit,diffDigest,proposalId,schemaVersion,status,transactionId'||record.schemaVersion!==1||record.transactionId!==transactionId||
-    !ID.test(record.proposalId||'')||!SHA.test(record.baseCommit||'')||
-    !DIGEST.test(record.diffDigest||'')||record.status!=='intent_recorded_no_commit_claim')
+ if(!isAtlasCodingIntentRecord(record)||record.transactionId!==transactionId)
   return Object.freeze({status:'invalid_intent',retrySafe:false,action:'manual_review'});
  if(expectedProposalId!==undefined&&record.proposalId!==expectedProposalId)
   return Object.freeze({status:'proposal_id_mismatch',retrySafe:false,action:'manual_review'});
