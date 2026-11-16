@@ -1,3 +1,4 @@
+import {LIA_IDENTITY} from './lia-identity.js';
 /**
  * Pure bounded proposal for Atlas's generative spiral.
  * Tangent offspring and finite resource budget; no renderer or autonomous action.
@@ -48,7 +49,8 @@ export function generateAtlasTangentSpirals({depth=3,budget=24,samples=32,growth
  return Object.freeze({schemaVersion:1,mode:'declarative_geometry',
   branches:Object.freeze(branches.map(b=>Object.freeze(b))),
   events:Object.freeze(events),remainingBudget:remaining,
-  vertices:Object.freeze(['Mundo Mental','Mundo Físico','Dios/Suceso']),
+  vertices:Object.freeze(LIA_IDENTITY.vertices.map(vertex=>vertex.domain)),
+  identity:LIA_IDENTITY.name,components:Object.freeze(LIA_IDENTITY.vertices.map(vertex=>vertex.component)),
   temporalIntervalsAreModelUnits:true,empiricalFungalModelVerified:false,
   codeExecuted:false,rendererCreated:false});
 }
