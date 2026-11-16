@@ -11,7 +11,7 @@ export function planLiaOfflineLearning(consolidation,{baseModelId,minimumVerifie
  // Keep identical normalized content in one partition, even across characters.
  const groups=new Map();
  for(const e of eligible){
-  const key=hash(e.content.trim().toLowerCase().replace(/\\s+/g,' '));
+  const key=hash(e.content.trim().toLowerCase().replace(/\s+/g,' '));
   if(!groups.has(key))groups.set(key,[]);
   groups.get(key).push(e);
  }
