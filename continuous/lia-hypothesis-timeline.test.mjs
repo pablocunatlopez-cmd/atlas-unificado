@@ -37,3 +37,16 @@ test('distinguishes a recorded new evidence reference from a causally unexplaine
  assert.deepEqual(timeline[2].newEvidenceReferences,[]);
  assert.match(timeline[2].changeExplanation,/without newly referenced evidence/);
 });
+
+
+test('chronological revisions are stable even when completed jobs arrive newest-first',()=>{
+ const old={id:'old',status:'completed',updatedAt:'2026-11-16T10:00:00Z',hypotheses:[{id:'h',claim:'Claim A',status:'proposed',evidence:[]}]};
+ const recent={id:'new',status:'completed',updatedAt:'2026-11-16T11:00:00Z',hypotheses:[{id:'h',claim:'Claim A',status:'supported',evidence:[{type:'tool-output',reference:'check:1'}]}]};
+ const chronological=projectLiaHypothesisTimeline([old,recent]);
+ const reversed=projectLiaHypothesisTimeline([recent,old]);
+ assert.deepEqual(reversed,chronological);
+ assert.equal(reversed[0].priorRecordId,null);
+ assert.equal(reversed[1].priorRecordId,'old:h');
+ assert.equal(reversed[1].statusChanged,true);
+ assert.deepEqual(reversed[1].newEvidenceReferences,['tool-output:check:1']);
+});
