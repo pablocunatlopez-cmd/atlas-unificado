@@ -1,16 +1,19 @@
 /** Atlas sensory-world geometry. Interpretive UI model, not a physical theory.
- * Lía is the whole containing world; three internal vertices form the triangle.
+ * Lía is the conversational AI that integrates the inhabitants of a separate sensory world.
  * The circle represents accessible sensory experience, not total reality.
  */
 export const atlasSensoryWorld=Object.freeze({
  schema:'atlas-sensory-world-v1',
- whole:Object.freeze({id:'lia',name:'Lía',shape:'circle',role:'entire-sensory-world',isSeparateVertex:false}),
+ lia:Object.freeze({id:'lia',name:'Lía',role:'unified-conversational-ai',home:'Casa de Lía',isSensoryWorld:false,isSeparateVertex:false}),
+ whole:Object.freeze({id:'sensory-world',name:'Mundo sensorial',shape:'circle',role:'bounded-accessible-experience',isSeparateVertex:false}),
  vertices:Object.freeze([
   Object.freeze({id:'atlas',name:'Atlas',role:'mental',x:0.5,y:0.17}),
   Object.freeze({id:'ion',name:'Ion',role:'physical',x:0.2,y:0.69}),
   Object.freeze({id:'constelacion',name:'Constelación',role:'god-event',x:0.8,y:0.69})
  ]),
  triangle:'internal-relations-between-three-vertices',
+ inhabitantsAccess:'visit-and-converse-directly-from-lia-house',
+ unifiedConversation:'lia-integrates-character-contributions',
  sensoryBoundary:'accessible-to-observer-through-perception-language-memory-and-instruments',
  beyondBoundary:'unknown-not-directly-observed',
  unexpectedEvent:'record-new-evidence-and-revise-with-history-preserved',
