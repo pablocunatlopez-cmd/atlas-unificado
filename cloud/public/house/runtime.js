@@ -107,7 +107,7 @@ listen(canvas,'pointerup',event=>{if(!drag||drag.id!==event.pointerId)return;con
   const bounds=canvas.getBoundingClientRect();
   const ndc=[(event.clientX-bounds.left)/bounds.width*2-1,-(event.clientY-bounds.top)/bounds.height*2+1];
   if(bounds.width>0&&bounds.height>0){const vertex=atlasSpiral?.pick({raycaster,camera,ndc});
-   if(vertex)send('atlas-vertex',{id:vertex,mode:'interpretive',verified:false});}
+   if(vertex)send('atlas-vertex',{id:vertex,identity:'Lía',interpretation:atlasSpiral.describeVertex(vertex),mode:'interpretive',verified:false});}
  }else if(clicked&&house&&!paused){raycaster.setFromCamera(new THREE.Vector2(event.clientX/innerWidth*2-1,-event.clientY/innerHeight*2+1),camera);const hit=raycaster.intersectObjects(house.interactive,false)[0];if(hit){const id=hit.object.userData.room;if(!overview&&currentRoom===id)interact();else{teleport(id);resize();}}}});
 for(const type of ['pointercancel','lostpointercapture'])listen(canvas,type,()=>drag=null);
 listen(document,'keydown',event=>{const key=event.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key))event.preventDefault();if(paused)return;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)&&overview){teleport(currentRoom);resize();}keys.add(key);if(key==='e'&&!event.repeat)interact();if(key==='h'&&!event.repeat){setOverview(!overview);resize();}});
