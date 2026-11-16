@@ -7,7 +7,7 @@ test('spiral is optional, reversible and uses host scene',()=>{
  class Geometry{setFromPoints(){return this;}dispose(){disposed++;}}
  class Material{dispose(){disposed++;}}
  class Vector3{constructor(...v){this.values=v;}}
- class Mesh{constructor(geometry,material){this.geometry=geometry;this.material=material;
+ class Mesh{constructor(geometry,material){this.geometry=geometry;this.material=material;this.userData={};
   this.position={set(){}};}}
  const THREE={Group,BufferGeometry:Geometry,SphereGeometry:Geometry,
   LineBasicMaterial:Material,MeshBasicMaterial:Material,Vector3,Line:Mesh,Mesh};
