@@ -29,3 +29,22 @@ test('small test sets never satisfy the default 100-query gate',()=>{
  const result=evaluatePairedRetrieval(cases.slice(0,5),runs(true).slice(0,5),runs(true).slice(0,5));
  assert.equal(result.gate.verdict,'insufficient-evidence');
 });
+
+test('per-query report separates improvements, regressions and conservative recommendation',()=>{
+ const baseline=runs(true);
+ const candidate=runs(true).map((r,i)=>i===0?{...r,retrievedIds:['irrelevant']} :r);
+ const result=evaluatePairedRetrieval(cases,baseline,candidate);
+ assert.equal(result.perQuery.length,100);
+ assert.equal(result.perQuery[0].qualityChange,'regressed');
+ assert.deepEqual(result.review.regressions,['q0']);
+ assert.equal(result.review.recommendation,'retain-baseline');
+ assert.equal(result.review.requiresHumanApproval,true);
+});
+test('aggregate gains never override a regression on a specific question',()=>{
+ const baseline=runs(false);
+ const candidate=runs(true).map((r,i)=>i===0?{...r,retrievedIds:['wrong0'],citationCorrect:false}:r);
+ const result=evaluatePairedRetrieval(cases,baseline,candidate);
+ assert.equal(result.review.recommendation,'human-review');
+ assert.equal(result.review.improvements.length,99);
+ assert.equal(result.autoPromote,false);
+});
