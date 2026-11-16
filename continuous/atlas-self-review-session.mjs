@@ -1,3 +1,4 @@
+import {verifyAtlasProposalEvidence} from './atlas-self-improvement-evidence.mjs';
 import {createAtlasOllamaLoopbackTransport} from './atlas-self-improvement-ollama-transport.mjs';
 import {createAtlasOllamaProposalAdapter} from './atlas-self-improvement-ollama.mjs';
 import {proposeAtlasSelfImprovement} from './atlas-self-improvement-generator.mjs';
@@ -16,11 +17,18 @@ export function createAtlasSelfReviewSession({
  const generateProposal=createAtlasOllamaProposalAdapter({model,requestModel});
  return Object.freeze({
   mode:'dry_run',
-  async run({constitution,roadmap,repositoryContext,rejectedHistory=[]}={}){
+  async run({constitution,roadmap,repositoryContext,rejectedHistory=[],evidenceSources,evidenceClaims}={}){
    const result=await proposeAtlasSelfImprovement({
     constitution,roadmap,repositoryContext,rejectedHistory,generateProposal
    });
+   if((evidenceSources===undefined)!==(evidenceClaims===undefined))
+    throw Error('Evidence sources and claims must be supplied together');
+   const evidence=evidenceSources===undefined?null:verifyAtlasProposalEvidence({
+    proposal:result.plan.proposals[0],sources:evidenceSources,claims:evidenceClaims
+   });
    return Object.freeze({
+    evidence,evidenceStatus:evidence===null?'not_provided':
+     evidence.verifiedAgainstSuppliedSnapshots?'exact_quotes_matched':'unverified',
     schemaVersion:1,mode:'dry_run',model,
     proposal:result.plan.proposals[0],review:result.review.reviews[0],
     contextDigest:result.contextDigest,
