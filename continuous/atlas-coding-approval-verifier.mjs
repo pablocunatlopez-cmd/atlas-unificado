@@ -1,4 +1,5 @@
 import {createPublicKey, verify, KeyObject} from 'node:crypto';
+import {parseAtlasCodingClaim} from './atlas-coding-claim-schema.mjs';
 
 /**
  * Verify a signed, commit-bound coding approval. Pure verification only:
@@ -37,6 +38,10 @@ export async function verifyAtlasCodingApproval({
       !Number.isSafeInteger(maxAgeMs) || maxAgeMs < 0 ||
       !Number.isSafeInteger(maxFutureSkewMs) || maxFutureSkewMs < 0) {
     throw Error('Trusted approval verification context required');
+  }
+  // Reject malformed or surplus fields before any host callbacks or signature work.
+  if (!parseAtlasCodingClaim(claim).success) {
+    return Object.freeze({status:'blocked',reason:'invalid_claim_shape',authorized:false});
   }
   const message = atlasCodingApprovalMessage(claim);
   for (const field of ['proposalId', 'actorId', 'operation', 'baseCommit', 'diffDigest']) {
