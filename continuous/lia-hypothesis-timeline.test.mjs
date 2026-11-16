@@ -23,3 +23,17 @@ test('authenticated endpoint and viewer use comparison timeline',()=>{
  assert.match(route,/projectLiaHypothesisTimeline\(execution\.events\)/);
  assert.match(view,/Comparación de hipótesis registradas/);
 });
+
+test('distinguishes a recorded new evidence reference from a causally unexplained status change',()=>{
+ const first=job('a','supported');
+ first.hypotheses[0].evidence=[{type:'tool-output',reference:'check:1'}];
+ const second=job('b','refuted');
+ second.hypotheses[0].evidence=[{type:'tool-output',reference:'check:1'},{type:'tool-output',reference:'check:2'}];
+ const third=job('c','inconclusive');
+ third.hypotheses[0].evidence=second.hypotheses[0].evidence;
+ const timeline=projectLiaHypothesisTimeline([first,second,third]);
+ assert.deepEqual(timeline[1].newEvidenceReferences,['tool-output:check:2']);
+ assert.match(timeline[1].changeExplanation,/newly referenced evidence/);
+ assert.deepEqual(timeline[2].newEvidenceReferences,[]);
+ assert.match(timeline[2].changeExplanation,/without newly referenced evidence/);
+});
