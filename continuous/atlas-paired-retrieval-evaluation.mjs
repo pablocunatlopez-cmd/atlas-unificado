@@ -52,8 +52,18 @@ export function evaluatePairedRetrieval(cases,baselineRuns,candidateRuns,{minimu
  const labelsHash=digest([...gold.entries()].sort(([a],[b])=>a.localeCompare(b)));
  const corpusHash=digest({labelsHash,documentCorpusHash});
  const protocolHash=digest({protocol,cutoff:5,metrics:['recallAt5','ndcgAt5','citationAccuracy','latencyP95Ms','memoryMb']});
+ const perQuery=[...gold].map(([id,expected])=>{
+  const relevant=new Set(expected);
+  const metrics=run=>{const top=run.retrievedIds.slice(0,5);const hits=top.filter(doc=>relevant.has(doc)).length;const ideal=Array.from({length:Math.min(5,expected.length)},(_,i)=>1/Math.log2(i+2)).reduce((a,b)=>a+b,0);return {recallAt5:hits/expected.length,ndcgAt5:top.reduce((sum,doc,i)=>sum+(relevant.has(doc)?1/Math.log2(i+2):0),0)/ideal,citationCorrect:run.citationCorrect,latencyMs:run.latencyMs};};
+  const before=metrics(base.get(id)),after=metrics(next.get(id));
+  const delta=after.ndcgAt5-before.ndcgAt5;
+  return Object.freeze({id,baseline:before,candidate:after,qualityChange:delta>1e-9?'improved':delta< -1e-9?'regressed':'unchanged',citationRegression:before.citationCorrect&&!after.citationCorrect});
+ });
  const baseline={...summary(base),corpusHash,protocolHash};
  const candidate={...summary(next),corpusHash,protocolHash};
  const gate=evaluateAtlasCandidate(baseline,candidate,{minimumQueries});
- return Object.freeze({baseline,candidate,gate,labelsHash,documentCorpusHash,source:'caller-provided-independent-labels',verifiedByExternalEvaluator:false,autoPromote:false});
+ const regressions=perQuery.filter(x=>x.qualityChange==='regressed'||x.citationRegression).map(x=>x.id);
+ const improvements=perQuery.filter(x=>x.qualityChange==='improved'&&!x.citationRegression).map(x=>x.id);
+ const review=Object.freeze({recommendation:gate.verdict==='review-required'&&regressions.length===0?'human-review':gate.verdict==='insufficient-evidence'?'collect-more-evidence':'retain-baseline',regressions,improvements,requiresHumanApproval:true});
+ return Object.freeze({baseline,candidate,gate,review,perQuery:Object.freeze(perQuery),labelsHash,documentCorpusHash,source:'caller-provided-independent-labels',verifiedByExternalEvaluator:false,autoPromote:false});
 }
