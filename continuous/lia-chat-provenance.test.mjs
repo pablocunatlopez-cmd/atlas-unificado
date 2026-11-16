@@ -22,7 +22,7 @@ test('unread web references do not become Ion observations',()=>{
 });
 test('local chat includes the source contract without changing retrieval',()=>{
  const source=readFileSync(new URL('./chat.mjs',import.meta.url),'utf8');
- assert.match(source,/classifyLiaChatSources\(\{sources,webRead,sharedSession:/);
+ assert.match(source,/classifyLiaChatSources\(\{sources,webRead,webSourceUrls,sharedSession:/);
  assert.match(source,/LÍA — PROVENIENCIA DE FUENTES/);
  assert.match(source,/liaProvenance,model:CHAT_MODEL/);
  assert.match(source,/searchDocuments\(/);
