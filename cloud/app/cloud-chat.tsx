@@ -3,12 +3,13 @@
 import {useCallback,useEffect,useRef,useState,type FormEvent,type KeyboardEvent,type ReactNode} from 'react';
 import styles from './cloud-chat.module.css';
 
-type Message={id?:string;role:'user'|'assistant';content:string;createdAt?:string};
+type LiaProvenance={identity?:string;items?:Array<{component?:string;provenance?:string;evidenceVerified?:boolean}>;unknownComponent?:string;truthVerified?:boolean};
+type Message={id?:string;role:'user'|'assistant';content:string;createdAt?:string;liaProvenance?:LiaProvenance};
 type Conversation={id:string;title:string;updatedAt?:string};
 type MotorStatus={online:boolean;modelName?:string;lastSeen?:string|null;sessionRequired?:boolean;capabilities?:{gpuMode?:string}};
 type JobStatus='queued'|'pending'|'running'|'completed'|'failed'|'cancelled'|'reconnecting';
 type Job={id:string;status:JobStatus};
-type JobResult={status:JobStatus;conversationId?:string;result?:{answer?:string;modelName?:string;model?:string};error?:string};
+type JobResult={status:JobStatus;conversationId?:string;result?:{answer?:string;modelName?:string;model?:string;liaProvenance?:LiaProvenance};error?:string};
 type Detail={conversation?:Conversation;messages:Message[];pendingJob?:Job|null};
 type Props={signedIn:boolean;displayName:string;signInPath:string};
 const prompts=[
@@ -136,7 +137,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
     if(result.status==='completed'){
      if(typeof result.result?.answer!=='string')throw Error('La respuesta terminó sin contenido.');
      if(result.conversationId)await hydrate(result.conversationId,current);
-     else setMessages(previous=>[...previous,{role:'assistant',content:result.result!.answer!}]);
+     else setMessages(previous=>[...previous,{role:'assistant',content:result.result!.answer!,liaProvenance:result.result?.liaProvenance}]);
      setJob(null);setPolling(false);setNotice('Respuesta de '+(result.result.modelName||'Qwen en tu PC')+'.');setError('');pendingText.current='';retry.current=null;void refreshArchive();return;
     }
     if(result.status==='failed'||result.status==='cancelled'){
@@ -230,7 +231,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
      {!signedIn?<section className={styles.signInCard}><span className={styles.signInMark}>◌</span><div><h2>Tu conversación, en tu espacio.</h2><p>Inicia sesión para hablar con Atlas y conservar tu historial. Cada persona accede solo a sus conversaciones.</p></div><a href={signInPath} target="_top">Continuar con ChatGPT <span>↗</span></a></section>:null}
      <div className={styles.messages} role="log" aria-label="Conversación con Atlas" aria-live="polite" aria-relevant="additions">
       {messages.length>visibleLimit?<button type="button" className={styles.earlier} onClick={()=>setVisibleLimit(previous=>previous+80)}>Ver mensajes anteriores <span>↑</span></button>:null}
-      {messages.slice(-visibleLimit).map((message,index)=><article key={message.id||`${index}-${message.role}`} className={`${styles.message} ${message.role==='user'?styles.userMessage:styles.assistantMessage}`}><div className={styles.messageAvatar}>{message.role==='user'?firstName.slice(0,1).toUpperCase():<Eye/>}</div><div className={styles.messageMain}><div className={styles.messageAuthor}>{message.role==='user'?'Tú':'Atlas'}{message.role==='assistant'?<span>QWEN · TU PC</span>:null}</div><div className={styles.messageBody}>{message.role==='assistant'?<Markdown text={message.content}/>:<p>{message.content}</p>}</div></div></article>)}
+      {messages.slice(-visibleLimit).map((message,index)=><article key={message.id||`${index}-${message.role}`} className={`${styles.message} ${message.role==='user'?styles.userMessage:styles.assistantMessage}`}><div className={styles.messageAvatar}>{message.role==='user'?firstName.slice(0,1).toUpperCase():<Eye/>}</div><div className={styles.messageMain}><div className={styles.messageAuthor}>{message.role==='user'?'Tú':'Lía'}{message.role==='assistant'?<span>QWEN · TU PC</span>:null}</div><div className={styles.messageBody}>{message.role==='assistant'?<Markdown text={message.content}/>:<p>{message.content}</p>}</div>{message.role==='assistant'&&message.liaProvenance?<div role="note" aria-label="Procedencia de la respuesta" style={{fontSize:12,opacity:.78,marginTop:8}}>Lía · Atlas: {message.liaProvenance.items?.filter(item=>item.component==='Atlas').length||0} referencias · Ion: {message.liaProvenance.items?.filter(item=>item.component==='Ion').length||0} fuentes consultadas · Constelación: incertidumbre conservada. Fuentes no verificadas.</div>:null}</div></article>)}
       {job?<div className={styles.pending} role="status"><span className={styles.pendingGlyph}>✳</span><div><strong>{job.status==='running'?'Conectando las ideas…':job.status==='reconnecting'?'Tu mensaje sigue guardado.':'Tu mensaje ya está en la nube.'}</strong><span>{job.status==='running'?'Qwen está respondiendo desde tu ordenador.':job.status==='reconnecting'?'La respuesta puede seguir en curso.':'Esperando a que el motor de tu PC lo recoja.'}</span></div>{!polling?<button type="button" onClick={()=>{setError('');void followJob(job.id,sequence.current);}}>Comprobar respuesta</button>:<span className={styles.pulseDots} aria-hidden="true"><i/><i/><i/></span>}</div>:null}
      </div><div ref={bottomRef}/>
     </div>
