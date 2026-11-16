@@ -24,3 +24,22 @@ test('invalid inputs are rejected',()=>{
  assert.throws(()=>proposeAtlasRetrievalRoute('hello',{baseline:'unknown'}));
  assert.throws(()=>proposeAtlasRetrievalRoute('hello',{semanticAvailable:'yes'}));
 });
+
+test('multilingual accented questions are classified without ASCII word-boundary bias',()=>{
+ for(const q of ['¿Cómo funciona la memoria?','¿Qué significa relación?','Explain the difference','por qué recordamos']){
+  assert.equal(proposeAtlasRetrievalRoute(q).route,'conceptual',q);
+ }
+});
+test('mixed conceptual and exact identifiers prioritize grounded exact matching',()=>{
+ const r=proposeAtlasRetrievalRoute('Explain why Q594 changed');
+ assert.equal(r.route,'exact-identifier');
+ assert.equal(r.method,'fts5');
+ assert.equal(r.semanticExecuted,false);
+});
+test('partial keywords and uncertain typos do not trigger a guessed semantic engine',()=>{
+ for(const q of ['comparativa','conceptualizar','memoriaa','reIacion']){
+  const r=proposeAtlasRetrievalRoute(q);
+  assert.equal(r.method,'atlas-lexical');
+  assert.equal(r.autoSwitch,false);
+ }
+});
