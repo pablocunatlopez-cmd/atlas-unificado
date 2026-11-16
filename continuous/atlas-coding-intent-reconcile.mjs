@@ -7,7 +7,7 @@ const DIGEST=/^[a-f0-9]{64}$/;
  * Read-only recovery report. An intent marker is not proof of a commit.
  * Never automatically retries, deletes markers, or authorizes writes.
  */
-export async function reconcileAtlasCodingIntent({directory,transactionId,readHeadCommit,expectedProposalId}={}){
+export async function reconcileAtlasCodingIntent({directory,transactionId,readHeadCommit,expectedProposalId,expectedBaseCommit,expectedDiffDigest}={}){
  if(typeof directory!=='string'||!directory.trim()||!ID.test(transactionId||'')||
     typeof readHeadCommit!=='function')
   throw Error('Trusted coding reconciliation context required');
@@ -29,6 +29,10 @@ export async function reconcileAtlasCodingIntent({directory,transactionId,readHe
   return Object.freeze({status:'invalid_intent',retrySafe:false,action:'manual_review'});
  if(expectedProposalId!==undefined&&record.proposalId!==expectedProposalId)
   return Object.freeze({status:'proposal_id_mismatch',retrySafe:false,action:'manual_review'});
+ if(expectedBaseCommit!==undefined&&record.baseCommit!==expectedBaseCommit)
+  return Object.freeze({status:'base_commit_mismatch',retrySafe:false,action:'manual_review'});
+ if(expectedDiffDigest!==undefined&&record.diffDigest!==expectedDiffDigest)
+  return Object.freeze({status:'diff_digest_mismatch',retrySafe:false,action:'manual_review'});
  const head=await readHeadCommit();
  if(head===record.baseCommit)
   return Object.freeze({status:'base_still_visible',transactionId,retrySafe:false,
