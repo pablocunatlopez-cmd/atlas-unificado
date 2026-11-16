@@ -32,16 +32,14 @@ export function planAtlasCodingCycle({proposalId,repositoryFiles,targets,changes
  * Optional trusted-host review claim for a previously planned cycle.
  * This separate phase cannot mutate the repository or execute commands.
  */
-export async function claimAtlasCodingCycleReview({cycle,claim,publicKey,nowMs,directory,authorizeActor}={}){
+export async function claimAtlasCodingCycleReview({cycle,claim,publicKey,nowMs,directory,authorizeActor,expected}={}){
  if(!cycle||cycle.status!=='planned_not_executed'||cycle.verifiedReady!==false||
     !cycle.review||cycle.unresolved?.length||!cycle.patch||
-    typeof cycle.proposalId!=='string')
+    typeof cycle.proposalId!=='string'||!expected||
+    typeof expected!=='object'||expected.proposalId!==cycle.proposalId)
   throw Error('A complete unresolved-free planned coding cycle is required');
  const {claimAtlasCodingReview}=await import('./atlas-coding-review-claim.mjs');
  if(claim?.proposalId!==cycle.proposalId)
   return Object.freeze({status:'blocked',reason:'proposal_mismatch',authorizationGranted:false,executesCode:false});
- return claimAtlasCodingReview({claim,publicKey,expected:{
-  proposalId:cycle.proposalId,actorId:claim.actorId,operation:claim.operation,
-  baseCommit:claim.baseCommit,diffDigest:claim.diffDigest
- },nowMs,directory,authorizeActor});
+ return claimAtlasCodingReview({claim,publicKey,expected,nowMs,directory,authorizeActor});
 }
