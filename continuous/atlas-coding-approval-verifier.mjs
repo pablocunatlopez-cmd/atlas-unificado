@@ -1,4 +1,4 @@
-import {createPublicKey, verify} from 'node:crypto';
+import {createPublicKey, verify, KeyObject} from 'node:crypto';
 
 /**
  * Verify a signed, commit-bound coding approval. Pure verification only:
@@ -51,7 +51,8 @@ export async function verifyAtlasCodingApproval({
       claim.signature.length > 512) {
     return Object.freeze({status:'blocked',reason:'invalid_signature',authorized:false});
   }
-  const key = createPublicKey(publicKey);
+  const key = publicKey instanceof KeyObject && publicKey.type === 'public'
+    ? publicKey : createPublicKey(publicKey);
   if (key.asymmetricKeyType !== 'ed25519') throw Error('Ed25519 key required');
   const signature = Buffer.from(claim.signature,'base64');
   if (signature.length !== 64 || !verify(null,message,key,signature)) {
