@@ -11,12 +11,7 @@ test('offline transcript conversion preserves existing private Atlas state',()=>
  assert.equal(updated.threads[1].messages[0].role,'user');
  assert.throws(()=>offlineThreadToState(updated,[],{threadId:'offline-1'}));
 });
-test('offline persistence is opt-in, authenticated, revision guarded and reversible',()=>{
- const ui=readFileSync(new URL('../cloud/app/chat/offline/offline-chat.tsx',import.meta.url),'utf8');
- assert.match(ui,/async function saveConversation\(\)/);
- assert.match(ui,/fetch\('\/api\/state'/);
- assert.match(ui,/revision:snapshot\.revision/);
- assert.match(ui,/Guardar en mi espacio Atlas/);
- assert.match(ui,/no se guarda automáticamente/);
- assert.match(ui,/Exportar conversación/);
+test('legacy offline state helper is not wired into canonical Lía chat',()=>{
+ const main=readFileSync(new URL('../cloud/app/cloud-chat.tsx',import.meta.url),'utf8');
+ assert.doesNotMatch(main,/lia-offline-state|saveConversation/);
 });
