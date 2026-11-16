@@ -2,7 +2,6 @@
 export const MODEL_CANDIDATES=Object.freeze([
  Object.freeze({id:'qwen3.5:4b',family:'Qwen3.5',task:'conversation',runtime:'ollama',minimumRamGb:8,license:'Apache-2.0',reference:'https://huggingface.co/collections/Qwen/qwen35',role:'mental',status:'candidate'}),
  Object.freeze({id:'qwen3.5:9b',family:'Qwen3.5',task:'conversation',runtime:'ollama',minimumRamGb:16,license:'Apache-2.0',reference:'https://huggingface.co/collections/Qwen/qwen35',role:'mental',status:'candidate'}),
- Object.freeze({id:'Horizon-Labs/multilingual-embedding-small',family:'multilingual-embedding-small',task:'embedding',runtime:'onnx',minimumRamGb:2,license:'Apache-2.0',reference:'https://huggingface.co/Horizon-Labs/multilingual-embedding-small',role:'memory',status:'candidate'}),
  Object.freeze({id:'BAAI/bge-m3',family:'BGE-M3',task:'embedding',runtime:'sentence-transformers',minimumRamGb:4,license:'MIT',reference:'https://huggingface.co/BAAI/bge-m3',role:'memory',status:'candidate'}),
  Object.freeze({id:'microsoft/Phi-4-mini-instruct',family:'Phi-4-mini',task:'reasoning',runtime:'transformers',minimumRamGb:8,license:'MIT',reference:'https://huggingface.co/microsoft/Phi-4-mini-instruct',role:'review',status:'candidate'})
 ]);
