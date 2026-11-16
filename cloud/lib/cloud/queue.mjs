@@ -13,6 +13,28 @@ const fail=(message,status=400)=>{throw new CloudQueueError(message,status);};
 const validId=value=>typeof value==='string'&&UUID.test(value);
 const safeTitle=text=>text.replace(/\s+/g,' ').trim().slice(0,80);
 const safeAgent=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(value);
+
+async function verifyLiaJournalInCloud(journal,allowedHypotheses){
+ if(!Array.isArray(journal)||journal.length>30)return false;
+ const encoder=new TextEncoder();let previousHash=null;
+ for(const entry of journal){
+  if(!entry||typeof entry.id!=='string'||!/^[\\w-]{1,80}$/.test(entry.id)||!allowedHypotheses.has(entry.hypothesisId)||entry.previousHash!==previousHash||typeof entry.hash!=='string'||!/^[a-f0-9]{64}$/.test(entry.hash))return false;
+  const t=entry.transition,c=t?.check;
+  if(!t||!c||c.executed!==true||t.previousStatus!=='testing'||!['citation-audit','deterministic-tool'].includes(c.kind)||!['pass','fail','unknown'].includes(c.outcome)||typeof c.reference!=='string'||!c.reference.trim()||c.reference.length>240)return false;
+  const expected=c.outcome==='pass'?'supported':c.outcome==='fail'?'refuted':'inconclusive';
+  if(t.nextStatus!==expected||t.rule!==(c.outcome==='pass'?'recorded-check-passed':c.outcome==='fail'?'recorded-check-failed':'executed-check-inconclusive')||t.changed!==(expected!=='testing')||t.factualAccuracyVerified!==false)return false;
+  const hypothesis=allowedHypotheses.get(entry.hypothesisId);
+  if(hypothesis.status!==expected||!hypothesis.evidence.some(e=>e.type==='tool-output'&&e.verified===true&&e.reference===c.reference))return false;
+  if(typeof entry.timestamp!=='string'||!/^\\d{4}-\\d\\d-\\d\\dT/.test(entry.timestamp))return false;
+  const {hash,...payload}=entry;
+  const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(JSON.stringify(payload))));
+  const computed=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+  if(computed!==hash)return false;
+  previousHash=hash;
+ }
+ return true;
+}
+
 function publicJob(row){
  if(!row)return null;
  const result={id:row.id,conversationId:row.conversation_id,status:row.status,kind:row.kind||'chat',progress:row.progress||0,stage:row.stage||null,createdAt:row.created_at,updatedAt:row.updated_at};
@@ -157,13 +179,9 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   }
   if(Array.isArray(result.liaHypotheses))value.liaHypotheses=buildLiaHypothesisLedger(result.liaHypotheses);
   if(Array.isArray(result.liaTransitionJournal)){
-   if(result.liaTransitionJournal.length>30)fail('Demasiados eventos de auditoría.');
-   const journal=result.liaTransitionJournal;
-   const allowed=new Set((value.liaHypotheses||[]).map(h=>h.id));
-   for(const item of journal){
-    if(!item||typeof item.id!=='string'||!allowed.has(item.hypothesisId)||typeof item.hash!=='string'||!/^[a-f0-9]{64}$/.test(item.hash)||item.transition?.check?.executed!==true)fail('Evento de auditoría no válido.');
-   }
-   value.liaTransitionJournal=journal.map(item=>({id:item.id.slice(0,80),hypothesisId:item.hypothesisId,timestamp:typeof item.timestamp==='string'?item.timestamp.slice(0,40):null,previousHash:typeof item.previousHash==='string'?item.previousHash.slice(0,64):null,hash:item.hash,transition:{previousStatus:item.transition.previousStatus,nextStatus:item.transition.nextStatus,rule:typeof item.transition.rule==='string'?item.transition.rule.slice(0,100):'',check:{kind:item.transition.check.kind,outcome:item.transition.check.outcome,reference:String(item.transition.check.reference).slice(0,240),executed:true}},integrityVerifiedInCloud:false}));
+   const hypotheses=new Map((value.liaHypotheses||[]).map(h=>[h.id,h]));
+   if(!await verifyLiaJournalInCloud(result.liaTransitionJournal,hypotheses))fail('La cadena de auditoría no supera la verificación.');
+   value.liaTransitionJournal=result.liaTransitionJournal.map(item=>({...item,integrityVerifiedInCloud:true}));
   }
   const at=now();
   const row=await one('SELECT conversation_id,user_id,question,kind,status,lease_token,lease_until,result FROM cloud_jobs WHERE id=?',input.jobId);
