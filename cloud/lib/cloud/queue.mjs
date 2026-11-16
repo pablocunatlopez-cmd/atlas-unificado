@@ -106,7 +106,7 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    let result=null;
    if(row.status==='completed'&&row.result){try{result=JSON.parse(row.result);}catch{}}
    return {id:row.id,kind:row.kind||'chat',status:row.status,stage:row.stage||null,createdAt:new Date(row.created_at).toISOString(),updatedAt:new Date(row.updated_at).toISOString(),
-    checks:Object.freeze({answerStored:typeof result?.answer==='string'&&result.answer.length>0,modelReported:typeof result?.model==='string'?result.model:null}),audit:result?.liaExecutionAudit||null,hypotheses:result?.liaHypotheses||[],
+    checks:Object.freeze({answerStored:typeof result?.answer==='string'&&result.answer.length>0,modelReported:typeof result?.model==='string'?result.model:null}),audit:result?.liaExecutionAudit||null,hypotheses:result?.liaHypotheses||[],transitionJournal:result?.liaTransitionJournal||[],
     evidence:'cloud_jobs',verifiedExecution:row.status==='completed',hypothesis:null,revision:null};
   })};
  }
@@ -156,6 +156,15 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    value.liaExecutionAudit={schema:1,source:'local-chat-result',review:['completed','failed','not-recorded'].includes(audit.review)?audit.review:'not-recorded',reviewAttempted:audit.reviewAttempted===true,citationAuditRecorded:audit.citationAuditRecorded===true,unknownCitationLabels:Array.isArray(audit.unknownCitationLabels)?audit.unknownCitationLabels.filter(x=>typeof x==='string').slice(0,12).map(x=>x.slice(0,100)):[],sourcesReturned:Number.isInteger(audit.sourcesReturned)&&audit.sourcesReturned>=0?Math.min(audit.sourcesReturned,100):null,webRead:audit.webRead===true,hypothesis:'not-recorded',revision:audit.review==='completed'?'answer-revised-without-diff':'not-recorded',factualAccuracyVerified:false};
   }
   if(Array.isArray(result.liaHypotheses))value.liaHypotheses=buildLiaHypothesisLedger(result.liaHypotheses);
+  if(Array.isArray(result.liaTransitionJournal)){
+   if(result.liaTransitionJournal.length>30)fail('Demasiados eventos de auditoría.');
+   const journal=result.liaTransitionJournal;
+   const allowed=new Set((value.liaHypotheses||[]).map(h=>h.id));
+   for(const item of journal){
+    if(!item||typeof item.id!=='string'||!allowed.has(item.hypothesisId)||typeof item.hash!=='string'||!/^[a-f0-9]{64}$/.test(item.hash)||item.transition?.check?.executed!==true)fail('Evento de auditoría no válido.');
+   }
+   value.liaTransitionJournal=journal.map(item=>({id:item.id.slice(0,80),hypothesisId:item.hypothesisId,timestamp:typeof item.timestamp==='string'?item.timestamp.slice(0,40):null,previousHash:typeof item.previousHash==='string'?item.previousHash.slice(0,64):null,hash:item.hash,transition:{previousStatus:item.transition.previousStatus,nextStatus:item.transition.nextStatus,rule:typeof item.transition.rule==='string'?item.transition.rule.slice(0,100):'',check:{kind:item.transition.check.kind,outcome:item.transition.check.outcome,reference:String(item.transition.check.reference).slice(0,240),executed:true}},integrityVerifiedInCloud:false}));
+  }
   const at=now();
   const row=await one('SELECT conversation_id,user_id,question,kind,status,lease_token,lease_until,result FROM cloud_jobs WHERE id=?',input.jobId);
   if(!row||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
