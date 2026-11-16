@@ -26,3 +26,14 @@ test('spatial viewer offers depth, rotation and a genuine static fallback',()=>{
  assert.match(source,/aria-label=\{\x60Vista espacial/);
  assert.match(source,/sin WebGL/);
 });
+
+test('one reusable avatar represents exterior and interior without independent agents',()=>{
+ const avatar=readFileSync(new URL('../cloud/app/lia-avatar.tsx',import.meta.url),'utf8');
+ const world=readFileSync(new URL('../cloud/app/lia-inner-world.tsx',import.meta.url),'utf8');
+ assert.match(avatar,/export default function LiaAvatar/);
+ assert.match(avatar,/mode==='interior'/);
+ assert.match(world,/import LiaAvatar from/);
+ assert.match(world,/depth===0\?'exterior':'interior'/);
+ assert.match(world,/<LiaAvatar/);
+ assert.doesNotMatch(avatar,/fetch\(|new Worker\(/);
+});
