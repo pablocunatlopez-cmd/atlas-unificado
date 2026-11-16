@@ -17,7 +17,7 @@ export default function OfflineChat({signedIn,signInPath}:{signedIn:boolean;sign
   const previous=turns;setBusy(true);setError('');
   setTurns([...previous,{role:'user',text}]);
   try{
-   const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({text,domain:'general',engine:'native',web:false,history:[]})});
+   const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({text,domain:'general',engine:'native',web:false,history:previous.slice(-20)})});
    const data=await response.json() as {reply?:{answer?:string;engine?:string};error?:string};
    if(!response.ok||typeof data.reply?.answer!=='string'||data.reply.engine!=='native')throw Error(data.error||'Atlas Core no devolvió una respuesta nativa válida.');
    setTurns([...previous,{role:'user',text},{role:'assistant',text:data.reply.answer}]);setDraft('');
@@ -28,7 +28,7 @@ export default function OfflineChat({signedIn,signInPath}:{signedIn:boolean;sign
   <nav><a href="/chat/">Volver al chat del motor local</a></nav>
   <h1>Lía · Atlas Core</h1>
   <p><strong>Modo sin ordenador.</strong> Responde el núcleo de reglas y recuperación del proyecto, no Qwen ni el motor completo de Lía. No se ejecutan acciones físicas ni se afirma que haya un modelo generativo activo.</p>
-  <p role="note">Sesión temporal en este navegador: no se guarda en el historial del motor local. Al salir o recargar esta página se pierde la conversación. Cada pregunta se procesa de forma independiente: Atlas Core no utiliza el historial de mensajes en esta ruta. Puedes exportar el texto antes de salir.</p>
+  <p role="note">Sesión temporal en este navegador: no se guarda en el historial del motor local. Al salir o recargar esta página se pierde la conversación. Atlas Core recibe hasta 20 mensajes anteriores y puede recuperar literalmente tu último mensaje cuando se lo preguntas. No utiliza ese contexto para razonar de forma general ni lo guarda como memoria persistente. Puedes exportar el texto antes de salir.</p>
   {!signedIn?<p><a href={signInPath}>Inicia sesión para conversar con Atlas Core.</a></p>:<>
    <section aria-label="Conversación" aria-live="polite" style={{display:'grid',gap:12,margin:'20px 0'}}>
     {turns.map((turn,i)=><article key={i} style={{border:'1px solid #8885',borderRadius:12,padding:14,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}><strong>{turn.role==='user'?'Tú':'Atlas Core · respuesta nativa'}</strong><div>{turn.text}</div></article>)}
