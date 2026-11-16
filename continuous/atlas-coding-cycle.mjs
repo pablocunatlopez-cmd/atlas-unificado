@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {buildAtlasRepoMap,selectAtlasRepoContext,selectAtlasAffectedModules} from './atlas-repo-map.mjs';
 import {planAtlasPatch} from './atlas-patch-planner.mjs';
 import {evaluateAtlasAgentChange} from './atlas-agent-change-gate.mjs';
@@ -12,6 +13,12 @@ export function planAtlasCodingCycle({proposalId,repositoryFiles,targets,changes
  const repoMap=buildAtlasRepoMap(repositoryFiles);
  const context=selectAtlasRepoContext(repoMap,{targets,...contextLimits});
  const patch=planAtlasPatch({proposalId,files:changes});
+ // Hash actual requested contents, not just path/size metadata.
+ const diffDigest=createHash('sha256').update(JSON.stringify({
+  domain:'atlas.coding.patch.v1',proposalId,
+  changes:changes.map(c=>({operation:c.operation,path:c.path,
+   ...(c.operation==='delete'?{}:{content:c.content})}))
+ })).digest('hex');
  const impact=selectAtlasAffectedModules(repoMap,{targets:patch.changes.map(c=>c.path)});
  const missingReadTargets=context.missingTargets;
  const missingChangeTargets=patch.changes.filter(c=>c.operation!=='create'&&!repoMap.files.some(f=>f.path===c.path)).map(c=>c.path);
@@ -20,7 +27,7 @@ export function planAtlasCodingCycle({proposalId,repositoryFiles,targets,changes
  const actions=patch.changes.map(c=>({kind:c.operation==='delete'?'delete':'write',target:c.path}));
  const review=evaluateAtlasAgentChange({id:proposalId,actions,checks,approval});
  return Object.freeze({
-  schemaVersion:2,proposalId,context,impact,patch,review,unresolved,
+  schemaVersion:2,proposalId,diffDigest,context,impact,patch,review,unresolved,
   status:'planned_not_executed',
   // Legacy review flags are caller-provided, not authenticated evidence.
   verifiedReady:false,
@@ -39,6 +46,8 @@ export async function claimAtlasCodingCycleReview({cycle,claim,publicKey,nowMs,d
     typeof expected!=='object'||expected.proposalId!==cycle.proposalId)
   throw Error('A complete unresolved-free planned coding cycle is required');
  const {claimAtlasCodingReview}=await import('./atlas-coding-review-claim.mjs');
+ if(expected.diffDigest!==cycle.diffDigest)
+  return Object.freeze({status:'blocked',reason:'patch_digest_mismatch',authorizationGranted:false,executesCode:false});
  if(claim?.proposalId!==cycle.proposalId)
   return Object.freeze({status:'blocked',reason:'proposal_mismatch',authorizationGranted:false,executesCode:false});
  return claimAtlasCodingReview({claim,publicKey,expected,nowMs,directory,authorizeActor});
