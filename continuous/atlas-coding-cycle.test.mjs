@@ -66,7 +66,8 @@ test('content changes alter the cryptographic patch digest',()=>{
 test('host expected digest must match the actual planned content before claiming',async()=>{
  const cycle=planAtlasCodingCycle(base);
  const result=await claimAtlasCodingCycleReview({cycle,claim:{proposalId:cycle.proposalId},
-  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:'b'.repeat(64)}});
+  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:'b'.repeat(64)},
+  readHeadCommit:async()=> 'a'.repeat(40)});
  assert.equal(result.reason,'patch_digest_mismatch');
  assert.equal(result.authorizationGranted,false);
 });
