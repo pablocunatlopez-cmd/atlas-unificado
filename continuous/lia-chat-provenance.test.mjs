@@ -5,7 +5,7 @@ import {classifyLiaChatSources} from './lia-chat-provenance.mjs';
 test('retrieval provenance remains non-authoritative and does not leak content',()=>{
  const sources=[{title:'private',content:'SECRET',url:'file:///private'},
   {title:'web',content:'PRIVATE',url:'https://example.org/article'}];
- const result=classifyLiaChatSources({sources,webRead:true});
+ const result=classifyLiaChatSources({sources,webRead:true,webSourceUrls:['https://example.org/article']});
  assert.deepEqual(result.items.map(x=>x.component),['Atlas','Ion']);
  assert.equal(result.items[0].evidenceVerified,false);
  assert.equal(result.items[1].provenance,'retrieved_web_unverified');
