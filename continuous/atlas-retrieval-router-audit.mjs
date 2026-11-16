@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {proposeAtlasRetrievalRoute} from './atlas-retrieval-router.mjs';
 const CLASSES=['exact-identifier','conceptual','ambiguous'];
 /** Evaluation-only classifier audit. Never changes production routing. */
@@ -22,7 +23,8 @@ export function evaluateAtlasRetrievalRouter(cases,{minimumCases=30}={}){
   return [label,{precision:tp+fp?tp/(tp+fp):null,recall:tp+fn?tp/(tp+fn):null,falsePositives:fp,falseNegatives:fn,support:tp+fn}];
  }));
  const correct=CLASSES.reduce((n,c)=>n+matrix[c][c],0);
- return Object.freeze({schema:'atlas-router-audit-v1',cases:cases.length,accuracy:correct/cases.length,
+ const fixtureHash='sha256:'+createHash('sha256').update(JSON.stringify(cases.map(c=>[c.id,c.question,c.expected]).sort((a,b)=>a[0].localeCompare(b[0])))).digest('hex');
+ return Object.freeze({schema:'atlas-router-audit-v1',cases:cases.length,fixtureHash,accuracy:correct/cases.length,
   confusionMatrix:matrix,perClass,errors,adequateSample:cases.length>=minimumCases,
   decision:'review-only',autoSwitch:false,verifiedAgainstProduction:false});
 }
