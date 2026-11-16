@@ -1,12 +1,19 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
-test('cloud offline mode uses the real authenticated Atlas Core route without pretending to invoke Qwen',()=>{
- const ui=readFileSync(new URL('../cloud/app/cloud-chat.tsx',import.meta.url),'utf8');
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+test('cloud offline chat is an isolated, authenticated Atlas Core session',()=>{
+ const main=readFileSync(new URL('../cloud/app/cloud-chat.tsx',import.meta.url),'utf8');
+ const ui=readFileSync(new URL('../cloud/app/chat/offline/offline-chat.tsx',import.meta.url),'utf8');
+ const page=readFileSync(new URL('../cloud/app/chat/offline/page.tsx',import.meta.url),'utf8');
  const route=readFileSync(new URL('../cloud/app/api/chat/route.ts',import.meta.url),'utf8');
- assert.match(ui,/async function sendOffline\(\)/);
- assert.match(ui,/readJson<\{reply:\{answer:string;engine:string\}\}>\('\/api\/chat'/);
+ assert.match(main,/href="\/chat\/offline\/"/);
+ assert.doesNotMatch(main,/async function sendOffline/);
+ assert.match(ui,/fetch\('\/api\/chat'/);
  assert.match(ui,/engine:'native',web:false/);
- assert.match(ui,/sin Qwen local/);
+ assert.match(ui,/data\.reply\.engine!=='native'/);
  assert.match(ui,/no se guarda en el historial/);
+ assert.match(ui,/setTurns\(\[\]\)/);
+ assert.match(page,/getChatGPTUser\(\)/);
  assert.match(route,/getChatGPTUser\(\)/);
  assert.match(route,/makeReply\(/);
 });
