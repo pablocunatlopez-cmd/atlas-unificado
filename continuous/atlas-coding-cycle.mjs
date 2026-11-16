@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {verifyAtlasCodingHeadUnderLock} from './atlas-coding-head-lock.mjs';
 import {buildAtlasRepoMap,selectAtlasRepoContext,selectAtlasAffectedModules} from './atlas-repo-map.mjs';
 import {planAtlasPatch} from './atlas-patch-planner.mjs';
 import {evaluateAtlasAgentChange} from './atlas-agent-change-gate.mjs';
@@ -58,4 +59,16 @@ export async function claimAtlasCodingCycleReview({cycle,claim,publicKey,nowMs,d
  if(claim?.proposalId!==cycle.proposalId)
   return Object.freeze({status:'blocked',reason:'proposal_mismatch',authorizationGranted:false,executesCode:false});
  return claimAtlasCodingReview({claim,publicKey,expected,nowMs,directory,authorizeActor});
+}
+
+/**
+ * Final read-only gate under a host-provided repository lock. The lock must
+ * remain held by the host for any later atomic compare-and-swap mutation.
+ */
+export async function verifyAtlasCodingCycleFinalHead({cycle,expectedBaseCommit,
+ readHeadCommit,withRepositoryLock}={}){
+ if(!cycle||cycle.status!=='planned_not_executed'||
+    cycle.unresolved?.length!==0||cycle.verifiedReady!==false)
+  throw Error('Unresolved or executed coding cycle cannot enter final review');
+ return verifyAtlasCodingHeadUnderLock({expectedBaseCommit,readHeadCommit,withRepositoryLock});
 }
