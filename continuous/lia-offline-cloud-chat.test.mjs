@@ -9,8 +9,8 @@ test('cloud offline chat is an isolated, authenticated Atlas Core session',()=>{
  assert.match(main,/href="\/chat\/offline\/"/);
  assert.doesNotMatch(main,/async function sendOffline/);
  assert.match(ui,/fetch\('\/api\/chat'/);
- assert.match(ui,/engine:'native',web:false,history:\[\]/);
- assert.match(ui,/Cada pregunta se procesa de forma independiente/);
+ assert.match(ui,/engine:'native',web:false,history:previous\.slice\(-20\)/);
+ assert.match(ui,/No utiliza ese contexto para razonar de forma general/);
  assert.match(ui,/function exportConversation\(\)/);
  assert.match(ui,/Exportar conversación/);
  assert.match(ui,/data\.reply\.engine!=='native'/);
