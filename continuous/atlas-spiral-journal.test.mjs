@@ -39,3 +39,8 @@ test('import refuses silently incomplete events and forged verification status',
  assert.throws(()=>spiralJournalImport([{...a,prediction:undefined}]));
  assert.throws(()=>spiralJournalImport([{...a,status:'verified'}]));
 });
+
+test('event identifiers cannot collide by truncation',()=>{
+ assert.throws(()=>spiralEvent({id:'a'.repeat(101),time:1}));
+ assert.throws(()=>spiralEvent({id:'x',time:1,evidence:['a'.repeat(2001)]}));
+});
