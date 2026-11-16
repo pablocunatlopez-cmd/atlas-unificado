@@ -19,9 +19,15 @@ export function projectLiaHypothesisTimeline(events,{limit=100}={}){
    const references=Array.isArray(hypothesis.evidence)?hypothesis.evidence.filter(e=>e&&typeof e.reference==='string'&&typeof e.type==='string').map(e=>e.type+':'+e.reference).slice(0,12):[];
    const previousEvidence=new Set(previous?.evidenceReferences||[]);
    const newEvidence=references.filter(reference=>!previousEvidence.has(reference));
+   // Only the cloud-validated hash journal can establish a recorded check;
+   // a model-provided evidence label or verified:true flag alone cannot.
+   const journal=Array.isArray(event.transitionJournal)?event.transitionJournal:[];
+   const validatedCheck=journal.some(entry=>entry?.hypothesisId===hypothesis.id&&entry.integrityVerifiedInCloud===true&&
+    entry.transition?.nextStatus===hypothesis.status&&entry.transition?.check?.executed===true&&
+    hypothesis.evidence?.some(e=>e?.type==='tool-output'&&e.reference===entry.transition.check.reference));
    const item=Object.freeze({
     id:event.id+':'+hypothesis.id,jobId:event.id,hypothesisId:hypothesis.id,
-    claim,status:hypothesis.status,origin:hypothesis.origin||'unknown',
+    claim,status:hypothesis.status,origin:hypothesis.origin||'unknown',recordedCheckValidated:validatedCheck,
     time:event.updatedAt||null,evidenceCount:references.length,evidenceReferences:Object.freeze(references),newEvidenceReferences:Object.freeze(newEvidence),
     recordedConclusion:typeof hypothesis.conclusion==='string'?hypothesis.conclusion.slice(0,600):'',
     priorRecordId:previous?.id||null,
