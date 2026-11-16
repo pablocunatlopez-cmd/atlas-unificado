@@ -14,7 +14,7 @@ test('cloud offline chat is an isolated, authenticated Atlas Core session',()=>{
  assert.match(ui,/function exportConversation\(\)/);
  assert.match(ui,/Exportar conversación/);
  assert.match(ui,/data\.reply\.engine!=='native'/);
- assert.match(ui,/no se guarda en el historial/);
+ assert.match(ui,/no se guarda automáticamente en el historial/);
  assert.match(ui,/setTurns\(\[\]\)/);
  assert.match(page,/getChatGPTUser\(\)/);
  assert.match(route,/getChatGPTUser\(\)/);
