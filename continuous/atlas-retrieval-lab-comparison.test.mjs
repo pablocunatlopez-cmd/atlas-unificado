@@ -26,3 +26,13 @@ test('same method is deterministic in retrieved results but never claims determi
  assert.equal(r.baseline.ndcgAt5,r.candidate.ndcgAt5);
  assert.equal(r.gate.promote,false);
 });
+
+test('benchmark fingerprints differ if documents change with identical questions and labels',t=>{
+ const first=createRetrievalLab(docs);const altered=createRetrievalLab([{...docs[0],text:'Texto distinto sobre Q594 Órbita'},docs[1]]);
+ t.after(()=>{first.close();altered.close();});
+ const a=compareRetrievalLabStrategies(first,cases,{citationLabels:labels});
+ const b=compareRetrievalLabStrategies(altered,cases,{citationLabels:labels});
+ assert.notEqual(a.documentCorpusHash,b.documentCorpusHash);
+ assert.notEqual(a.baseline.corpusHash,b.baseline.corpusHash);
+ assert.equal(a.labelsHash,b.labelsHash);
+});
