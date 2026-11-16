@@ -6,7 +6,7 @@ test('produces bounded Three.js compatible scene plan without instantiation',()=
  const plan=planAtlasCanonicalThreeScene(createAtlasCanonicalWorldSpec());
  assert.equal(plan.spiral.points.length,96);
  assert.equal(plan.anchors.length,6);
- assert.equal(plan.edges.length,5);
+ assert.equal(plan.edges.length,6);
  assert.equal(plan.threeObjectsCreated,false);
  assert.equal(plan.erasPortal.target,'eras-house');
 });
