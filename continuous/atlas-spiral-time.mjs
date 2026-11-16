@@ -11,9 +11,9 @@ const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const normalize=value=>typeof value==='string'?value.trim().slice(0,2000):'';
 /** Records an append-only observation; caller owns persistence and permissions. */
 export function spiralEvent({id,time,mental='',physical='',unknown='',evidence=[],prediction='',outcome='',revisionOf=null}={}){
- if(typeof id!=='string'||!id.trim()||!finite(time)||time<0)throw new TypeError('Event requires id and finite nonnegative time');
- if(!Array.isArray(evidence)||evidence.length>12||evidence.some(item=>typeof item!=='string'))throw new TypeError('Invalid evidence');
- return Object.freeze({id:id.slice(0,100),time,vertices:Object.freeze({mental:normalize(mental),physical:normalize(physical),god:normalize(unknown)}),prediction:normalize(prediction),outcome:normalize(outcome),evidence:Object.freeze(evidence.map(normalize)),revisionOf:revisionOf===null?null:normalize(revisionOf),status:'user-supplied-unverified'});
+ if(typeof id!=='string'||!id.trim()||id.length>100||!finite(time)||time<0)throw new TypeError('Event requires id and finite nonnegative time');
+ if(!Array.isArray(evidence)||evidence.length>12||evidence.some(item=>typeof item!=='string'||item.length>2000))throw new TypeError('Invalid evidence');
+ return Object.freeze({id,time,vertices:Object.freeze({mental:normalize(mental),physical:normalize(physical),god:normalize(unknown)}),prediction:normalize(prediction),outcome:normalize(outcome),evidence:Object.freeze(evidence.map(normalize)),revisionOf:revisionOf===null?null:normalize(revisionOf),status:'user-supplied-unverified'});
 }
 /**
  * Discrete tangent is a local finite difference between consecutive events.
