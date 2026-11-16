@@ -10,7 +10,7 @@ test('completed local review is recorded without claiming factual verification',
  assert.deepEqual(audit.unknownCitationLabels,['[9]']);
 });
 test('missing and failed review metadata remain explicit',()=>{
- assert.equal(sanitizeLiaExecutionAudit({answer:'hello'}).review,'not-recorded');
+ assert.equal(sanitizeLiaExecutionAudit({answer:'hello'}),null);
  assert.equal(sanitizeLiaExecutionAudit({reviewError:'timeout'}).review,'failed');
  assert.equal(sanitizeLiaExecutionAudit(null),null);
 });
