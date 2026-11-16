@@ -50,3 +50,14 @@ test('chronological revisions are stable even when completed jobs arrive newest-
  assert.equal(reversed[1].statusChanged,true);
  assert.deepEqual(reversed[1].newEvidenceReferences,['tool-output:check:1']);
 });
+
+test('only cloud-verified matching journal marks an executed check',()=>{
+ const hypothesis={id:'citation-check',claim:'Citation labels exist',status:'supported',origin:'tool',evidence:[{type:'tool-output',reference:'chat:audit',verified:true}]};
+ const base={id:'job-1',status:'completed',updatedAt:'2026-11-16T15:00:00Z',hypotheses:[hypothesis]};
+ const forged=projectLiaHypothesisTimeline([base]);
+ assert.equal(forged[0].recordedCheckValidated,false);
+ const withJournal={...base,transitionJournal:[{hypothesisId:'citation-check',integrityVerifiedInCloud:true,transition:{nextStatus:'supported',check:{executed:true,reference:'chat:audit'}}}]};
+ assert.equal(projectLiaHypothesisTimeline([withJournal])[0].recordedCheckValidated,true);
+ const mismatched={...withJournal,transitionJournal:[{...withJournal.transitionJournal[0],transition:{nextStatus:'refuted',check:{executed:true,reference:'chat:audit'}}}]};
+ assert.equal(projectLiaHypothesisTimeline([mismatched])[0].recordedCheckValidated,false);
+});
