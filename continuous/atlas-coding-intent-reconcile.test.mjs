@@ -35,3 +35,17 @@ test('symlink intent is never followed',()=>withDir(async directory=>{
  const r=await reconcileAtlasCodingIntent({directory,transactionId:'tx',readHeadCommit:async()=>data.baseCommit});
  assert.equal(r.status,'unsafe_intent_file');assert.equal(r.retrySafe,false);
 }));
+
+test('oversized intent is rejected before parsing',()=>withDir(async directory=>{
+ const path=join(directory,'tx.intent.json');
+ await writeFile(path,'x'.repeat(4096));await chmod(path,0o600);
+ const r=await reconcileAtlasCodingIntent({directory,transactionId:'tx',readHeadCommit:async()=>data.baseCommit});
+ assert.equal(r.status,'unsafe_intent_file');
+}));
+test('unexpected persisted fields fail closed',()=>withDir(async directory=>{
+ const path=join(directory,'tx.intent.json');
+ await writeFile(path,JSON.stringify({...data,schemaVersion:1,status:'intent_recorded_no_commit_claim',injected:true}));
+ await chmod(path,0o600);
+ const r=await reconcileAtlasCodingIntent({directory,transactionId:'tx',readHeadCommit:async()=>data.baseCommit});
+ assert.equal(r.status,'invalid_intent');
+}));
