@@ -18,14 +18,14 @@ async function verifyLiaJournalInCloud(journal,allowedHypotheses){
  if(!Array.isArray(journal)||journal.length>30)return false;
  const encoder=new TextEncoder();let previousHash=null;
  for(const entry of journal){
-  if(!entry||typeof entry.id!=='string'||!/^[\\w-]{1,80}$/.test(entry.id)||!allowedHypotheses.has(entry.hypothesisId)||entry.previousHash!==previousHash||typeof entry.hash!=='string'||!/^[a-f0-9]{64}$/.test(entry.hash))return false;
+  if(!entry||typeof entry.id!=='string'||!/^[\w-]{1,80}$/.test(entry.id)||!allowedHypotheses.has(entry.hypothesisId)||entry.previousHash!==previousHash||typeof entry.hash!=='string'||!/^[a-f0-9]{64}$/.test(entry.hash))return false;
   const t=entry.transition,c=t?.check;
   if(!t||!c||c.executed!==true||t.previousStatus!=='testing'||!['citation-audit','deterministic-tool'].includes(c.kind)||!['pass','fail','unknown'].includes(c.outcome)||typeof c.reference!=='string'||!c.reference.trim()||c.reference.length>240)return false;
   const expected=c.outcome==='pass'?'supported':c.outcome==='fail'?'refuted':'inconclusive';
   if(t.nextStatus!==expected||t.rule!==(c.outcome==='pass'?'recorded-check-passed':c.outcome==='fail'?'recorded-check-failed':'executed-check-inconclusive')||t.changed!==(expected!=='testing')||t.factualAccuracyVerified!==false)return false;
   const hypothesis=allowedHypotheses.get(entry.hypothesisId);
   if(hypothesis.status!==expected||!hypothesis.evidence.some(e=>e.type==='tool-output'&&e.verified===true&&e.reference===c.reference))return false;
-  if(typeof entry.timestamp!=='string'||!/^\\d{4}-\\d\\d-\\d\\dT/.test(entry.timestamp))return false;
+  if(typeof entry.timestamp!=='string'||!/^\d{4}-\d\d-\d\dT/.test(entry.timestamp))return false;
   const {hash,...payload}=entry;
   const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(JSON.stringify(payload))));
   const computed=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
