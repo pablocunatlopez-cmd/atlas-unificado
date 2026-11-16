@@ -1,3 +1,4 @@
+import {buildVerifiedToolHypotheses} from './lia-tool-hypotheses.mjs';
 import {deriveLiaAuditHypotheses} from './lia-audit-hypotheses.mjs';
 import {searchDocuments} from './engine.mjs';
 import {classifyLiaChatSources} from './lia-chat-provenance.mjs';
@@ -61,7 +62,7 @@ export async function chat(input,documents,request=fetch,apiKey='',providerKey='
  const historyLimit=attachments.length?6000:input.toolRepair===true?24000:10000;
  const messages=selectChatWindow(validateMessages(input.messages),{maxMessages:15,maxCharacters:historyLimit});
  const verifiedAnswer=input.json!==true&&input.internet!==true&&input.external!==true&&input.refute!==true&&!attachments.length?formatExecutedToolAnswer(toolRun):null;
- if(verifiedAnswer!==null)return {answer:verifiedAnswer,liaProvenance:classifyLiaChatSources({sources:[],sharedSession:runtime.sharedSession===true}),model:'atlas-coordinator',modelName:'Atlas · herramienta verificada',sources:[],warnings:[],webRead:false,failedWebUrls:[],attachmentCount:0,collaborator:null,collaborators:[],reflectionMemoryUsed:0,toolRun,reviewed:false,reviewError:null,reviewScope:'Resultado de la herramienta ejecutada y validado; redacción determinista del coordinador.',trained:false,tokens:0,performance:{totalMs:Date.now()-startedAt,firstContentMs:null,generations:[]}};
+ if(verifiedAnswer!==null)return {answer:verifiedAnswer,liaHypotheses:buildVerifiedToolHypotheses(toolRun),liaProvenance:classifyLiaChatSources({sources:[],sharedSession:runtime.sharedSession===true}),model:'atlas-coordinator',modelName:'Atlas · herramienta verificada',sources:[],warnings:[],webRead:false,failedWebUrls:[],attachmentCount:0,collaborator:null,collaborators:[],reflectionMemoryUsed:0,toolRun,reviewed:false,reviewError:null,reviewScope:'Resultado de la herramienta ejecutada y validado; redacción determinista del coordinador.',trained:false,tokens:0,performance:{totalMs:Date.now()-startedAt,firstContentMs:null,generations:[]}};
  const generationPolicy=await loadGenerationPolicy();
  let coreDirective=null;
  try{coreDirective=await runtime.cognitiveCore?.decide(messages.at(-1).content,{json:input.json===true,hasMemory:runtime.sharedSession!==true&&documents.length>0,internet:input.internet===true,tools:input.tools===true});}catch{}
