@@ -8,9 +8,18 @@ export function planLiaOfflineLearning(consolidation,{baseModelId,minimumVerifie
   typeof holdoutFraction!=='number'||holdoutFraction<.1||holdoutFraction>.5)
   throw new TypeError('Invalid offline learning plan');
  const eligible=consolidation.retained.filter(e=>e.evidenceVerified===true&&e.kind!=='hypothesis');
- const sorted=[...eligible].sort((a,b)=>hash(a.contentHash).localeCompare(hash(b.contentHash)));
- const holdoutCount=Math.max(1,Math.ceil(sorted.length*holdoutFraction));
- const holdout=sorted.slice(0,holdoutCount),training=sorted.slice(holdoutCount);
+ // Keep identical normalized content in one partition, even across characters.
+ const groups=new Map();
+ for(const e of eligible){
+  const key=hash(e.content.trim().toLowerCase().replace(/\\s+/g,' '));
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(e);
+ }
+ const ordered=[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+ const holdoutGroupCount=Math.max(1,Math.ceil(ordered.length*holdoutFraction));
+ const holdout=ordered.slice(0,holdoutGroupCount).flatMap(([,items])=>items);
+ const training=ordered.slice(holdoutGroupCount).flatMap(([,items])=>items);
+ const sorted=ordered.flatMap(([,items])=>items);
  const ready=eligible.length>=minimumVerified&&training.length>0&&holdout.length>0;
  return Object.freeze({schema:'lia-offline-learning-plan-v1',baseModelId,
   eligibleCount:eligible.length,trainingCount:training.length,holdoutCount:holdout.length,
