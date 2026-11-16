@@ -98,6 +98,17 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   const pending=await one(`SELECT id,status FROM cloud_jobs WHERE conversation_id=? AND user_id=? AND status IN ${active} ORDER BY created_at DESC LIMIT 1`,id,userId);
   return {conversation:{id:row.id,title:row.title,updatedAt:new Date(row.updated_at).toISOString()},messages:messages.map(message=>({id:message.id,role:message.role,content:message.content,createdAt:new Date(message.created_at).toISOString()})),...(pending?{pendingJob:pending}:{})};
  }
+ async function conversationExecutionEvents(userId,id){
+  await ownedConversation(userId,id);
+  const rows=await all('SELECT id,kind,status,stage,created_at,updated_at,result FROM cloud_jobs WHERE conversation_id=? AND user_id=? ORDER BY created_at DESC,id DESC LIMIT 30',id,userId);
+  return {events:rows.reverse().map(row=>{
+   let result=null;
+   if(row.status==='completed'&&row.result){try{result=JSON.parse(row.result);}catch{}}
+   return {id:row.id,kind:row.kind||'chat',status:row.status,stage:row.stage||null,createdAt:new Date(row.created_at).toISOString(),updatedAt:new Date(row.updated_at).toISOString(),
+    checks:Object.freeze({answerStored:typeof result?.answer==='string'&&result.answer.length>0,modelReported:typeof result?.model==='string'?result.model:null}),
+    evidence:'cloud_jobs',verifiedExecution:row.status==='completed',hypothesis:null,revision:null};
+  })};
+ }
  async function getJob(userId,id){return publicJob(await ownedJob(userId,id));}
  async function cancel(userId,id){
   await ownedJob(userId,id);
@@ -206,5 +217,5 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   const rows=await all('SELECT id,process_id,state,phase,text,at,created_at FROM resident_memories WHERE resident_id=? ORDER BY created_at DESC,id LIMIT ?',residentId,RESIDENT_MEMORY_LIMIT);
   return {residentId,memories:rows.map(row=>({id:row.id,processId:row.process_id,state:row.state,phase:row.phase||null,text:row.text,at:row.at,observedAt:new Date(row.created_at).toISOString()}))};
  }
- return {enqueue,status,conversations,conversation,getJob,cancel,heartbeat,claim,complete,fail:failJob,observeResidentEvents,residentMemories};
+ return {enqueue,status,conversations,conversation,conversationExecutionEvents,getJob,cancel,heartbeat,claim,complete,fail:failJob,observeResidentEvents,residentMemories};
 }
