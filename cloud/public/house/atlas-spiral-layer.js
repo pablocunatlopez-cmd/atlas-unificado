@@ -1,3 +1,4 @@
+import {generateAtlasTangentSpirals} from './atlas-generative-spiral.js';
 /**
  * Optional Atlas philosophy layer inside the existing ERAS Three.js scene.
  * This is illustrative geometry, not verified fidelity to original images.
@@ -15,16 +16,10 @@ export function createAtlasSpiralLayer({THREE,scene}={}){
   geometries.push(geometry);materials.push(material);
   group.add(new THREE.Line(geometry,material));
  }
- const spiral=[];
- for(let i=0;i<144;i++){
-  const t=i/143,angle=t*Math.PI*7,r=.3+t*7;
-  spiral.push([Math.cos(angle)*r,1+t*4,Math.sin(angle)*r]);
- }
- line(spiral,0xb9c4d0);
- // Smaller open spirals echo the same historical trajectory at other scales.
- for(const scale of [.55,.27]){
-  line(spiral.map(([x,y,z])=>[x*scale,y*scale+1.3,z*scale]),
-   scale>.3?0x8e9bbd:0xc2a4ca);
+ const generative=generateAtlasTangentSpirals({depth:3,budget:15,samples:48});
+ for(const branch of generative.branches){
+  line(branch.points,branch.level===0?0xb9c4d0:
+   branch.level===1?0x8e9bbd:branch.level===2?0xc2a4ca:0x839eaf);
  }
  const vertices=[
   {id:'mental',position:[-8,3,-5],color:0x7795d9},
@@ -75,6 +70,8 @@ export function createAtlasSpiralLayer({THREE,scene}={}){
   get visible(){return group.visible;},
   get mounted(){return mounted;},
   vertices:Object.freeze(vertices.map(v=>v.id)),
+  get branchCount(){return generative.branches.length;},
+  get eventCount(){return generative.events.length;},
   rendererCreated:false,visualFidelityVerified:false
  });
 }
