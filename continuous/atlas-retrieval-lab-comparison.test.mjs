@@ -39,7 +39,7 @@ test('benchmark fingerprints differ if documents change with identical questions
 
 test('alternating AB/BA order is balanced and warmup is excluded',()=>{
  const calls=[];
- const lab={corpusHash:'a'.repeat(64),search(question,{method})=>{
+ const lab={corpusHash:'a'.repeat(64),search(question,{method}){
   calls.push(method+':'+question);
   return [{id:question==='one'?'doc1':'doc2'}];
  }};
