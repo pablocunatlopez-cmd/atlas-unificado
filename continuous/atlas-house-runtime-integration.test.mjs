@@ -9,5 +9,5 @@ test('ERAS runtime imports Atlas mode without replacing existing renderer',()=>{
  assert.match(source,/atlasMode\.dispose\(\)/);
  assert.match(source,/message\.type==='atlas:house:atlas-mode'/);
  assert.match(source,/renderer\.render\(house\.scene,camera\)/);
- assert.match(source,/visualSceneMounted:false/);
+ assert.match(source,/visualSceneMounted:atlasSpiral\?\.mounted===true/);
 });
