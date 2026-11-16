@@ -13,6 +13,19 @@ export function publicIPv4(ip){
  return !(a===0||a===10||a===127||a>=224||(a===169&&b===254)||(a===172&&b>=16&&b<=31)||(a===192&&(b===0||b===168))||(a===100&&b>=64&&b<=127)||(a===198&&((b===18||b===19)||(b===51&&c===100)))||(a===203&&b===0&&c===113)||(a===192&&b===88&&c===99));
 }
 export function webUrl(value){const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password||(u.port&&u.port!=='443')||u.hostname==='localhost'||u.hostname.endsWith('.localhost')||u.hostname.endsWith('.local')||(isIP(u.hostname)&&!publicIPv4(u.hostname)))throw Error('Solo páginas HTTPS públicas, sin credenciales ni puertos privados.');return u;}
+const SAFE_NET_MESSAGE=/^(Solo páginas HTTPS públicas|Destino de red privado o no permitido|Demasiadas redirecciones|La página no es texto legible|La página supera el límite de lectura|La web respondió HTTP \d+|Contenido insuficiente|No se pudo |Tiempo de espera agotado)/;
+const DNS_ERROR_CODES=new Set(['ENOTFOUND','ENODATA','ENORECORDS','EAI_AGAIN','EAI_NODATA','EAI_FAMILY']);
+const CONNECTION_ERROR_CODES=new Set(['ECONNREFUSED','ECONNRESET','ECONNABORTED','EHOSTUNREACH','EHOSTDOWN','ENETUNREACH','ENETDOWN','EPIPE','EPROTO','EAI_FAMILY','UNABLE_TO_VERIFY_LEAF_SIGNATURE','UNABLE_TO_GET_ISSUER_CERT','CERT_HAS_EXPIRED','DEPTH_ZERO_SELF_SIGNED_CERT','SELF_SIGNED_CERT_IN_CHAIN','ERR_TLS_CERT_ALTNAME_INVALID']);
+// Mensajes genéricos para el cliente: nunca incluyen hostname, IP, ruta ni causa interna.
+export function sanitizeNetError(err){
+ const message=String(err?.message||''),code=String(err?.code||'');
+ if(SAFE_NET_MESSAGE.test(message))return err instanceof Error?err:Error(message);
+ if(DNS_ERROR_CODES.has(code))return Error('No se pudo resolver el nombre DNS del destino.');
+ if(code==='ETIMEDOUT'||/tiempo\b[\s\S]*agotado/i.test(message)||/timed?\s*out/i.test(message))return Error('Tiempo de espera agotado al contactar el destino.');
+ if(/\bDNS\b/i.test(message))return Error('No se pudo resolver el nombre DNS del destino.');
+ if(CONNECTION_ERROR_CODES.has(code)||/cert|tls|ssl/i.test(code))return Error('No se pudo establecer una conexión segura con el destino.');
+ return Error('No se pudo acceder al destino solicitado.');
+}
 export async function resolvePublicAddresses(hostname,timeoutMs=6000,signal,resolver=lookup){
  signal?.throwIfAborted();let timer,abort;
  try{
@@ -25,6 +38,7 @@ export async function resolvePublicAddresses(hostname,timeoutMs=6000,signal,reso
 }
 export async function publicGet(value,depth=0,signal){
  signal?.throwIfAborted();
+ try{
  const u=webUrl(value);if(depth>3)throw Error('Demasiadas redirecciones');
  const addresses=isIP(u.hostname)?[u.hostname]:await resolvePublicAddresses(u.hostname,6000,signal);
  signal?.throwIfAborted();
@@ -38,6 +52,8 @@ export async function publicGet(value,depth=0,signal){
   });const timer=setTimeout(()=>req.destroy(Error('Tiempo de lectura agotado')),15000);req.on('close',()=>clearTimeout(timer));req.on('error',reject);
  });
  return response.redirect?publicGet(response.redirect,depth+1,signal):response;
+ }
+ catch(err){if(err===signal?.reason||err?.name==='AbortError')throw err;throw sanitizeNetError(err);}
 }
 export function parseDuckDuckGoResults(html,limit=4){
  const anchors=[...String(html||'').matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
@@ -65,7 +81,7 @@ export function parseDuckDuckGoResults(html,limit=4){
 export async function webEvidence(question,{signal}={}){
  signal?.throwIfAborted();const get=url=>publicGet(url,0,signal);
  const links=question.match(/https:\/\/[^\s<>"']+/g)?.map(s=>s.replace(/[),.;]+$/,'' )).slice(0,2)||[];
- if(links.length){const results=await Promise.allSettled(links.map(async url=>{const r=await get(url);return {url:r.url,requestedUrl:new URL(url).href,excerpt:extractText(r.text).slice(0,3500),fetchedAt:new Date().toISOString(),method:'Página pública leída ahora'};}));signal?.throwIfAborted();return {sources:results.filter(r=>r.status==='fulfilled').map(r=>r.value),errors:results.filter(r=>r.status==='rejected').map(r=>r.reason.message)};}
+ if(links.length){const results=await Promise.allSettled(links.map(async url=>{const r=await get(url);return {url:r.url,requestedUrl:new URL(url).href,excerpt:extractText(r.text).slice(0,3500),fetchedAt:new Date().toISOString(),method:'Página pública leída ahora'};}));signal?.throwIfAborted();return {sources:results.filter(r=>r.status==='fulfilled').map(r=>r.value),errors:results.filter(r=>r.status==='rejected').map(r=>sanitizeNetError(r.reason).message)};}
  const query=question.slice(0,200);let searchFailure='';
  const googleResult=await google.search(query,signal);
  try{
@@ -77,17 +93,17 @@ export async function webEvidence(question,{signal}={}){
   // Interleave queries so specialised sources are not displaced by generic hits.
   const groups=[googleResult.sources,...outcomes.filter(x=>x.status==='fulfilled').map(x=>x.value)];
   for(let i=0;i<3;i++)for(const group of groups){const s=group[i];if(s&&!seen.has(s.url)&&sources.length<6){seen.add(s.url);sources.push({...s,sourceKind:sourceKind(s.url)});}}
-  const errors=[...googleResult.errors,...outcomes.filter(x=>x.status==='rejected').map(x=>x.reason.message)];
-  await Promise.all(sources.slice(0,2).map(async s=>{try{const page=await get(s.url);const text=extractText(page.text);if(text.length<100)throw Error('Contenido insuficiente');s.excerpt=text.slice(0,3500);s.url=page.url;s.method='Página pública leída ahora';}catch(e){errors.push('Lectura '+s.url+': '+e.message);}}));
+  const errors=[...googleResult.errors,...outcomes.filter(x=>x.status==='rejected').map(x=>sanitizeNetError(x.reason).message)];
+  await Promise.all(sources.slice(0,2).map(async s=>{try{const page=await get(s.url);const text=extractText(page.text);if(text.length<100)throw Error('Contenido insuficiente');s.excerpt=text.slice(0,3500);s.url=page.url;s.method='Página pública leída ahora';}catch(e){errors.push('Lectura '+s.url+': '+sanitizeNetError(e).message);}}));
   signal?.throwIfAborted();
   if(sources.length)return {sources,errors};
   searchFailure='DuckDuckGo Lite no devolvió resultados interpretables.';
- }catch(e){signal?.throwIfAborted();searchFailure='DuckDuckGo Lite: '+e.message;}
+ }catch(e){signal?.throwIfAborted();searchFailure='DuckDuckGo Lite: '+sanitizeNetError(e).message;}
  const u='https://es.wikipedia.org/w/api.php?action=query&list=search&format=json&utf8=1&srlimit=3&srsearch='+encodeURIComponent(query);
  try{
   const r=await get(u),j=JSON.parse(r.text);if(j.error)throw Error('La búsqueda enciclopédica no está disponible');
   const sources=(j.query?.search||[]).map(s=>({url:'https://es.wikipedia.org/wiki/'+encodeURIComponent(s.title.replaceAll(' ','_')),excerpt:extractText(s.snippet),title:s.title,fetchedAt:new Date().toISOString(),method:'Resultado de búsqueda Wikipedia; extracto, no artículo completo'}));
   if(sources.length)return {sources,errors:[...googleResult.errors,...(searchFailure?[searchFailure+'; se usó Wikipedia como alternativa.']:[])]};
   throw Error('La búsqueda enciclopédica no devolvió resultados.');
- }catch(e){throw Error([...googleResult.errors,searchFailure,e.message].filter(Boolean).join(' '));}
+ }catch(e){throw Error([...googleResult.errors,searchFailure,sanitizeNetError(e).message].filter(Boolean).join(' '));}
 }
