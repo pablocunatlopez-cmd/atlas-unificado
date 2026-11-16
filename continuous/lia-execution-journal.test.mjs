@@ -19,7 +19,8 @@ test('bridge, cloud queue and viewer expose persistent journal without false clo
  const queue=readFileSync(new URL('../cloud/lib/cloud/queue.mjs',import.meta.url),'utf8');
  const view=readFileSync(new URL('../cloud/app/lia-inner-world.tsx',import.meta.url),'utf8');
  assert.match(bridge,/liaTransitionJournal:journalLiaExecutedChecks/);
- assert.match(queue,/value\.liaTransitionJournal=journal\.map/);
+ assert.match(queue,/verifyLiaJournalInCloud\(result\.liaTransitionJournal,hypotheses\)/);
+ assert.match(queue,/integrityVerifiedInCloud:true/);
  assert.match(queue,/La cadena de auditoría no supera la verificación/);
  assert.match(view,/Integridad en nube:/);
 });
