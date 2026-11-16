@@ -25,3 +25,8 @@ test('invalid actions and forged identities fail closed',()=>{
  assert.throws(()=>transitionLiaPerspective({...initialLiaPerspective,identity:'other'},{type:'enter'}));
  assert.throws(()=>transitionLiaPerspective(initialLiaPerspective,{type:'run-robot'}));
 });
+
+test('corrupt perspective orientation and mode are rejected',()=>{
+ assert.throws(()=>transitionLiaPerspective({...initialLiaPerspective,yaw:Infinity},{type:'enter'}));
+ assert.throws(()=>transitionLiaPerspective({...initialLiaPerspective,mode:'robot'},{type:'enter'}));
+});
