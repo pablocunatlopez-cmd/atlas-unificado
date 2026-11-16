@@ -12,13 +12,18 @@ export function projectLiaHypothesisTimeline(events,{limit=100}={}){
    const claim=hypothesis.claim.trim(),key=claim.toLowerCase();
    if(!claim||claim.length>600)continue;
    const previous=lastByClaim.get(key);
+   const references=Array.isArray(hypothesis.evidence)?hypothesis.evidence.filter(e=>e&&typeof e.reference==='string'&&typeof e.type==='string').map(e=>e.type+':'+e.reference).slice(0,12):[];
+   const previousEvidence=new Set(previous?.evidenceReferences||[]);
+   const newEvidence=references.filter(reference=>!previousEvidence.has(reference));
    const item=Object.freeze({
     id:event.id+':'+hypothesis.id,jobId:event.id,hypothesisId:hypothesis.id,
     claim,status:hypothesis.status,origin:hypothesis.origin||'unknown',
-    time:event.updatedAt||null,evidenceCount:Array.isArray(hypothesis.evidence)?hypothesis.evidence.length:0,
+    time:event.updatedAt||null,evidenceCount:references.length,evidenceReferences:Object.freeze(references),newEvidenceReferences:Object.freeze(newEvidence),
+    recordedConclusion:typeof hypothesis.conclusion==='string'?hypothesis.conclusion.slice(0,600):'',
     priorRecordId:previous?.id||null,
     statusChanged:!!previous&&previous.status!==hypothesis.status,
     comparison:previous?(previous.status===hypothesis.status?'same-status':'status-changed'):'first-record',
+    changeExplanation:previous&&previous.status!==hypothesis.status?(newEvidence.length?'Changed status with newly referenced evidence':'Changed status without newly referenced evidence'):'',
     factualAccuracyVerified:false
    });
    timeline.push(item);
