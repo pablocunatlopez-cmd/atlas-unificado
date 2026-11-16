@@ -105,7 +105,7 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    let result=null;
    if(row.status==='completed'&&row.result){try{result=JSON.parse(row.result);}catch{}}
    return {id:row.id,kind:row.kind||'chat',status:row.status,stage:row.stage||null,createdAt:new Date(row.created_at).toISOString(),updatedAt:new Date(row.updated_at).toISOString(),
-    checks:Object.freeze({answerStored:typeof result?.answer==='string'&&result.answer.length>0,modelReported:typeof result?.model==='string'?result.model:null}),
+    checks:Object.freeze({answerStored:typeof result?.answer==='string'&&result.answer.length>0,modelReported:typeof result?.model==='string'?result.model:null}),audit:result?.liaExecutionAudit||null,
     evidence:'cloud_jobs',verifiedExecution:row.status==='completed',hypothesis:null,revision:null};
   })};
  }
@@ -150,6 +150,10 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   const result=input.result;
   if(!result||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>16000||!['atlas-local','atlas-coordinator'].includes(result.model))fail('El resultado local no es válido.');
   const value={answer:result.answer,model:result.model,modelName:typeof result.modelName==='string'?result.modelName.slice(0,120):'Qwen local'};
+  if(result.liaExecutionAudit?.schema===1&&result.liaExecutionAudit.source==='local-chat-result'){
+   const audit=result.liaExecutionAudit;
+   value.liaExecutionAudit={schema:1,source:'local-chat-result',review:['completed','failed','not-recorded'].includes(audit.review)?audit.review:'not-recorded',reviewAttempted:audit.reviewAttempted===true,citationAuditRecorded:audit.citationAuditRecorded===true,unknownCitationLabels:Array.isArray(audit.unknownCitationLabels)?audit.unknownCitationLabels.filter(x=>typeof x==='string').slice(0,12).map(x=>x.slice(0,100)):[],sourcesReturned:Number.isInteger(audit.sourcesReturned)&&audit.sourcesReturned>=0?Math.min(audit.sourcesReturned,100):null,webRead:audit.webRead===true,hypothesis:'not-recorded',revision:audit.review==='completed'?'answer-revised-without-diff':'not-recorded',factualAccuracyVerified:false};
+  }
   const at=now();
   const row=await one('SELECT conversation_id,user_id,question,kind,status,lease_token,lease_until,result FROM cloud_jobs WHERE id=?',input.jobId);
   if(!row||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
