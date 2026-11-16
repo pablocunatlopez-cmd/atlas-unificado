@@ -28,3 +28,14 @@ test('missing persisted intent requires manual review',()=>withDir(async directo
  assert.equal(r.needsHumanReview,true);
  assert.equal(r.reconciliationStatus,'intent_not_found');
 }));
+
+test('audit rejects attributing persisted transaction to a different proposal',()=>withDir(async directory=>{
+ await recordAtlasCodingIntent({...base,directory});
+ let reads=0;
+ const r=await auditAtlasCodingTransaction({directory,transactionId:'tx',proposalId:'other',
+  readHeadCommit:async()=>{reads++;return base.baseCommit;},atMs:100});
+ assert.equal(r.reconciliationStatus,'proposal_id_mismatch');
+ assert.equal(r.needsHumanReview,true);
+ assert.equal(r.authorizationGranted,false);
+ assert.equal(reads,0);
+}));
