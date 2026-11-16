@@ -1,4 +1,4 @@
-import {mkdir,open,readFile} from 'node:fs/promises';
+import {mkdir,open,readFile,stat} from 'node:fs/promises';
 import {join} from 'node:path';
 const ID=/^[a-zA-Z0-9_-]{1,100}$/;
 const SHA=/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
@@ -14,6 +14,9 @@ export async function recordAtlasCodingIntent({directory,transactionId,proposalI
     !ID.test(proposalId||'')||!SHA.test(baseCommit||'')||!DIGEST.test(diffDigest||''))
   throw Error('Invalid coding transaction intent');
  await mkdir(directory,{recursive:true,mode:0o700});
+ const info=await stat(directory);
+ if(!info.isDirectory()||(info.mode&0o077)!==0)
+  throw Error('Coding intent directory must be private (0700)');
  const path=join(directory,transactionId+'.intent.json');
  const entry={schemaVersion:1,transactionId,proposalId,baseCommit,diffDigest,
   status:'intent_recorded_no_commit_claim'};
@@ -24,7 +27,9 @@ export async function recordAtlasCodingIntent({directory,transactionId,proposalI
   await handle.sync();
  }catch(error){
   if(error?.code==='EEXIST'){
-   const existing=JSON.parse(await readFile(path,'utf8'));
+   let existing;
+   try{existing=JSON.parse(await readFile(path,'utf8'));}
+   catch{return Object.freeze({status:'corrupt_or_partial_intent',transactionId,applied:false});}
    if(existing.transactionId===transactionId&&existing.proposalId===proposalId&&
       existing.baseCommit===baseCommit&&existing.diffDigest===diffDigest)
     return Object.freeze({status:'already_recorded',transactionId,applied:false});
