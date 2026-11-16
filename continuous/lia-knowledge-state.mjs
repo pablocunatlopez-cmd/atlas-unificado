@@ -7,7 +7,7 @@ export function projectLiaKnowledgeState(hypothesisTimeline,{limit=100}={}){
   if(!record||typeof record.claim!=='string'||!record.claim.trim()||typeof record.id!=='string'||!STATUS.has(record.status))continue;
   const key=record.claim.trim().toLocaleLowerCase('en');
   const evidence=Array.isArray(record.evidenceReferences)?record.evidenceReferences.filter(x=>typeof x==='string').slice(0,12):[];
-  const verifiedExecution=evidence.some(x=>x.startsWith('tool-output:'))&&record.origin==='tool';
+  const verifiedExecution=record.recordedCheckValidated===true;
   const state=record.status==='supported'&&verifiedExecution?'check-supported':record.status==='refuted'&&verifiedExecution?'check-refuted':'unverified-hypothesis';
   latest.set(key,Object.freeze({
    claim:record.claim.trim(),recordId:record.id,jobId:record.jobId||null,
