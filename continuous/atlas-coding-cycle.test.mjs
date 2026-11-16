@@ -55,3 +55,17 @@ test('signed review phase blocks a proposal mismatch before consuming evidence',
  assert.equal(result.status,'blocked');
  assert.equal(result.authorizationGranted,false);
 });
+
+test('content changes alter the cryptographic patch digest',()=>{
+ const a=planAtlasCodingCycle(base);
+ const b=planAtlasCodingCycle({...base,changes:[{...base.changes[0],content:'different source'}]});
+ assert.match(a.diffDigest,/^[a-f0-9]{64}$/);
+ assert.notEqual(a.diffDigest,b.diffDigest);
+});
+test('host expected digest must match the actual planned content before claiming',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ const result=await claimAtlasCodingCycleReview({cycle,claim:{proposalId:cycle.proposalId},
+  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:'b'.repeat(64)}});
+ assert.equal(result.reason,'patch_digest_mismatch');
+ assert.equal(result.authorizationGranted,false);
+});
