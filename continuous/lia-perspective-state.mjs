@@ -5,7 +5,7 @@ export const LIA_MAX_DEPTH=6;
 export const LIA_FOCI=Object.freeze(['mental','physical','god']);
 export const initialLiaPerspective=Object.freeze({identity:'lia',depth:0,focus:'mental',yaw:0,mode:'spatial',revision:0});
 export function transitionLiaPerspective(state,action){
- if(!state||state.identity!=='lia'||!Number.isInteger(state.depth)||state.depth<0||state.depth>LIA_MAX_DEPTH||!LIA_FOCI.includes(state.focus)||!Number.isInteger(state.revision)||state.revision<0)throw new TypeError('Invalid shared perspective state');
+ if(!state||state.identity!=='lia'||!Number.isInteger(state.depth)||state.depth<0||state.depth>LIA_MAX_DEPTH||!LIA_FOCI.includes(state.focus)||!Number.isInteger(state.revision)||state.revision<0||!Number.isFinite(state.yaw)||state.yaw<0||state.yaw>=360||!['spatial','static'].includes(state.mode))throw new TypeError('Invalid shared perspective state');
  if(!action||typeof action!=='object')throw new TypeError('Invalid perspective action');
  let next;
  switch(action.type){
