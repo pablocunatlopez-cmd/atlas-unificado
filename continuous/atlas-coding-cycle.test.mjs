@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {planAtlasCodingCycle} from './atlas-coding-cycle.mjs';
+import {planAtlasCodingCycle,claimAtlasCodingCycleReview} from './atlas-coding-cycle.mjs';
 const base={
  proposalId:'atlas-task-1',
  repositoryFiles:[
@@ -41,4 +41,17 @@ test('blocks create when file already exists',()=>{
 test('reports affected reverse dependencies for regression targeting',()=>{
  const result=planAtlasCodingCycle({...base,changes:[{operation:'update',path:'src/dep.mjs',content:'export const x=2;'}]});
  assert.deepEqual(result.impact.affected,['src/dep.mjs','src/main.mjs']);
+});
+
+test('signed review phase requires independently supplied expected commit and digest',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ await assert.rejects(()=>claimAtlasCodingCycleReview({cycle,claim:{proposalId:cycle.proposalId}}),
+  /complete unresolved-free planned coding cycle/);
+});
+test('signed review phase blocks a proposal mismatch before consuming evidence',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ const result=await claimAtlasCodingCycleReview({cycle,claim:{proposalId:'different'},
+  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:'b'.repeat(64)}});
+ assert.equal(result.status,'blocked');
+ assert.equal(result.authorizationGranted,false);
 });
