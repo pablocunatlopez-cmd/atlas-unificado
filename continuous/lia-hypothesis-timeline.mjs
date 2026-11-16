@@ -1,0 +1,29 @@
+/** Read-only timeline of explicitly recorded hypotheses across completed jobs.
+ * Repeated local IDs are namespaced by job. Changes are observations of
+ * recorded status, not claims that the model learned or corrected itself.
+ */
+export function projectLiaHypothesisTimeline(events,{limit=100}={}){
+ if(!Array.isArray(events)||!Number.isInteger(limit)||limit<1||limit>200)throw new TypeError('Invalid timeline');
+ const timeline=[],lastByClaim=new Map();
+ for(const event of events){
+  if(!event||event.status!=='completed'||typeof event.id!=='string'||!Array.isArray(event.hypotheses))continue;
+  for(const hypothesis of event.hypotheses){
+   if(!hypothesis||typeof hypothesis.id!=='string'||typeof hypothesis.claim!=='string'||typeof hypothesis.status!=='string')continue;
+   const claim=hypothesis.claim.trim(),key=claim.toLowerCase();
+   if(!claim||claim.length>600)continue;
+   const previous=lastByClaim.get(key);
+   const item=Object.freeze({
+    id:event.id+':'+hypothesis.id,jobId:event.id,hypothesisId:hypothesis.id,
+    claim,status:hypothesis.status,origin:hypothesis.origin||'unknown',
+    time:event.updatedAt||null,evidenceCount:Array.isArray(hypothesis.evidence)?hypothesis.evidence.length:0,
+    priorRecordId:previous?.id||null,
+    statusChanged:!!previous&&previous.status!==hypothesis.status,
+    comparison:previous?(previous.status===hypothesis.status?'same-status':'status-changed'):'first-record',
+    factualAccuracyVerified:false
+   });
+   timeline.push(item);
+   lastByClaim.set(key,item);
+  }
+ }
+ return Object.freeze(timeline.slice(-limit));
+}
