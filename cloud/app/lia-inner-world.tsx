@@ -112,7 +112,7 @@ export default function LiaInnerWorld(){
        {event.transitionJournal.map(record=><div key={record.id} style={{padding:'6px 0'}}>
         <strong>{record.hypothesisId}: {record.transition.previousStatus} → {record.transition.nextStatus}</strong>
         <div>Regla: {record.transition.rule} · Comprobación: {record.transition.check.kind} ({record.transition.check.outcome})</div>
-        <small>Referencia: {record.transition.check.reference} · SHA-256: {record.hash.slice(0,16)}… · Integridad en nube: no verificada</small>
+        <small>Referencia: {record.transition.check.reference} · SHA-256: {record.hash.slice(0,16)}… · Integridad en nube: {record.integrityVerifiedInCloud?'cadena comprobada':'no verificada'}</small>
        </div>)}
       </details>:null}
       {event.hypotheses?.map(hypothesis=><div key={hypothesis.id} style={{borderLeft:'2px solid #a89cff',paddingLeft:10,marginTop:8}}>
