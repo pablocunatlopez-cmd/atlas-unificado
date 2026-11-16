@@ -1,3 +1,4 @@
+import {assessAtlasDecisionConsistency} from './atlas-self-improvement-consistency.mjs';
 import {verifyAtlasProposalEvidence} from './atlas-self-improvement-evidence.mjs';
 import {createAtlasOllamaLoopbackTransport} from './atlas-self-improvement-ollama-transport.mjs';
 import {createAtlasOllamaProposalAdapter} from './atlas-self-improvement-ollama.mjs';
@@ -17,7 +18,7 @@ export function createAtlasSelfReviewSession({
  const generateProposal=createAtlasOllamaProposalAdapter({model,requestModel});
  return Object.freeze({
   mode:'dry_run',
-  async run({constitution,roadmap,repositoryContext,rejectedHistory=[],evidenceSources,evidenceClaims}={}){
+  async run({constitution,roadmap,repositoryContext,rejectedHistory=[],evidenceSources,evidenceClaims,decisionHistory=[],changeExplanation=''}={}){
    const result=await proposeAtlasSelfImprovement({
     constitution,roadmap,repositoryContext,rejectedHistory,generateProposal
    });
@@ -26,8 +27,12 @@ export function createAtlasSelfReviewSession({
    const evidence=evidenceSources===undefined?null:verifyAtlasProposalEvidence({
     proposal:result.plan.proposals[0],sources:evidenceSources,claims:evidenceClaims
    });
+   const consistency=assessAtlasDecisionConsistency({
+    proposal:result.plan.proposals[0],history:decisionHistory,
+    evidence,changeExplanation
+   });
    return Object.freeze({
-    evidence,evidenceStatus:evidence===null?'not_provided':
+    consistency,evidence,evidenceStatus:evidence===null?'not_provided':
      evidence.verifiedAgainstSuppliedSnapshots?'exact_quotes_matched':'unverified',
     schemaVersion:1,mode:'dry_run',model,
     proposal:result.plan.proposals[0],review:result.review.reviews[0],
