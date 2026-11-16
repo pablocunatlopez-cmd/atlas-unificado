@@ -9,10 +9,11 @@ const quantile95=values=>values.slice().sort((a,b)=>a-b)[Math.ceil(values.length
 /** Offline, deterministic and paired retrieval evaluation. Inputs must be independently labeled.
  * No network, model execution, private corpus reads, or automatic promotion.
  */
-export function evaluatePairedRetrieval(cases,baselineRuns,candidateRuns,{minimumQueries=100,protocol='retrieval-v1'}={}){
+export function evaluatePairedRetrieval(cases,baselineRuns,candidateRuns,{minimumQueries=100,protocol='retrieval-v1',documentCorpusHash=null}={}){
  if(!Array.isArray(cases)||!Array.isArray(baselineRuns)||!Array.isArray(candidateRuns)||
   !Number.isInteger(minimumQueries)||minimumQueries<1||typeof protocol!=='string'||!protocol.trim()||
-  cases.length===0||cases.length>10000)throw new TypeError('Invalid evaluation inputs');
+  cases.length===0||cases.length>10000||
+  (documentCorpusHash!==null&&!/^sha256:[a-f0-9]{64}$/.test(documentCorpusHash)))throw new TypeError('Invalid evaluation inputs');
  const gold=new Map();
  for(const c of cases){
   if(!c||!validId(c.id)||gold.has(c.id)||!Array.isArray(c.relevantIds)||!c.relevantIds.length||
@@ -48,10 +49,11 @@ export function evaluatePairedRetrieval(cases,baselineRuns,candidateRuns,{minimu
   }
   return {queries:gold.size,recallAt5:mean(recall),ndcgAt5:mean(ndcg),citationAccuracy:mean(citation),latencyP95Ms:quantile95(latency),memoryMb:Math.max(...memory)};
  };
- const corpusHash=digest([...gold.entries()].sort(([a],[b])=>a.localeCompare(b)));
+ const labelsHash=digest([...gold.entries()].sort(([a],[b])=>a.localeCompare(b)));
+ const corpusHash=digest({labelsHash,documentCorpusHash});
  const protocolHash=digest({protocol,cutoff:5,metrics:['recallAt5','ndcgAt5','citationAccuracy','latencyP95Ms','memoryMb']});
  const baseline={...summary(base),corpusHash,protocolHash};
  const candidate={...summary(next),corpusHash,protocolHash};
  const gate=evaluateAtlasCandidate(baseline,candidate,{minimumQueries});
- return Object.freeze({baseline,candidate,gate,source:'caller-provided-independent-labels',verifiedByExternalEvaluator:false,autoPromote:false});
+ return Object.freeze({baseline,candidate,gate,labelsHash,documentCorpusHash,source:'caller-provided-independent-labels',verifiedByExternalEvaluator:false,autoPromote:false});
 }
