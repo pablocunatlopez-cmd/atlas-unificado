@@ -5,7 +5,7 @@ import {exportLiaGltfScene} from './lia-gltf-scene-export.mjs';
 const cube=()=>({positions:[-0.5,-0.5,0.5,0.5,-0.5,0.5,0.5,0.5,0.5,-0.5,0.5,0.5,-0.5,-0.5,-0.5,0.5,-0.5,-0.5,0.5,0.5,-0.5,-0.5,0.5,-0.5],indices:[0,1,2,0,2,3,1,5,6,1,6,2,5,4,7,5,7,6,4,0,3,4,3,7,3,2,6,3,6,7,4,5,1,4,1,0]});
 export function exportLiaMeshGltf(world){
  const gltf=exportLiaGltfScene(world);
- const eligible=new Set(['terrain','building','prop']);
+ const eligible=new Set(['terrain','building','prop','tree']);
  const meshes=[],accessors=[],bufferViews=[],bytes=[];
  let offset=0;
  const append=(data,target)=>{
