@@ -3,7 +3,7 @@
  * Identifiers are checked before conceptual heuristics; ambiguity falls back to baseline.
  */
 const IDENTIFIER=/\b(?:[A-Z]{1,8}[-_]?\d{2,12}|[A-Fa-f0-9]{16,64}|(?:ERR|RFC|HTTP)[-_ ]?\d{3,6})\b/;
-const CONCEPT=/\b(?:why|how|compare|explain|relationship|difference|porque|por qué|cómo|compara|explica|relación|diferencia|significa|meaning|concepto|concept)\b/i;
+const CONCEPT=/(?<![\p{L}\p{N}_])(?:why|how|compare|explain|relationship|difference|porque|por qué|cómo|compara|explica|relación|diferencia|significa|meaning|concepto|concept)(?![\p{L}\p{N}_])/iu;
 export function proposeAtlasRetrievalRoute(question,{
  baseline='atlas-lexical',exact='fts5',semanticAvailable=false,semanticReviewed=false
 }={}){
