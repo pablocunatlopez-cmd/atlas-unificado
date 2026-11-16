@@ -19,6 +19,6 @@ test('authenticated endpoint joins canonical messages and actual execution recor
 test('visualization explicitly labels unrecorded hypothesis and revision',()=>{
  const view=readFileSync(new URL('../cloud/app/lia-inner-world.tsx',import.meta.url),'utf8');
  assert.match(view,/Ejecuciones registradas/);
- assert.match(view,/Hipótesis: no registrada/);
- assert.match(view,/Revisión: no registrada/);
+ assert.match(view,/registro explícito disponible/);
+ assert.match(view,/segunda pasada registrada/);
 });
