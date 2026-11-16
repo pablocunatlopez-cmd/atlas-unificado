@@ -5,6 +5,48 @@
 const MAX_FILES=2000, MAX_FILE_BYTES=200000, MAX_TOTAL_BYTES=4000000;
 const PATH=/^[a-zA-Z0-9_.\/-]{1,240}$/;
 const IMPORT=/(?:\bimport\s*(?:[^'"]*?\sfrom\s*)?|\bexport\s+[^'"]*?\sfrom\s*|\bimport\s*\()\s*['"]([^'"]+)['"]/g;
+
+/**
+ * Strip line and block comments without treating paths inside string
+ * literals as code. Does not implement full JS parsing; reduces
+ * false-positive imports from commented-out statements.
+ */
+export function stripJsComments(source){
+ if(typeof source!=='string')return '';
+ let out='',i=0;const n=source.length;
+ while(i<n){
+  const c=source[i],next=i+1<n?source[i+1]:'';
+  if(c==='"'||c==="'"||c==='`'){
+   const quote=c;out+=c;i+=1;
+   while(i<n){
+    const ch=source[i];out+=ch;i+=1;
+    if(ch==='\\'&&i<n){out+=source[i];i+=1;continue;}
+    if(ch===quote)break;
+   }
+   continue;
+  }
+  if(c==='/'&&next==='/'){i+=2;while(i<n&&source[i]!=='\n')i+=1;continue;}
+  if(c==='/'&&next==='*'){i+=2;while(i+1<n&&!(source[i]==='*'&&source[i+1]==='/'))i+=1;i=Math.min(n,i+2);continue;}
+  out+=c;i+=1;
+ }
+ return out;
+}
+
+function collectRelativeImports(content,fromPath,map){
+ const imports=new Set();
+ const source=stripJsComments(content);
+ let match;IMPORT.lastIndex=0;
+ while((match=IMPORT.exec(source))!==null){
+  const candidate=resolveRelative(fromPath,match[1]);
+  if(candidate){
+   const resolved=[candidate,candidate+'.mjs',candidate+'.js',candidate+'/index.mjs',candidate+'/index.js']
+     .find(p=>map.has(p));
+   if(resolved)imports.add(resolved);
+  }
+ }
+ return [...imports].sort();
+}
+
 function cleanPath(p){
  if(typeof p!=='string'||!PATH.test(p)||p.startsWith('/')||
     p.split('/').some(x=>!x||x==='.'||x==='..')||p.includes('\\'))throw Error('Invalid repository path');
@@ -32,16 +74,8 @@ export function buildAtlasRepoMap(files=[]){
   map.set(path,{path,content:file.content,bytes});
  }
  const result=[...map.values()].map(file=>{
-  const imports=new Set();let match;IMPORT.lastIndex=0;
-  while((match=IMPORT.exec(file.content))!==null){
-   const candidate=resolveRelative(file.path,match[1]);
-   if(candidate){
-    const resolved=[candidate,candidate+'.mjs',candidate+'.js',candidate+'/index.mjs',candidate+'/index.js']
-      .find(p=>map.has(p));
-    if(resolved)imports.add(resolved);
-   }
-  }
-  return {path:file.path,bytes:file.bytes,imports:[...imports].sort()};
+  const imports=collectRelativeImports(file.content,file.path,map);
+  return {path:file.path,bytes:file.bytes,imports};
  });
  return {schemaVersion:1,files:result.sort((a,b)=>a.path.localeCompare(b.path)),totalBytes:total};
 }
