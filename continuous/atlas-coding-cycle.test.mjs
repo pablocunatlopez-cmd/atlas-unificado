@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {planAtlasCodingCycle} from './atlas-coding-cycle.mjs';
+import {planAtlasCodingCycle,claimAtlasCodingCycleReview,verifyAtlasCodingCycleFinalHead} from './atlas-coding-cycle.mjs';
 const base={
  proposalId:'atlas-task-1',
  repositoryFiles:[
@@ -41,4 +41,65 @@ test('blocks create when file already exists',()=>{
 test('reports affected reverse dependencies for regression targeting',()=>{
  const result=planAtlasCodingCycle({...base,changes:[{operation:'update',path:'src/dep.mjs',content:'export const x=2;'}]});
  assert.deepEqual(result.impact.affected,['src/dep.mjs','src/main.mjs']);
+});
+
+test('signed review phase requires independently supplied expected commit and digest',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ await assert.rejects(()=>claimAtlasCodingCycleReview({cycle,claim:{proposalId:cycle.proposalId}}),
+  /complete unresolved-free planned coding cycle/);
+});
+test('signed review phase blocks a proposal mismatch before consuming evidence',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ const result=await claimAtlasCodingCycleReview({cycle,claim:{proposalId:'different'},
+  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:cycle.diffDigest},
+  readHeadCommit:async()=> 'a'.repeat(40)});
+ assert.equal(result.status,'blocked');
+ assert.equal(result.authorizationGranted,false);
+});
+
+test('content changes alter the cryptographic patch digest',()=>{
+ const a=planAtlasCodingCycle(base);
+ const b=planAtlasCodingCycle({...base,changes:[{...base.changes[0],content:'different source'}]});
+ assert.match(a.diffDigest,/^[a-f0-9]{64}$/);
+ assert.notEqual(a.diffDigest,b.diffDigest);
+});
+test('host expected digest must match the actual planned content before claiming',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ const result=await claimAtlasCodingCycleReview({cycle,claim:{proposalId:cycle.proposalId},
+  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:'b'.repeat(64)},
+  readHeadCommit:async()=> 'a'.repeat(40)});
+ assert.equal(result.reason,'patch_digest_mismatch');
+ assert.equal(result.authorizationGranted,false);
+});
+
+test('stale repository HEAD blocks review before signature verification',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ const result=await claimAtlasCodingCycleReview({cycle,claim:{proposalId:cycle.proposalId},
+  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:cycle.diffDigest},
+  readHeadCommit:async()=> 'b'.repeat(40)});
+ assert.equal(result.status,'blocked');
+ assert.equal(result.reason,'stale_base_commit');
+ assert.equal(result.authorizationGranted,false);
+});
+test('trusted HEAD reader is mandatory',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ await assert.rejects(()=>claimAtlasCodingCycleReview({cycle,
+  expected:{proposalId:cycle.proposalId,diffDigest:cycle.diffDigest}}),
+  /Trusted repository HEAD reader required/);
+});
+
+test('final cycle HEAD check runs under the host lock and never executes',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ let locked=false;
+ const result=await verifyAtlasCodingCycleFinalHead({cycle,expectedBaseCommit:'a'.repeat(40),
+  readHeadCommit:async()=>{assert.equal(locked,true);return 'a'.repeat(40);},
+  withRepositoryLock:async callback=>{locked=true;try{return await callback();}finally{locked=false;}}});
+ assert.equal(result.status,'head_matches_under_lock');
+ assert.equal(result.executesCode,false);
+});
+test('final cycle HEAD check blocks changed repository',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ const result=await verifyAtlasCodingCycleFinalHead({cycle,expectedBaseCommit:'a'.repeat(40),
+  readHeadCommit:async()=> 'b'.repeat(40),withRepositoryLock:callback=>callback()});
+ assert.equal(result.reason,'stale_base_commit');
 });

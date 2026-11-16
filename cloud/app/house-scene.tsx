@@ -24,6 +24,7 @@ export type HouseRecording={url:string;mime:string;filename:string;bytes:number;
 export type HousePerformance={fps:number;frames:number;drawCalls:number;triangles:number;backend:string};
 export type HouseAPI={
  teleport:(room:HouseRoom)=>void;
+ atlasMode:(value:'enter'|'leave')=>void;
  overview:()=>void;
  focusResident:(id:string)=>void;
  focusEvolution:()=>void;
@@ -49,7 +50,7 @@ export function HouseScene(props:Props){
     pending.current.set(requestId,{resolve:result=>resolve(result as T),reject,timeout});send(kind,{requestId,...value});
    });
   }
-  return {teleport:room=>send('teleport',{room}),overview:()=>send('overview'),focusResident:id=>send('resident',{id}),focusEvolution:()=>send('evolution'),setCreativeState:value=>send('creative',{value}),capture:()=>request<string>('capture',{},8000),record:options=>{const seconds=Math.max(2,Math.min(16,options?.seconds||8));return request<HouseRecording>('record',{seconds},seconds*1000+10000);},revoke:url=>send('revoke',{url}),pause:value=>send('pause',{value}),setProcessState:value=>send('processes',{value})};
+  return {atlasMode:value=>send('atlas-mode',{value}),teleport:room=>send('teleport',{room}),overview:()=>send('overview'),focusResident:id=>send('resident',{id}),focusEvolution:()=>send('evolution'),setCreativeState:value=>send('creative',{value}),capture:()=>request<string>('capture',{},8000),record:options=>{const seconds=Math.max(2,Math.min(16,options?.seconds||8));return request<HouseRecording>('record',{seconds},seconds*1000+10000);},revoke:url=>send('revoke',{url}),pause:value=>send('pause',{value}),setProcessState:value=>send('processes',{value})};
  },[]);
  useEffect(()=>{
   const requests=pending.current;

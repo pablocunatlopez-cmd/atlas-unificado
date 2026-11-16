@@ -187,3 +187,30 @@ test('process telemetry is independently whitelisted before persistence and cann
  assert.equal(telemetry.processes.length,1);assert.equal(telemetry.processes[0].label,'Observación de fuentes');assert.equal(telemetry.processes[0].room,'mind');assert.deepEqual(telemetry.processes[0].counters,{observations:17});assert.equal(telemetry.core.generation,2);assert.equal(telemetry.core.qwenWeightsChanged,false);assert.equal(telemetry.core.method,'StrategyPolicy');assert.equal(telemetry.lor.verdict,'REFUTED');
  assert.doesNotMatch(sqlite.prepare('SELECT capabilities FROM cloud_bridge').get().capabilities,/private-room|private prompt|private-token|private-code|C:\/private/);
 });
+
+
+test('owner-scoped queue persists and verifies a genuine executed-check journal',async t=>{
+ const {buildLiaHypothesisLedger}=await import('../../../continuous/lia-hypothesis-ledger.mjs');
+ const {journalLiaExecutedChecks}=await import('../../../continuous/lia-execution-journal.mjs');
+ const {queue}=fixture(t);
+ const accepted=await queue.enqueue('owner',next('Check citations'));
+ const {job}=await queue.claim(bridge);
+ const hypotheses=buildLiaHypothesisLedger([{id:'citation-check',claim:'All detected citation labels refer to available sources',origin:'tool',status:'supported',evidence:[{type:'tool-output',reference:'chat:citation-audit',verified:true}],revisionOf:null,conclusion:'No unknown labels detected'}]);
+ const journal=journalLiaExecutedChecks(hypotheses,{timestamp:'2026-11-16T14:00:00Z'});
+ await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,liaHypotheses:hypotheses,liaTransitionJournal:journal}});
+ const execution=await queue.conversationExecutionEvents('owner',accepted.conversationId);
+ assert.equal(execution.events.length,1);
+ assert.equal(execution.events[0].transitionJournal[0].integrityVerifiedInCloud,true);
+ assert.equal(execution.events[0].hypotheses[0].status,'supported');
+ await assert.rejects(queue.conversationExecutionEvents('other-user',accepted.conversationId));
+});
+test('cloud rejects tampered executed-check journals without completing the job',async t=>{
+ const {buildLiaHypothesisLedger}=await import('../../../continuous/lia-hypothesis-ledger.mjs');
+ const {journalLiaExecutedChecks}=await import('../../../continuous/lia-execution-journal.mjs');
+ const {queue}=fixture(t);
+ await queue.enqueue('owner',next('Check citations'));
+ const {job}=await queue.claim(bridge);
+ const hypotheses=buildLiaHypothesisLedger([{id:'citation-check',claim:'All detected citation labels refer to available sources',origin:'tool',status:'refuted',evidence:[{type:'tool-output',reference:'chat:citation-audit',verified:true}],revisionOf:null,conclusion:'Unknown labels'}]);
+ const journal=journalLiaExecutedChecks(hypotheses,{timestamp:'2026-11-16T14:00:00Z'});
+ await assert.rejects(queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,liaHypotheses:hypotheses,liaTransitionJournal:[{...journal[0],hash:'0'.repeat(64)}]}}),/cadena de auditoría/);
+});

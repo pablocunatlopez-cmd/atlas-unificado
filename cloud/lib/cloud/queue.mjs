@@ -1,3 +1,4 @@
+import {buildLiaHypothesisLedger} from '../../../continuous/lia-hypothesis-ledger.mjs';
 /** D1-backed, user-isolated handoff to the owner's local inference worker. */
 import {validateCreativePlan} from '../creative/plan.mjs';
 import {sanitizeProcessTelemetry} from '../core/process-telemetry.mjs';
@@ -12,6 +13,28 @@ const fail=(message,status=400)=>{throw new CloudQueueError(message,status);};
 const validId=value=>typeof value==='string'&&UUID.test(value);
 const safeTitle=text=>text.replace(/\s+/g,' ').trim().slice(0,80);
 const safeAgent=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(value);
+
+async function verifyLiaJournalInCloud(journal,allowedHypotheses){
+ if(!Array.isArray(journal)||journal.length>30)return false;
+ const encoder=new TextEncoder();let previousHash=null;
+ for(const entry of journal){
+  if(!entry||typeof entry.id!=='string'||!/^[\w-]{1,80}$/.test(entry.id)||!allowedHypotheses.has(entry.hypothesisId)||entry.previousHash!==previousHash||typeof entry.hash!=='string'||!/^[a-f0-9]{64}$/.test(entry.hash))return false;
+  const t=entry.transition,c=t?.check;
+  if(!t||!c||c.executed!==true||t.previousStatus!=='testing'||!['citation-audit','deterministic-tool'].includes(c.kind)||!['pass','fail','unknown'].includes(c.outcome)||typeof c.reference!=='string'||!c.reference.trim()||c.reference.length>240)return false;
+  const expected=c.outcome==='pass'?'supported':c.outcome==='fail'?'refuted':'inconclusive';
+  if(t.nextStatus!==expected||t.rule!==(c.outcome==='pass'?'recorded-check-passed':c.outcome==='fail'?'recorded-check-failed':'executed-check-inconclusive')||t.changed!==(expected!=='testing')||t.factualAccuracyVerified!==false)return false;
+  const hypothesis=allowedHypotheses.get(entry.hypothesisId);
+  if(hypothesis.status!==expected||!hypothesis.evidence.some(e=>e.type==='tool-output'&&e.verified===true&&e.reference===c.reference))return false;
+  if(typeof entry.timestamp!=='string'||!/^\d{4}-\d\d-\d\dT/.test(entry.timestamp))return false;
+  const {hash,...payload}=entry;
+  const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(JSON.stringify(payload))));
+  const computed=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+  if(computed!==hash)return false;
+  previousHash=hash;
+ }
+ return true;
+}
+
 function publicJob(row){
  if(!row)return null;
  const result={id:row.id,conversationId:row.conversation_id,status:row.status,kind:row.kind||'chat',progress:row.progress||0,stage:row.stage||null,createdAt:row.created_at,updatedAt:row.updated_at};
@@ -98,6 +121,17 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   const pending=await one(`SELECT id,status FROM cloud_jobs WHERE conversation_id=? AND user_id=? AND status IN ${active} ORDER BY created_at DESC LIMIT 1`,id,userId);
   return {conversation:{id:row.id,title:row.title,updatedAt:new Date(row.updated_at).toISOString()},messages:messages.map(message=>({id:message.id,role:message.role,content:message.content,createdAt:new Date(message.created_at).toISOString()})),...(pending?{pendingJob:pending}:{})};
  }
+ async function conversationExecutionEvents(userId,id){
+  await ownedConversation(userId,id);
+  const rows=await all('SELECT id,kind,status,stage,created_at,updated_at,result FROM cloud_jobs WHERE conversation_id=? AND user_id=? ORDER BY created_at DESC,id DESC LIMIT 30',id,userId);
+  return {events:rows.reverse().map(row=>{
+   let result=null;
+   if(row.status==='completed'&&row.result){try{result=JSON.parse(row.result);}catch{}}
+   return {id:row.id,kind:row.kind||'chat',status:row.status,stage:row.stage||null,createdAt:new Date(row.created_at).toISOString(),updatedAt:new Date(row.updated_at).toISOString(),
+    checks:Object.freeze({answerStored:typeof result?.answer==='string'&&result.answer.length>0,modelReported:typeof result?.model==='string'?result.model:null}),audit:result?.liaExecutionAudit||null,hypotheses:result?.liaHypotheses||[],transitionJournal:result?.liaTransitionJournal||[],
+    evidence:'cloud_jobs',verifiedExecution:row.status==='completed',hypothesis:null,revision:null};
+  })};
+ }
  async function getJob(userId,id){return publicJob(await ownedJob(userId,id));}
  async function cancel(userId,id){
   await ownedJob(userId,id);
@@ -139,6 +173,16 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   const result=input.result;
   if(!result||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>16000||!['atlas-local','atlas-coordinator'].includes(result.model))fail('El resultado local no es válido.');
   const value={answer:result.answer,model:result.model,modelName:typeof result.modelName==='string'?result.modelName.slice(0,120):'Qwen local'};
+  if(result.liaExecutionAudit?.schema===1&&result.liaExecutionAudit.source==='local-chat-result'){
+   const audit=result.liaExecutionAudit;
+   value.liaExecutionAudit={schema:1,source:'local-chat-result',review:['completed','failed','not-recorded'].includes(audit.review)?audit.review:'not-recorded',reviewAttempted:audit.reviewAttempted===true,citationAuditRecorded:audit.citationAuditRecorded===true,unknownCitationLabels:Array.isArray(audit.unknownCitationLabels)?audit.unknownCitationLabels.filter(x=>typeof x==='string').slice(0,12).map(x=>x.slice(0,100)):[],sourcesReturned:Number.isInteger(audit.sourcesReturned)&&audit.sourcesReturned>=0?Math.min(audit.sourcesReturned,100):null,webRead:audit.webRead===true,hypothesis:'not-recorded',revision:audit.review==='completed'?'answer-revised-without-diff':'not-recorded',factualAccuracyVerified:false};
+  }
+  if(Array.isArray(result.liaHypotheses))value.liaHypotheses=buildLiaHypothesisLedger(result.liaHypotheses);
+  if(Array.isArray(result.liaTransitionJournal)){
+   const hypotheses=new Map((value.liaHypotheses||[]).map(h=>[h.id,h]));
+   if(!await verifyLiaJournalInCloud(result.liaTransitionJournal,hypotheses))fail('La cadena de auditoría no supera la verificación.');
+   value.liaTransitionJournal=result.liaTransitionJournal.map(item=>({...item,integrityVerifiedInCloud:true}));
+  }
   const at=now();
   const row=await one('SELECT conversation_id,user_id,question,kind,status,lease_token,lease_until,result FROM cloud_jobs WHERE id=?',input.jobId);
   if(!row||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
@@ -206,5 +250,5 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   const rows=await all('SELECT id,process_id,state,phase,text,at,created_at FROM resident_memories WHERE resident_id=? ORDER BY created_at DESC,id LIMIT ?',residentId,RESIDENT_MEMORY_LIMIT);
   return {residentId,memories:rows.map(row=>({id:row.id,processId:row.process_id,state:row.state,phase:row.phase||null,text:row.text,at:row.at,observedAt:new Date(row.created_at).toISOString()}))};
  }
- return {enqueue,status,conversations,conversation,getJob,cancel,heartbeat,claim,complete,fail:failJob,observeResidentEvents,residentMemories};
+ return {enqueue,status,conversations,conversation,conversationExecutionEvents,getJob,cancel,heartbeat,claim,complete,fail:failJob,observeResidentEvents,residentMemories};
 }

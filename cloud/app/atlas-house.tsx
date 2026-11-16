@@ -11,6 +11,7 @@ import ConstellationPanel from './constellation-panel';
 import CoreObservatory,{type CoreTelemetry} from './core-observatory';
 import styles from './atlas-house.module.css';
 import LiveWorkOptIn from './live-work-opt-in';
+import {LIA_IDENTITY} from '../public/house/lia-identity.js';
 import {RESIDENTS,WORKSTATIONS,residentById,processForResident} from '../public/house/residents.js';
 import {telemetryAge,TELEMETRY_FRESH_MS} from '../public/house/process-state.js';
 import {readCreativePreview} from './experience-creative-preview';
@@ -46,11 +47,12 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
   const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false),[status,setStatus]=useState<Status|null>(null),[statusAt,setStatusAt]=useState(0),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState('');
   const[residentMemories,setResidentMemories]=useState<ResidentMemory[]>([]),[memoryError,setMemoryError]=useState('');
   const[charterOpen,setCharterOpen]=useState(false);
+  const[spiralOpen,setSpiralOpen]=useState(false);
   const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null),charterDialog=useRef<HTMLDialogElement>(null);
   const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|undefined>(undefined),[sceneError,setSceneError]=useState(''),[capturing,setCapturing]=useState(false),[hudHidden,setHudHidden]=useState(false);
   const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),previousFocus=useRef<HTMLElement|null>(null),lastRequested=useRef<HouseRoom|null>(null),pollBusy=useRef(false),roomNavigation=useRef<HTMLElement|null>(null);
   const active=rooms[room],ActiveIcon=active.icon;
-  const triad=[{name:'Atlas',role:'mente'},{name:'Ion',role:'cuerpo'},{name:'Ícaro',role:'cielo + constelación'}];
+  const triad=LIA_IDENTITY.vertices.map(vertex=>({name:vertex.component,role:vertex.meaning}));
 
   useEffect(()=>{
     let alive=true;const controller=new AbortController();
@@ -147,12 +149,13 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
    <div className={styles.triadBar} aria-label="Pirámide de Lía">
     <span className={styles.triadLabel}>LÍA</span>
     {triad.map(item=><div key={item.name} className={styles.triadBadge}><strong>{item.name}</strong><small>{item.role}</small></div>)}
+    <button type="button" aria-pressed={spiralOpen} disabled={!api} onClick={()=>{const next=!spiralOpen;api?.atlasMode(next?'enter':'leave');setSpiralOpen(next);}}>{spiralOpen?'Volver a la casa':'Ver espiral'}</button>
    </div>
 
    <section className={`${styles.roomCard} ${!entered?styles.introCard:''}`} data-details-open={!entered||roomDetailsOpen} aria-label="Espacio actual" style={{'--room-accent':active.accent} as React.CSSProperties}>
-    <div className={styles.eyebrow}><span>△</span> {entered?'ENTRAS EN LÍA':'ATLAS · ION · ÍCARO'}</div>
+    <div className={styles.eyebrow}><span>△</span> {entered?'ENTRAS EN LÍA' :'ATLAS · ION · CONSTELACIÓN'}</div>
     <h1>{entered?(selectedPerson?.name||active.title):<>La pirámide vive<br/>en Lía.</>}</h1>
-    <p>{entered?(selectedPerson?.role||active.description):'Atlas aporta la mente, Ion el cuerpo, Ícaro el cielo y la constelación; Lía es el objetivo del entorno y la casa que se mejora a sí misma.'}</p>
+    <p>{entered?(selectedPerson?.role||active.description):'Lía es la compañera digital completa: Atlas representa lo que sabe, Ion lo que observa y Constelación aquello que todavía no puede ver o saber.'}</p>
     {entered&&selectedPerson&&<div className={styles.residentMemory} aria-live="polite"><span>MEMORIA OBSERVADA</span>{memoryError?<p>{memoryError}</p>:selectedPerson.processIds.length===0?<p>Este puesto no tiene un proceso asignado; no se inventan recuerdos.</p>:residentMemories.length===0?<p>Sin resultados terminales registrados todavía.</p>:<ul>{residentMemories.slice(0,3).map(memory=><li key={memory.id}><p>{memory.text}</p><small>{new Date(memory.at).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short',timeZone:'UTC'})} UTC</small></li>)}</ul>}<small>Observaciones automáticas desde telemetría fresca del coordinador. No acreditan aprendizaje, verificación independiente ni consciencia.</small></div>}
     {!entered?<button className={styles.enter} type="button" onClick={()=>walk('salon')}>Entrar en la casa <ArrowUpRight size={15}/></button>:<button className={styles.overview} type="button" onClick={overview}>Volver a la visión general</button>}
     {entered&&<button className={styles.detailsToggle} type="button" aria-expanded={roomDetailsOpen} aria-controls="atlas-house-room-details" onClick={()=>setRoomDetailsOpen(value=>!value)}>{roomDetailsOpen?'Cerrar detalles':'Ver detalles'}</button>}

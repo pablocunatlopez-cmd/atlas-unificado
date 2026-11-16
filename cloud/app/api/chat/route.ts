@@ -3,6 +3,8 @@ import {allowedOrigin,privateHeaders,readState,writeEvent} from '@/lib/server-st
 import {chatSchema} from '@/lib/atlas-validation';
 import {guidedReply} from '@/lib/atlas-content';
 import {makeReply} from '@/lib/atlas-core';
+import {recallRecentUserTurn} from '@/lib/core/lia-session-context.mjs';
+import {retrieveSavedUserMessages} from '@/lib/core/lia-saved-retrieval.mjs';
 import {getKnowledge,readLab} from '@/lib/atlas-lab';
 import {getResearchKnowledge} from '@/lib/research/server';
 import {wantsInternet,internetForQuestion,addInternetReply} from '@/lib/research/chat';
@@ -18,6 +20,14 @@ export async function POST(request:Request){
   if(args.engine==='guided')return Response.json({reply:guidedReply(args.text,args.domain)},{headers:privateHeaders});
   const [{state},{lab},research]=await Promise.all([readState(user.userId),readLab(user.userId),getResearchKnowledge()]);
   let reply=makeReply(args.text,state,[...research.knowledge,...getKnowledge(lab)],args.domain,research.profile);
+  if(args.engine==='native'){
+   const recall=recallRecentUserTurn(args.text,args.history);
+   if(recall)reply={...reply,answer:recall.answer,basis:'Recuperación literal de un mensaje previo proporcionado en esta petición; no se ha consultado memoria persistente.',confidence:recall.found?'Alta':'Limitada',claims:[],sources:[],unknowns:['El historial enviado puede ser parcial y no se ha verificado fuera de esta sesión.'],nextSteps:[],searched:false};
+   else if(/^(?:¿\\s*)?(?:que|qué) (?:te )?(?:dije|he dicho|hablamos) (?:sobre|de) /i.test(args.text.trim())){
+    const matches=retrieveSavedUserMessages(args.text,state.threads);
+    reply={...reply,answer:matches.length?'En tus conversaciones guardadas encuentro estos mensajes escritos por ti (no son hechos verificados):\\n\\n'+matches.map(item=>'• '+item.excerpt+' [conversación: '+item.title+']').join('\\n'): 'No encuentro mensajes tuyos coincidentes en las conversaciones guardadas de Atlas.',basis:'Búsqueda léxica en conversaciones privadas del usuario autenticado; sin modelo generativo ni validación externa.',confidence:'Limitada',claims:[],sources:[],unknowns:['Las coincidencias léxicas no garantizan que el mensaje sea relevante ni verdadero.'],nextSteps:[],searched:false};
+   }
+  }
   if(wantsInternet(args.text,args.web))reply=addInternetReply(reply,await internetForQuestion(args.text),research.profile);
   await writeEvent(user.userId,'native_response',{domain:args.domain,engine:'Atlas Core 0.3',sources:reply.sources.length,web:reply.searched});
   return Response.json({reply},{headers:privateHeaders});

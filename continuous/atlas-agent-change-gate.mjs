@@ -28,6 +28,9 @@ export function evaluateAtlasAgentChange({id,actions=[],checks={},approval=null}
  const ready=failed.length===0&&(!requiresApproval||approved);
  return Object.freeze({
   proposalId:id,requiresApproval,approved:requiresApproval?approved:null,
+  // This pure function cannot authenticate host evidence or grant execution rights.
+  authorizationGranted:false,
+  evidenceStatus:'caller_supplied_unverified',
   failedChecks:failed,readyForReview:ready,
   recommendation:ready?'review_only':failed.length?'run_or_fix_checks':'request_verified_approval',
   actions:normalized,
