@@ -16,3 +16,13 @@ test('the world is routed separately without replacing the canonical chat',()=>{
  assert.match(page,/LiaInnerWorld/);
  assert.match(chat,/CloudChat/);
 });
+
+test('spatial viewer offers depth, rotation and a genuine static fallback',()=>{
+ const source=readFileSync(new URL('../cloud/app/lia-inner-world.tsx',import.meta.url),'utf8');
+ assert.match(source,/perspective:900/);
+ assert.match(source,/rotateY/);
+ assert.match(source,/setYaw/);
+ assert.match(source,/immersive\?\x60rotateY/);
+ assert.match(source,/aria-label=\{\x60Vista espacial/);
+ assert.match(source,/sin WebGL/);
+});
