@@ -21,11 +21,11 @@ export default function LiaInnerWorld(){
   </div>
   <p role="status">{VERTICES[focus].detail}</p>
   <div role="img" aria-label={`Vista espacial de Lía con ${depth+1} representaciones anidadas, foco en ${VERTICES[focus].name}`} style={{height:330,overflow:'hidden',position:'relative',perspective:900,borderRadius:18,background:'radial-gradient(ellipse at 50% 35%,#202b50,#0b0f1d 75%)',color:'#e8eaff'}}>
-   <div style={{position:'absolute',inset:0,display:'grid',placeItems:'center',transformStyle:'preserve-3d',transform:`rotateY(${yaw}deg) rotateX(-9deg)`,transition:'transform 350ms ease'}}>
-    {levels.map(level=><div key={level.depth} style={{position:'absolute',width:`${Math.max(90,260-level.depth*34)}px`,height:`${Math.max(90,260-level.depth*34)}px`,border:'2px solid rgba(153,176,255,.8)',borderRadius:20,boxShadow:'0 0 25px #818cf855,inset 0 0 30px #818cf822',transform:`translateZ(${(depth-level.depth)*35}px) rotateZ(${level.depth*9}deg)`,display:'grid',placeItems:'start center',paddingTop:12,background:'rgba(35,48,88,.08)'}}>
+   <div style={{position:'absolute',inset:0,display:'grid',placeItems:'center',transformStyle:'preserve-3d',transform:immersive?`rotateY(${yaw}deg) rotateX(-9deg)`:'none',transition:'transform 350ms ease'}}>
+    {levels.map(level=><div key={level.depth} style={{position:'absolute',width:`${Math.max(90,260-level.depth*34)}px`,height:`${Math.max(90,260-level.depth*34)}px`,border:'2px solid rgba(153,176,255,.8)',borderRadius:20,boxShadow:'0 0 25px #818cf855,inset 0 0 30px #818cf822',transform:immersive?`translateZ(${(depth-level.depth)*35}px) rotateZ(${level.depth*9}deg)`:'none',display:'grid',placeItems:'start center',paddingTop:12,background:'rgba(35,48,88,.08)'}}>
      <span style={{fontSize:12,textShadow:'0 1px 4px #000'}}>{level.label}</span>
     </div>)}
-    <div style={{transform:`translateZ(${depth*35+40}px)`,display:'grid',placeItems:'center',gap:3,textAlign:'center',fontSize:13}}>
+    <div style={{transform:immersive?`translateZ(${depth*35+40}px)`:'none',display:'grid',placeItems:'center',gap:3,textAlign:'center',fontSize:13}}>
      <span aria-hidden="true" style={{fontSize:42}}>◇</span><strong>LÍA</strong>
      <span style={{maxWidth:160,fontSize:11}}>{VERTICES[focus].name}</span>
     </div>
