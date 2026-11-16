@@ -1,5 +1,6 @@
 'use client';
 import {useMemo,useState} from 'react';
+import LiaAvatar from './lia-avatar';
 type Level={depth:number;label:string;focus:string};
 const MAX_DEPTH=6;
 const VERTICES=[
@@ -26,7 +27,7 @@ export default function LiaInnerWorld(){
      <span style={{fontSize:12,textShadow:'0 1px 4px #000'}}>{level.label}</span>
     </div>)}
     <div style={{transform:immersive?`translateZ(${depth*35+40}px)`:'none',display:'grid',placeItems:'center',gap:3,textAlign:'center',fontSize:13}}>
-     <span aria-hidden="true" style={{fontSize:42}}>◇</span><strong>LÍA</strong>
+     <LiaAvatar size={110} mode={depth===0?'exterior':'interior'} focus={(['mental','physical','god'] as const)[focus]}/><strong>LÍA</strong>
      <span style={{maxWidth:160,fontSize:11}}>{VERTICES[focus].name}</span>
     </div>
    </div>
