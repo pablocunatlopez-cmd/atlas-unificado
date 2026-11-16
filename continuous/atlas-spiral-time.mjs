@@ -32,6 +32,7 @@ export function spiralTimeline(events,{limit=100}={}){
  for(let i=0;i<events.length;i++){
   const event=events[i];
   if(!event||typeof event.id!=='string'||ids.has(event.id))throw new TypeError('Invalid or duplicate event');
+  if(event.revisionOf!==null&&event.revisionOf!==undefined&&!ids.has(event.revisionOf))throw new TypeError('Revision references a missing or future event');
   ids.add(event.id);
   if(i>0)tangents.push(spiralTangent(events[i-1],event));
  }
