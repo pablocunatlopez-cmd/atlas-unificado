@@ -5,12 +5,16 @@
 const METRICS=['recallAt5','ndcgAt5','citationAccuracy','latencyP95Ms','memoryMb'];
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 export function evaluateAtlasCandidate(baseline,candidate,{minimumQueries=100,maxLatencyRegression=1.15,maxMemoryRegression=1.2}={}){
+ if(!Number.isInteger(minimumQueries)||minimumQueries<1||!finite(maxLatencyRegression)||maxLatencyRegression<1||!finite(maxMemoryRegression)||maxMemoryRegression<1){
+  return Object.freeze({verdict:'insufficient-evidence',reasons:['Los umbrales de evaluación no son válidos.'],promote:false});
+ }
  if(!baseline||!candidate||!Number.isInteger(candidate.queries)||candidate.queries<minimumQueries||
   !Number.isInteger(baseline.queries)||baseline.queries<minimumQueries||
   METRICS.some(key=>!finite(baseline[key])||!finite(candidate[key]))){
   return Object.freeze({verdict:'insufficient-evidence',reasons:['Se requieren métricas finitas y un corpus evaluado suficientemente amplio.'],promote:false});
  }
  const reasons=[];
+ if(candidate.queries!==baseline.queries)reasons.push('Los tamaños de corpus difieren; se requiere evaluación emparejada');
  for(const key of ['recallAt5','ndcgAt5','citationAccuracy']){
   if(baseline[key]<0||baseline[key]>1||candidate[key]<0||candidate[key]>1)reasons.push(key+': rango inválido');
   else if(candidate[key]+1e-9<baseline[key])reasons.push(key+': regresión de calidad');
