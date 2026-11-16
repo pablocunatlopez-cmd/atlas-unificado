@@ -5,7 +5,11 @@
 export function projectLiaHypothesisTimeline(events,{limit=100}={}){
  if(!Array.isArray(events)||!Number.isInteger(limit)||limit<1||limit>200)throw new TypeError('Invalid timeline');
  const timeline=[],lastByClaim=new Map();
- for(const event of events){
+ // Jobs can arrive newest-first from APIs; compare statuses only in chronological order.
+ // Preserve input order for equal/missing timestamps to avoid fabricating chronology.
+ const ordered=events.map((event,index)=>({event,index,time:typeof event?.updatedAt==='string'&&Number.isFinite(Date.parse(event.updatedAt))?Date.parse(event.updatedAt):null}))
+  .sort((a,b)=>a.time!==null&&b.time!==null&&a.time!==b.time?a.time-b.time:a.index-b.index);
+ for(const {event} of ordered){
   if(!event||event.status!=='completed'||typeof event.id!=='string'||!Array.isArray(event.hypotheses))continue;
   for(const hypothesis of event.hypotheses){
    if(!hypothesis||typeof hypothesis.id!=='string'||typeof hypothesis.claim!=='string'||typeof hypothesis.status!=='string')continue;
