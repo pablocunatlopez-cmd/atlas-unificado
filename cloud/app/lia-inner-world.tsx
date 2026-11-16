@@ -4,6 +4,7 @@ import {initialLiaPerspective,transitionLiaPerspective,liaPerspectiveLevels} fro
 import LiaAvatar from './lia-avatar';
 type Level={depth:number;label:string;focus:string};
 type Conversation={id:string;title:string};
+type ExecutionEvent={id:string;kind:string;status:string;stage:string|null;updatedAt:string;checks:{answerStored:boolean;modelReported:string|null};verifiedExecution:boolean;hypothesis:null;revision:null};
 type HistoryEvent={id:string;role:string;summary:string;vertex:string;verified:boolean;provenance:string;time:string|null};
 const MAX_DEPTH=6;
 const VERTICES=[
@@ -16,6 +17,7 @@ export default function LiaInnerWorld(){
  const [conversations,setConversations]=useState<Conversation[]>([]);
  const [selectedConversation,setSelectedConversation]=useState('');
  const [history,setHistory]=useState<HistoryEvent[]>([]);
+ const [executions,setExecutions]=useState<ExecutionEvent[]>([]);
  const [historyError,setHistoryError]=useState('');
  const [historyLoading,setHistoryLoading]=useState(false);
  useEffect(()=>{
@@ -27,12 +29,12 @@ export default function LiaInnerWorld(){
   return ()=>{active=false};
  },[]);
  useEffect(()=>{
-  if(!selectedConversation){setHistory([]);return;}
+  if(!selectedConversation){setHistory([]);setExecutions([]);return;}
   const controller=new AbortController();
-  setHistoryLoading(true);setHistoryError('');setHistory([]);
+  setHistoryLoading(true);setHistoryError('');setHistory([]);setExecutions([]);
   fetch('/api/lia-world/conversations/'+encodeURIComponent(selectedConversation),{credentials:'same-origin',cache:'no-store',signal:controller.signal})
    .then(async response=>{if(!response.ok)throw Error('No se pudo recuperar la conversación seleccionada.');return response.json()})
-   .then(data=>setHistory(Array.isArray(data.events)?data.events:[]))
+   .then(data=>{setHistory(Array.isArray(data.events)?data.events:[]);setExecutions(Array.isArray(data.executionEvents)?data.executionEvents:[])})
    .catch(error=>{if(!controller.signal.aborted)setHistoryError(error.message)})
    .finally(()=>{if(!controller.signal.aborted)setHistoryLoading(false)});
   return ()=>controller.abort();
@@ -83,6 +85,18 @@ export default function LiaInnerWorld(){
    </select>
    {historyLoading&&<p role="status">Cargando historial…</p>}
    {historyError&&<p role="alert">{historyError}</p>}
+   {selectedConversation&&!historyLoading&&!historyError&&<div>
+    <h3>Ejecuciones registradas</h3>
+    <p>Estos estados proceden de trabajos reales de la cola. Una ejecución completada no demuestra que su respuesta sea correcta. Las hipótesis y revisiones no registradas se muestran como ausentes.</p>
+    <ol style={{maxHeight:240,overflowY:'auto',paddingLeft:22}}>
+     {executions.map(event=><li key={event.id} style={{marginBottom:10}}>
+      <strong>{event.kind} · {event.status}</strong> · {event.updatedAt}
+      <div>Etapa: {event.stage||'sin etapa registrada'} · Respuesta almacenada: {event.checks.answerStored?'sí':'no'} · Modelo declarado: {event.checks.modelReported||'desconocido'}</div>
+      <small>Hipótesis: no registrada · Revisión: no registrada</small>
+     </li>)}
+    </ol>
+    {!executions.length&&<p>No hay ejecuciones registradas en esta conversación.</p>}
+   </div>}
    {selectedConversation&&!historyLoading&&!historyError&&<ol style={{maxHeight:260,overflowY:'auto',paddingLeft:22}}>
     {history.map(event=><li key={event.id} style={{marginBottom:12}}><strong>{event.role==='assistant'?'Lía · respuesta':'Usuario · mensaje'}</strong>{' '}<small>· {event.time||'fecha desconocida'} · no verificado</small><div>{event.summary}</div></li>)}
    </ol>}
