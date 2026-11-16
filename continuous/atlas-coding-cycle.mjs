@@ -39,15 +39,22 @@ export function planAtlasCodingCycle({proposalId,repositoryFiles,targets,changes
  * Optional trusted-host review claim for a previously planned cycle.
  * This separate phase cannot mutate the repository or execute commands.
  */
-export async function claimAtlasCodingCycleReview({cycle,claim,publicKey,nowMs,directory,authorizeActor,expected}={}){
+export async function claimAtlasCodingCycleReview({cycle,claim,publicKey,nowMs,directory,authorizeActor,expected,readHeadCommit}={}){
  if(!cycle||cycle.status!=='planned_not_executed'||cycle.verifiedReady!==false||
     !cycle.review||cycle.unresolved?.length||!cycle.patch||
     typeof cycle.proposalId!=='string'||!expected||
     typeof expected!=='object'||expected.proposalId!==cycle.proposalId)
   throw Error('A complete unresolved-free planned coding cycle is required');
  const {claimAtlasCodingReview}=await import('./atlas-coding-review-claim.mjs');
+ if(typeof readHeadCommit!=='function')
+  throw Error('Trusted repository HEAD reader required');
  if(expected.diffDigest!==cycle.diffDigest)
   return Object.freeze({status:'blocked',reason:'patch_digest_mismatch',authorizationGranted:false,executesCode:false});
+ if(!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(expected.baseCommit||''))
+  return Object.freeze({status:'blocked',reason:'invalid_base_commit',authorizationGranted:false,executesCode:false});
+ const currentHead=await readHeadCommit();
+ if(currentHead!==expected.baseCommit)
+  return Object.freeze({status:'blocked',reason:'stale_base_commit',authorizationGranted:false,executesCode:false});
  if(claim?.proposalId!==cycle.proposalId)
   return Object.freeze({status:'blocked',reason:'proposal_mismatch',authorizationGranted:false,executesCode:false});
  return claimAtlasCodingReview({claim,publicKey,expected,nowMs,directory,authorizeActor});
