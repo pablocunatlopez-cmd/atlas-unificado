@@ -6,7 +6,8 @@ type Level={depth:number;label:string;focus:string};
 type Conversation={id:string;title:string};
 type TimelineRecord={id:string;jobId:string;claim:string;status:string;time:string|null;priorRecordId:string|null;statusChanged:boolean;comparison:string;factualAccuracyVerified:boolean;changeExplanation:string;newEvidenceReferences:string[];recordedConclusion:string};
 type Hypothesis={id:string;claim:string;status:string;origin:string;evidence:Array<{type:string;reference:string;verified:boolean}>;revisionOf:string|null;conclusion:string;factualAccuracyVerified:boolean};
-type ExecutionEvent={id:string;kind:string;status:string;stage:string|null;updatedAt:string;checks:{answerStored:boolean;modelReported:string|null};verifiedExecution:boolean;hypothesis:null;revision:null;audit?:{review:string;reviewAttempted:boolean;citationAuditRecorded:boolean;unknownCitationLabels:string[];factualAccuracyVerified:boolean}|null;hypotheses?:Hypothesis[]};
+type TransitionJournalRecord={id:string;hypothesisId:string;timestamp:string|null;hash:string;previousHash:string|null;integrityVerifiedInCloud:boolean;transition:{previousStatus:string;nextStatus:string;rule:string;check:{kind:string;outcome:string;reference:string;executed:boolean}}};
+type ExecutionEvent={id:string;kind:string;status:string;stage:string|null;updatedAt:string;checks:{answerStored:boolean;modelReported:string|null};verifiedExecution:boolean;hypothesis:null;revision:null;audit?:{review:string;reviewAttempted:boolean;citationAuditRecorded:boolean;unknownCitationLabels:string[];factualAccuracyVerified:boolean}|null;hypotheses?:Hypothesis[];transitionJournal?:TransitionJournalRecord[]};
 type HistoryEvent={id:string;role:string;summary:string;vertex:string;verified:boolean;provenance:string;time:string|null};
 const MAX_DEPTH=6;
 const VERTICES=[
@@ -107,6 +108,13 @@ export default function LiaInnerWorld(){
       <strong>{event.kind} · {event.status}</strong> · {event.updatedAt}
       <div>Etapa: {event.stage||'sin etapa registrada'} · Respuesta almacenada: {event.checks.answerStored?'sí':'no'} · Modelo declarado: {event.checks.modelReported||'desconocido'}</div>
       <small>Hipótesis: {event.hypotheses?.length?'registro explícito disponible':'no registrada'} · Revisión del modelo: {event.audit?.review==='completed'?'segunda pasada registrada':event.audit?.review==='failed'?'intentada y fallida':'no registrada'} · Auditoría de citas: {event.audit?.citationAuditRecorded?'registrada':'no registrada'} · Exactitud factual: no verificada</small>
+      {event.transitionJournal?.length?<details><summary>Diario de comprobaciones ({event.transitionJournal.length})</summary>
+       {event.transitionJournal.map(record=><div key={record.id} style={{padding:'6px 0'}}>
+        <strong>{record.hypothesisId}: {record.transition.previousStatus} → {record.transition.nextStatus}</strong>
+        <div>Regla: {record.transition.rule} · Comprobación: {record.transition.check.kind} ({record.transition.check.outcome})</div>
+        <small>Referencia: {record.transition.check.reference} · SHA-256: {record.hash.slice(0,16)}… · Integridad en nube: no verificada</small>
+       </div>)}
+      </details>:null}
       {event.hypotheses?.map(hypothesis=><div key={hypothesis.id} style={{borderLeft:'2px solid #a89cff',paddingLeft:10,marginTop:8}}>
        <strong>{hypothesis.status} · {hypothesis.id}</strong><div>{hypothesis.claim}</div>
        <small>Origen: {hypothesis.origin} · Revisión de: {hypothesis.revisionOf||'ninguna'} · Evidencias: {hypothesis.evidence.length} · Exactitud: no verificada</small>
