@@ -4,7 +4,7 @@ import {initialLiaPerspective,transitionLiaPerspective,liaPerspectiveLevels} fro
 import LiaAvatar from './lia-avatar';
 type Level={depth:number;label:string;focus:string};
 type Conversation={id:string;title:string};
-type TimelineRecord={id:string;jobId:string;claim:string;status:string;time:string|null;priorRecordId:string|null;statusChanged:boolean;comparison:string;factualAccuracyVerified:boolean};
+type TimelineRecord={id:string;jobId:string;claim:string;status:string;time:string|null;priorRecordId:string|null;statusChanged:boolean;comparison:string;factualAccuracyVerified:boolean;changeExplanation:string;newEvidenceReferences:string[];recordedConclusion:string};
 type Hypothesis={id:string;claim:string;status:string;origin:string;evidence:Array<{type:string;reference:string;verified:boolean}>;revisionOf:string|null;conclusion:string;factualAccuracyVerified:boolean};
 type ExecutionEvent={id:string;kind:string;status:string;stage:string|null;updatedAt:string;checks:{answerStored:boolean;modelReported:string|null};verifiedExecution:boolean;hypothesis:null;revision:null;audit?:{review:string;reviewAttempted:boolean;citationAuditRecorded:boolean;unknownCitationLabels:string[];factualAccuracyVerified:boolean}|null;hypotheses?:Hypothesis[]};
 type HistoryEvent={id:string;role:string;summary:string;vertex:string;verified:boolean;provenance:string;time:string|null};
@@ -32,9 +32,9 @@ export default function LiaInnerWorld(){
   return ()=>{active=false};
  },[]);
  useEffect(()=>{
-  if(!selectedConversation){setHistory([]);setExecutions([]);setTimeline([]);setTimeline([]);return;}
+  if(!selectedConversation){setHistory([]);setExecutions([]);setTimeline([]);return;}
   const controller=new AbortController();
-  setHistoryLoading(true);setHistoryError('');setHistory([]);setExecutions([]);
+  setHistoryLoading(true);setHistoryError('');setHistory([]);setExecutions([]);setTimeline([]);
   fetch('/api/lia-world/conversations/'+encodeURIComponent(selectedConversation),{credentials:'same-origin',cache:'no-store',signal:controller.signal})
    .then(async response=>{if(!response.ok)throw Error('No se pudo recuperar la conversación seleccionada.');return response.json()})
    .then(data=>{setHistory(Array.isArray(data.events)?data.events:[]);setExecutions(Array.isArray(data.executionEvents)?data.executionEvents:[]);setTimeline(Array.isArray(data.hypothesisTimeline)?data.hypothesisTimeline:[])})
@@ -96,6 +96,8 @@ export default function LiaInnerWorld(){
       <strong>{item.statusChanged?'Cambio de estado registrado':item.comparison==='same-status'?'Estado repetido':'Primera aparición'} · {item.status}</strong>
       <div>{item.claim}</div>
       <small>Trabajo: {item.jobId} · Anterior: {item.priorRecordId||'ninguno'} · Exactitud: no verificada</small>
+      {item.statusChanged&&<div>Motivo observable: {item.newEvidenceReferences.length?'nuevas referencias de evidencia registradas':'no constan referencias nuevas'}; no se puede atribuir causalidad.</div>}
+      {item.recordedConclusion&&<div>Conclusión del registro: {item.recordedConclusion}</div>}
      </li>)}
     </ol>:<p>No hay hipótesis comparables registradas.</p>}
     <h3>Ejecuciones registradas</h3>
