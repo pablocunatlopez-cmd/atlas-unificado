@@ -34,7 +34,13 @@ export async function recordAtlasCodingIntent({directory,transactionId,proposalI
     if(!existingInfo.isFile()||(existingInfo.mode&0o077)!==0)
      return Object.freeze({status:'unsafe_intent_file',transactionId,applied:false});
     const file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
-    try{existing=JSON.parse(await file.readFile('utf8'));}finally{await file.close();}
+    try{
+     const opened=await file.stat();
+     if(!opened.isFile()||(opened.mode&0o077)!==0||
+        opened.dev!==existingInfo.dev||opened.ino!==existingInfo.ino)
+      return Object.freeze({status:'unsafe_intent_file',transactionId,applied:false});
+     existing=JSON.parse(await file.readFile('utf8'));
+    }finally{await file.close();}
    }
    catch{return Object.freeze({status:'corrupt_or_partial_intent',transactionId,applied:false});}
    if(existing.transactionId===transactionId&&existing.proposalId===proposalId&&
