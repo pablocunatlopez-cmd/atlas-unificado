@@ -22,7 +22,13 @@ export async function reconcileAtlasCodingIntent({directory,transactionId,readHe
   if(!fileInfo.isFile()||(fileInfo.mode&0o077)!==0)
    return Object.freeze({status:'unsafe_intent_file',retrySafe:false,action:'manual_review'});
   const file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
-  try{raw=await file.readFile('utf8');}finally{await file.close();}
+  try{
+   const opened=await file.stat();
+   if(!opened.isFile()||(opened.mode&0o077)!==0||
+      opened.dev!==fileInfo.dev||opened.ino!==fileInfo.ino)
+    return Object.freeze({status:'unsafe_intent_file',retrySafe:false,action:'manual_review'});
+   raw=await file.readFile('utf8');
+  }finally{await file.close();}
  }
  catch(e){
   if(e?.code==='ENOENT')return Object.freeze({status:'intent_not_found',retrySafe:false,action:'manual_review'});
