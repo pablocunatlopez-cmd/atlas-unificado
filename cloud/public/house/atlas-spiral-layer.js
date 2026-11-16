@@ -1,3 +1,4 @@
+import {getLiaVertex} from './lia-identity.js';
 import {generateAtlasTangentSpirals} from './atlas-generative-spiral.js';
 /**
  * Optional Atlas philosophy layer inside the existing ERAS Three.js scene.
@@ -70,6 +71,7 @@ export function createAtlasSpiralLayer({THREE,scene}={}){
   get visible(){return group.visible;},
   get mounted(){return mounted;},
   vertices:Object.freeze(vertices.map(v=>v.id)),
+  describeVertex(id){return getLiaVertex(id);},
   get branchCount(){return generative.branches.length;},
   get eventCount(){return generative.events.length;},
   rendererCreated:false,visualFidelityVerified:false
