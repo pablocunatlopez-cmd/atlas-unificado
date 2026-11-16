@@ -27,6 +27,7 @@ test('partial intent is blocked and never treated as a valid retry',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'atlas-intent-'));
  try{
   await writeFile(join(dir,'tx1.intent.json'),'{broken');
+  await chmod(join(dir,'tx1.intent.json'),0o600);
   const r=await recordAtlasCodingIntent({...base,directory:dir});
   assert.equal(r.status,'corrupt_or_partial_intent');assert.equal(r.applied,false);
  }finally{await rm(dir,{recursive:true,force:true});}
