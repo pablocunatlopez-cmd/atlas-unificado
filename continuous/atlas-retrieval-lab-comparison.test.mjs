@@ -36,3 +36,26 @@ test('benchmark fingerprints differ if documents change with identical questions
  assert.notEqual(a.baseline.corpusHash,b.baseline.corpusHash);
  assert.equal(a.labelsHash,b.labelsHash);
 });
+
+test('alternating AB/BA order is balanced and warmup is excluded',()=>{
+ const calls=[];
+ const lab={corpusHash:'a'.repeat(64),search(question,{method})=>{
+  calls.push(method+':'+question);
+  return [{id:question==='one'?'doc1':'doc2'}];
+ }};
+ const sample=[{id:'one',question:'one',relevantIds:['doc1']},{id:'two',question:'two',relevantIds:['doc2']}];
+ const external={one:{'atlas-lexical':true,fts5:true},two:{'atlas-lexical':true,fts5:true}};
+ const result=compareRetrievalLabStrategies(lab,sample,{citationLabels:external,warmupRounds:1,measurementRounds:2});
+ assert.equal(calls.length,12);
+ assert.deepEqual(calls.slice(0,4),['atlas-lexical:one','fts5:one','fts5:two','atlas-lexical:two']);
+ assert.equal(result.measurementProtocol.measurementRounds,2);
+ assert.equal(result.baseline.queries,2);
+ assert.equal(result.gate.verdict,'insufficient-evidence');
+});
+test('inconsistent retrieval across repeated rounds fails closed',()=>{
+ let count=0;
+ const lab={corpusHash:'a'.repeat(64),search(){return [{id:++count%2?'doc1':'doc2'}]}};
+ assert.throws(()=>compareRetrievalLabStrategies(lab,[{id:'one',question:'one',relevantIds:['doc1']}],{
+  citationLabels:{one:{'atlas-lexical':true,fts5:true}},warmupRounds:0,measurementRounds:3
+ }),/changed across measurement rounds/);
+});
