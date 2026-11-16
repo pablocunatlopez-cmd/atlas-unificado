@@ -24,7 +24,7 @@ test('inner world reads authenticated canonical history, never local invented th
  const route=readFileSync(new URL('../cloud/app/api/lia-world/conversations/[id]/route.ts',import.meta.url),'utf8');
  const view=readFileSync(new URL('../cloud/app/lia-inner-world.tsx',import.meta.url),'utf8');
  assert.match(route,/cloudUser\(\)/);
- assert.match(route,/queue\(\)\.conversation\(user\.userId,id\)/);
+ assert.match(route,/store\.conversation\(user\.userId,id\)/);
  assert.match(route,/projectLiaConversation/);
  assert.match(view,/api\/lia-world\/conversations/);
  assert.match(view,/no verificado/);
