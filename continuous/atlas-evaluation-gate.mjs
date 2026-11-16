@@ -15,6 +15,8 @@ export function evaluateAtlasCandidate(baseline,candidate,{minimumQueries=100,ma
  }
  const reasons=[];
  if(candidate.queries!==baseline.queries)reasons.push('Los tamaños de corpus difieren; se requiere evaluación emparejada');
+ if(typeof baseline.corpusHash!=='string'||!/^sha256:[a-f0-9]{64}$/.test(baseline.corpusHash)||baseline.corpusHash!==candidate.corpusHash)reasons.push('Falta una huella SHA-256 idéntica del corpus evaluado');
+ if(typeof baseline.protocolHash!=='string'||!/^sha256:[a-f0-9]{64}$/.test(baseline.protocolHash)||baseline.protocolHash!==candidate.protocolHash)reasons.push('Falta una huella SHA-256 idéntica del protocolo de evaluación');
  for(const key of ['recallAt5','ndcgAt5','citationAccuracy']){
   if(baseline[key]<0||baseline[key]>1||candidate[key]<0||candidate[key]>1)reasons.push(key+': rango inválido');
   else if(candidate[key]+1e-9<baseline[key])reasons.push(key+': regresión de calidad');
