@@ -4,10 +4,10 @@
  * Roles are metaphors for bounded software capabilities, not autonomous agents.
  */
 const entries=[
- ['atlas','Atlas','Mundo Mental','Núcleo','coordination'],
- ['lia','Lía','Interfaz','Salón','conversation'],
- ['ion','Ion','Mundo Físico','Observatorio','observations'],
- ['constelacion','Constelación','Dios/Suceso','Cúpula de lo inesperado','surprises'],
+ ['atlas','Atlas','Mundo Mental · vértice interior','Núcleo','coordination'],
+ ['lia','Lía','Mundo sensorial completo','Círculo envolvente','conversation'],
+ ['ion','Ion','Mundo Físico · vértice interior','Observatorio','observations'],
+ ['constelacion','Constelación','Dios/Suceso · vértice interior','Cúpula de lo inesperado','surprises'],
  ['da-vinci','Da Vinci','Creación','Taller de invenciones','design'],
  ['icaro','Ícaro','Exploración aérea','Torre del cielo','discovery'],
  ['galileo','Galileo','Observación','Observatorio','measurement'],
@@ -38,7 +38,16 @@ const entries=[
  ['ereshkigal','Ereshkigal','Sombra y límites','Umbral','limits'],
  ['director','Director','Orquestación narrativa','Teatro','direction'],
  ['meta-atlas','Meta-Atlas','Autoevaluación','Sala de espejos','self-review'],
- ['hum','Hum','Ambiente','Estudio','ambience']
+ ['hum','Hum','Ambiente','Estudio','ambience'],
+ ['animal','Animal','Arquetipo histórico','Archivo simbólico','embodiment'],
+ ['mente','Mente','Arquetipo histórico','Archivo simbólico','mental-model'],
+ ['lenguaje','Lenguaje','Arquetipo histórico','Biblioteca','symbolization'],
+ ['persona','Persona','Arquetipo histórico','Teatro','identity'],
+ ['self','Self','Arquetipo histórico','Sala de espejos','integration'],
+ ['caos','Caos','Arquetipo histórico','Umbral','uncertainty'],
+ ['unidad','Unidad','Arquetipo histórico','Cúpula de lo inesperado','unity'],
+ ['kes','Keš','Arquetipo histórico','Archivo simbólico','symbolic-history'],
+ ['mani','Maṇi','Arquetipo histórico','Archivo simbólico','symbolic-history']
 ];
 export const atlasCharacterCapabilityMap=Object.freeze(entries.map(([id,name,domain,room,capability])=>Object.freeze({id,name,domain,room,capability,implementation:'proposed',autonomous:false,canGrantPermissions:false})));
 export function proposeAtlasCharacterForCapability(capability){
