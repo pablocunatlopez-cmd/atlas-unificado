@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm,writeFile,symlink} from 'node:fs/promises';
+import {mkdtemp,rm,writeFile,symlink,chmod} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {recordAtlasCodingIntent} from './atlas-coding-intent-log.mjs';
@@ -23,6 +23,7 @@ test('changed HEAD is not proof the intended patch was committed',()=>withDir(as
 }));
 test('corrupt intent fails closed',()=>withDir(async directory=>{
  await writeFile(join(directory,'tx.intent.json'),'{');
+ await chmod(join(directory,'tx.intent.json'),0o600);
  const r=await reconcileAtlasCodingIntent({directory,transactionId:'tx',readHeadCommit:async()=>data.baseCommit});
  assert.equal(r.status,'corrupt_or_partial_intent');assert.equal(r.retrySafe,false);
 }));
