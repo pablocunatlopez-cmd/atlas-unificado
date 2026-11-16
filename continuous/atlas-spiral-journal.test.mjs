@@ -28,3 +28,14 @@ test('revision links cannot point to missing or future events',()=>{
  const second=spiralEvent({id:'second',time:2,revisionOf:'first'});
  assert.equal(spiralJournalImport([first,second]).events.length,2);
 });
+
+test('journal fingerprint covers predictions and outcomes',()=>{
+ const a=spiralEvent({id:'a',time:1,prediction:'A',outcome:'observación'});
+ const b=spiralEvent({id:'a',time:1,prediction:'B',outcome:'observación'});
+ assert.notEqual(spiralJournalAppend([],a).sha256,spiralJournalAppend([],b).sha256);
+});
+test('import refuses silently incomplete events and forged verification status',()=>{
+ const a=spiralEvent({id:'a',time:1});
+ assert.throws(()=>spiralJournalImport([{...a,prediction:undefined}]));
+ assert.throws(()=>spiralJournalImport([{...a,status:'verified'}]));
+});
