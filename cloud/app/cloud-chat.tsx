@@ -176,19 +176,6 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
   }catch(problem){if(sequence.current===current){setMessages(previous);setError(problem instanceof Error?problem.message:'No se pudo enviar el mensaje.');}}
   finally{sending.current=false;if(mounted.current)setSubmitting(false);}
  }
- async function sendOffline(){
-  const text=draft.trim();if(!signedIn||!text||busy||sending.current)return;
-  sending.current=true;setSubmitting(true);setError('');setNotice('');const previous=messages,current=sequence.current;
-  setMessages([...previous,{role:'user',content:text}]);
-  try{
-   const data=await readJson<{reply:{answer:string;engine:string}}>('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,domain:'general',engine:'native',web:false,history:previous.slice(-20).map(message=>({role:message.role,text:message.content}))}),signal:AbortSignal.timeout(20000)});
-   if(sequence.current!==current||!mounted.current)return;
-   if(typeof data.reply?.answer!=='string')throw Error('El núcleo no devolvió una respuesta.');
-   setMessages(items=>[...items,{role:'assistant',content:data.reply.answer}]);setDraft('');
-   setNotice('Respuesta del núcleo Atlas Core en la nube, sin Qwen local. Esta conversación temporal no se guarda en el historial del motor local.');
-  }catch(problem){if(sequence.current===current){setMessages(previous);setError(problem instanceof Error?problem.message:'No se pudo consultar el núcleo de la nube.');}}
-  finally{sending.current=false;if(mounted.current)setSubmitting(false);}
- }
  async function cancel(){
   if(!job||cancelling)return;setCancelling(true);
   try{
@@ -252,7 +239,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
    <footer className={styles.composerArea}>
     <div className={styles.composerWrap}>
      <div className={styles.connectionNote}><span className={`${styles.dot} ${motor.online?styles.online:''}`}/><span>{!motorRead?'Comprobando el motor de tu ordenador…':motor.online?'Tu ordenador está conectado. Atlas puede responder.':'Puedes dejar un mensaje en cola; Qwen responderá cuando tu PC se conecte.'}</span></div>
-     <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}><button type="button" disabled={!signedIn||busy||!draft.trim()} onClick={()=>void sendOffline()}>Responder con Atlas Core (sin PC)</button><span style={{fontSize:12,opacity:.7}}>Modo limitado, sin Qwen; no se guarda en el historial local.</span></div><form className={styles.composer} onSubmit={event=>void submit(event)}><textarea ref={inputRef} value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={keyDown} rows={2} maxLength={6000} disabled={submitting||loadingThread} placeholder={signedIn?'Pregunta lo que quieras o cuéntale qué quieres crear…':'Tu próxima idea empieza aquí…'} aria-label="Mensaje para Atlas"/><div className={styles.composerTools}><button type="button" className={`${styles.internetToggle} ${internet?styles.internetOn:''}`} onClick={()=>setInternet(previous=>!previous)} disabled={busy} aria-pressed={internet} title="Pedir una consulta de fuentes públicas para este mensaje"><Icon name="globe" size={15}/>Internet<span className={styles.switchTrack}><i/></span></button><span className={styles.composerHint}>{draft.length>5500?`${draft.length}/6000`:'Qwen · motor local'}</span>{job?<button type="button" className={styles.stopButton} disabled={cancelling} onClick={()=>void cancel()}><span>■</span>{cancelling?'Deteniendo':'Detener'}</button>:<button type="submit" className={styles.sendButton} disabled={!signedIn||!draft.trim()||busy} aria-label="Enviar mensaje"><Icon name="arrow" size={20}/></button>}</div></form>
+     <div style={{marginBottom:8,fontSize:13}}><a href="/chat/offline/">Hablar con Atlas Core sin PC (sesión temporal separada)</a></div><form className={styles.composer} onSubmit={event=>void submit(event)}><textarea ref={inputRef} value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={keyDown} rows={2} maxLength={6000} disabled={submitting||loadingThread} placeholder={signedIn?'Pregunta lo que quieras o cuéntale qué quieres crear…':'Tu próxima idea empieza aquí…'} aria-label="Mensaje para Atlas"/><div className={styles.composerTools}><button type="button" className={`${styles.internetToggle} ${internet?styles.internetOn:''}`} onClick={()=>setInternet(previous=>!previous)} disabled={busy} aria-pressed={internet} title="Pedir una consulta de fuentes públicas para este mensaje"><Icon name="globe" size={15}/>Internet<span className={styles.switchTrack}><i/></span></button><span className={styles.composerHint}>{draft.length>5500?`${draft.length}/6000`:'Qwen · motor local'}</span>{job?<button type="button" className={styles.stopButton} disabled={cancelling} onClick={()=>void cancel()}><span>■</span>{cancelling?'Deteniendo':'Detener'}</button>:<button type="submit" className={styles.sendButton} disabled={!signedIn||!draft.trim()||busy} aria-label="Enviar mensaje"><Icon name="arrow" size={20}/></button>}</div></form>
      <div className={styles.belowComposer}><span>La web y tu historial están en la nube. Qwen responde desde tu PC; debe estar encendido.</span><span className={styles.shortcut}>↵ Enviar <b>·</b> ⇧↵ Nueva línea</span></div>
      {error?<div className={styles.error} role="alert"><span>!</span><p>{error}</p><button type="button" onClick={()=>setError('')} aria-label="Cerrar aviso"><Icon name="close" size={14}/></button></div>:null}
      <p className={styles.statusLine} role="status">{statusText||'Atlas puede equivocarse. Contrasta lo importante.'}</p>
