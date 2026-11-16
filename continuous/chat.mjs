@@ -70,7 +70,7 @@ export async function chat(input,documents,request=fetch,apiKey='',providerKey='
  if(input.internet===true){emit({type:'stage',stage:'web'});try{const web=await (runtime.lookupEvidence||webEvidence)(messages.at(-1).content,{signal:runSignal});const usable=attachments.length?web.sources.slice(0,1):web.sources;webSourceUrls=usable.map(source=>source.url);sources.push(...usable);warnings.push(...web.errors);webRead=usable.length>0;const fetched=new Set(usable.map(item=>item.requestedUrl||item.url));failedWebUrls=requestedUrls.filter(url=>!fetched.has(url));}catch(e){runSignal?.throwIfAborted();warnings.push(e.message);failedWebUrls=requestedUrls;}}
  sources=labelCitationSources(sources);
  webRead=webRead&&sources.some(source=>webSourceUrls.includes(source.url));
- const liaProvenance=classifyLiaChatSources({sources,webRead,sharedSession:runtime.sharedSession===true});
+ const liaProvenance=classifyLiaChatSources({sources,webRead,webSourceUrls,sharedSession:runtime.sharedSession===true});
  const specialistReview=reviewWithSpecialists({question:messages.at(-1).content,sources,scope:runtime.sharedSession===true?'shared':'owner',runtime:{concurrency:1,maxInferenceCalls:0},signal:runSignal});
  try{runtime.onSpecialistReview?.(specialistReview);}catch{warnings.push('La revisión local se ejecutó, pero no se pudo registrar su telemetría.');}
  const selectedSpecialists=selectSpecialistRoles(messages.at(-1).content,{limit:2});
