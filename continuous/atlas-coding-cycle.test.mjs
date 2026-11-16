@@ -51,7 +51,8 @@ test('signed review phase requires independently supplied expected commit and di
 test('signed review phase blocks a proposal mismatch before consuming evidence',async()=>{
  const cycle=planAtlasCodingCycle(base);
  const result=await claimAtlasCodingCycleReview({cycle,claim:{proposalId:'different'},
-  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:'b'.repeat(64)}});
+  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:cycle.diffDigest},
+  readHeadCommit:async()=> 'a'.repeat(40)});
  assert.equal(result.status,'blocked');
  assert.equal(result.authorizationGranted,false);
 });
@@ -68,4 +69,20 @@ test('host expected digest must match the actual planned content before claiming
   expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:'b'.repeat(64)}});
  assert.equal(result.reason,'patch_digest_mismatch');
  assert.equal(result.authorizationGranted,false);
+});
+
+test('stale repository HEAD blocks review before signature verification',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ const result=await claimAtlasCodingCycleReview({cycle,claim:{proposalId:cycle.proposalId},
+  expected:{proposalId:cycle.proposalId,baseCommit:'a'.repeat(40),diffDigest:cycle.diffDigest},
+  readHeadCommit:async()=> 'b'.repeat(40)});
+ assert.equal(result.status,'blocked');
+ assert.equal(result.reason,'stale_base_commit');
+ assert.equal(result.authorizationGranted,false);
+});
+test('trusted HEAD reader is mandatory',async()=>{
+ const cycle=planAtlasCodingCycle(base);
+ await assert.rejects(()=>claimAtlasCodingCycleReview({cycle,
+  expected:{proposalId:cycle.proposalId,diffDigest:cycle.diffDigest}}),
+  /Trusted repository HEAD reader required/);
 });
