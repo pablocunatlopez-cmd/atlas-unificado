@@ -5,7 +5,7 @@
  * comparison and enforce authorization within the same transaction.
  */
 export async function applyAtlasCodingPatchCAS({
- expectedBaseCommit,diffDigest,authorization,atomicCommit
+ expectedBaseCommit,diffDigest,authorization,atomicCommit,verifyAuthorization
 }={}){
  if(typeof expectedBaseCommit!=='string'||
     !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(expectedBaseCommit)||
@@ -14,8 +14,11 @@ export async function applyAtlasCodingPatchCAS({
     authorization.proposalId===undefined||
     authorization.baseCommit!==expectedBaseCommit||
     authorization.diffDigest!==diffDigest||
-    typeof atomicCommit!=='function')
+    typeof atomicCommit!=='function'||typeof verifyAuthorization!=='function')
   return Object.freeze({status:'blocked',reason:'missing_trusted_authorization_or_cas',applied:false});
+ const trusted=await verifyAuthorization({authorization,expectedBaseCommit,diffDigest});
+ if(trusted!==true)
+  return Object.freeze({status:'blocked',reason:'host_authorization_rejected',applied:false});
  const result=await atomicCommit({expectedBaseCommit,diffDigest,proposalId:authorization.proposalId});
  if(!result||result.committed!==true||
     typeof result.newCommit!=='string'||
