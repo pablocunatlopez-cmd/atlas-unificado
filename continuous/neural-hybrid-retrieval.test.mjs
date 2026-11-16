@@ -9,7 +9,7 @@ test('hybrid ranking preserves lexical fallback when no neural model is installe
 });
 test('verified semantic scores can rerank lexical candidates, without hallucinating similarities',()=>{
  const hits=[{url:'a',score:0.6},{url:'b',score:0.5}];
- const ranked=hybridRerank(hits,new Map([['b',1]]),{alpha:0.2});
+ const ranked=hybridRerank(hits,new Map([['a',-1],['b',1]]),{alpha:0.2});
  assert.equal(ranked[0].url,'b');
  assert.equal(ranked[0].rankingMethod,'lexical+neural');
  assert.throws(()=>hybridRerank(hits,new Map(),{alpha:2}));
