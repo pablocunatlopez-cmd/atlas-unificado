@@ -29,3 +29,11 @@ Las reglas geométricas y los módulos de hipótesis son datos y operaciones aco
 Se ejecutan pruebas con SQLite, geometría Three.js real, handlers de interacción, cliente de creación, aislamiento de propietarios, cancelaciones, reparación, hipótesis y presupuesto. Las dos regresiones observadas fueron una instantánea de fuente caducada (regenerada desde archivos inspeccionados) y la dependencia de fechas distintas en el presupuesto de obras vivas (corregida). También se ejecutan controles de tipos y compilación de producción.
 
 No se ha realizado inspección gráfica GPU, escucha ni una partida de navegador en este entorno. No se acredita hiperrealismo ni capacidad general equivalente a modelos especializados. Los proyectos geométricos guardados todavía no se convierten por sí solos en nuevas funciones o reformas transitables de la casa. El siguiente paso debe ampliar ese contrato con pruebas de uso y reversión; aumentar contadores o frecuencia no lo sustituye.
+
+## Pase de realismo visual antes de publicar
+
+Por petición del propietario se generaron dentro de ChatGPT dos recursos nuevos: atlas de albedo de roble/yeso/lino/caliza y panorama de jardín para fondo y reflejos. Sus originales se conservan en el espacio de trabajo; las copias del Site y sus hashes están en `public/house/assets/generated/provenance.json`. El atlas tiene 1.254×1.254 píxeles y el panorama 1.774×887; no se presentan como escaneados ni como un HDR medido.
+
+La casa extrae una vez los cuatro materiales, deriva canales acotados de normal y rugosidad y los aplica exclusivamente a superficies etiquetadas, manteniendo las texturas de piel de los avatares. El jardín alimenta PMREM y el fondo. Si una carga falla se conservan los materiales y el entorno procedurales. Los móviles reducen la resolución de materiales. La carga tardía no modifica una casa descartada y todos los canales se liberan al cerrar.
+
+Se añaden máscaras aproximadas de contacto ligadas a las huellas del mobiliario y agua con transmisión e índice de refracción de 1,333. No alteran colisiones, almacenamiento ni las funciones de los puestos. Estas mejoras se orientan al hiperrealismo; la apariencia final, reflejos, sombras y rendimiento todavía requieren revisión GPU en un dispositivo.

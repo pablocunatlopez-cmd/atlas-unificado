@@ -1,3 +1,4 @@
+import {loadPhotographicSurfaces,loadPhotographicEnvironment} from './photographic-assets.js';
 import {createAtlasHouseMode} from './atlas-mode.js';
 import {createAtlasSpiralLayer} from './atlas-spiral-layer.js';
 import {canUseHouseFunction} from './interaction-policy.js';
@@ -10,12 +11,13 @@ import {createRenderEngine} from './render-engine.js';
 import {CircularJoystick,showTouchControls} from './mobile-input.js';
 import {ROOMS,roomById,roomAt,movePlayer,navigationVector,blocked} from './layout.js';
 import {WORKSTATIONS,residentById} from './residents.js';
-import {buildHouse} from './scene.js?v=oriented3';
+import {buildHouse} from './scene.js?v=photo5';
 import {normalizeProcessState,processForRoom,processCaption} from './process-state.js?v=housework1';
 
 const prototype=new URLSearchParams(location.search).get('prototype')==='1';
 const $=id=>document.getElementById(id),canvas=$('scene'),callbacks=[],urls=new Set();
 const send=(event,data={})=>parent.postMessage({type:'atlas:house:'+event,...data},location.origin);
+let photographicSurfaces;
 let atlasMode,atlasLayer,priorAtlasView;
 let disposeEnvironment,quality,renderer,house,frame=0,disposed=false,paused=false,overview=true,recording=null,currentRoom='salon',ready=false;
 let player={x:roomById('salon').spawn[0],z:roomById('salon').spawn[1]},yaw=roomById('salon').yaw,pitch=.02,orbit=.58,elevation=.68,last=0,frames=0,elapsed=0;
@@ -103,7 +105,7 @@ function tick(now){
  if(elapsed>=1.2){const fps=frames/elapsed;$('fps').textContent=Math.round(fps)+' FPS';canvas.dataset.frames=String(Number(canvas.dataset.frames||0)+frames);send('performance',{fps:Math.round(fps),frames:Number(canvas.dataset.frames),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,backend:'WebGL2'});const tuning=quality?.sample({fps});if(tuning?.changed){house.setPeopleBudget(tuning.people);if(renderer.getPixelRatio()!==tuning.pixelRatio){renderer.setPixelRatio(tuning.pixelRatio);resize();}send('quality',{value:{fps,people:tuning.people,pixelRatio:tuning.pixelRatio,reason:tuning.reason}});}frames=0;elapsed=0;}
  if(!ready){ready=true;$('boot').hidden=true;canvas.dataset.ready='true';reportReady();}
 }
-function dispose(){if(disposed)return;atlasMode?.dispose();atlasLayer?.dispose();disposed=true;cancelAnimationFrame(frame);if(recording?.state!=='inactive')recording?.stop();joystick?.destroy();callbacks.forEach(remove=>remove());disposeEnvironment?.();house?.dispose();renderer?.dispose();renderer?.forceContextLoss();for(const url of urls)URL.revokeObjectURL(url);urls.clear();}
+function dispose(){if(disposed)return;atlasMode?.dispose();atlasLayer?.dispose();photographicSurfaces?.dispose();disposed=true;cancelAnimationFrame(frame);if(recording?.state!=='inactive')recording?.stop();joystick?.destroy();callbacks.forEach(remove=>remove());disposeEnvironment?.();house?.dispose();renderer?.dispose();renderer?.forceContextLoss();for(const url of urls)URL.revokeObjectURL(url);urls.clear();}
 for(const room of ROOMS){const button=document.createElement('button');button.type='button';button.dataset.room=room.id;button.textContent=room.short;button.setAttribute('aria-label','Ir a '+room.title);button.setAttribute('aria-pressed','false');listen(button,'click',()=>teleport(room.id));$('roomnav').append(button);}
 listen($('overview'),'click',()=>{atlasMode?.deactivate();setOverview(true);resize();});listen($('walk'),'click',()=>{teleport(currentRoom);resize();});listen($('interact'),'click',interact);listen($('retry'),'click',()=>location.reload());
 listen(window,'resize',resize);
@@ -138,7 +140,7 @@ listen(window,'message',async event=>{
 listen(window,'pagehide',dispose);
 try{
  const engine=await createRenderEngine(canvas,{gpu:null});renderer=engine.renderer;renderer.setPixelRatio(Math.min(devicePixelRatio||1,touch?1.35:2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
- house=buildHouse();atlasLayer=createAtlasSpiralLayer({THREE,scene:house.scene});atlasLayer.mount();atlasMode=createAtlasHouseMode({enter:()=>{priorAtlasView={overview,player:{...player},yaw,pitch,orbit,elevation};setOverview(true);orbit=.55;elevation=.78;atlasLayer.show();send('atlas-mode',{mode:'atlas'});},leave:()=>{atlasLayer.hide();if(priorAtlasView){const view=priorAtlasView;setOverview(view.overview);player=view.player;yaw=view.yaw;pitch=view.pitch;orbit=view.orbit;elevation=view.elevation;}send('atlas-mode',{mode:'house'});},renderFrame:()=>{}});try{disposeEnvironment=installEnvironment(renderer,house.scene);}catch{console.warn('No se pudo preparar la reflexión de entorno; se conserva la iluminación directa.');}if(touch)house.sun.shadow.mapSize.set(1024,1024);house.setProcessState(processState);quality=createAdaptiveQuality({maxPixelRatio:Math.min(devicePixelRatio||1,touch?1.35:2),initialPixelRatio:renderer.getPixelRatio(),minPixelRatio:Math.min(.85,renderer.getPixelRatio()),maxPeople:coarse?1:2,mobile:coarse});
+ house=buildHouse();atlasLayer=createAtlasSpiralLayer({THREE,scene:house.scene});atlasLayer.mount();atlasMode=createAtlasHouseMode({enter:()=>{priorAtlasView={overview,player:{...player},yaw,pitch,orbit,elevation};setOverview(true);orbit=.55;elevation=.78;atlasLayer.show();send('atlas-mode',{mode:'atlas'});},leave:()=>{atlasLayer.hide();if(priorAtlasView){const view=priorAtlasView;setOverview(view.overview);player=view.player;yaw=view.yaw;pitch=view.pitch;orbit=view.orbit;elevation=view.elevation;}send('atlas-mode',{mode:'house'});},renderFrame:()=>{}});try{disposeEnvironment=installEnvironment(renderer,house.scene);}catch{console.warn('No se pudo preparar la reflexión de entorno; se conserva la iluminación directa.');}photographicSurfaces=loadPhotographicSurfaces(house.scene,{mobile:touch});canvas.dataset.surfaces='loading';void photographicSurfaces.ready.then(loaded=>{if(!disposed&&loaded)canvas.dataset.surfaces='generated-pbr';}).catch(()=>{if(!disposed)canvas.dataset.surfaces='procedural';});void loadPhotographicEnvironment(renderer,house.scene,{isActive:()=>!disposed}).then(cleanup=>{if(!cleanup)return;if(disposed){cleanup();return;}disposeEnvironment?.();disposeEnvironment=cleanup;canvas.dataset.environment='generated-panorama';}).catch(()=>{if(!disposed)canvas.dataset.environment='procedural';});if(touch)house.sun.shadow.mapSize.set(1024,1024);house.setProcessState(processState);quality=createAdaptiveQuality({maxPixelRatio:Math.min(devicePixelRatio||1,touch?1.35:2),initialPixelRatio:renderer.getPixelRatio(),minPixelRatio:Math.min(.85,renderer.getPixelRatio()),maxPeople:coarse?1:2,mobile:coarse});
  if(!prototype)void fetch('./initial-creative.json',{cache:'no-cache'}).then(response=>response.ok?response.json():null).then(value=>applyCreative(value,'retained')).catch(()=>{});
 setOverview(true);resize();joystick=new CircularJoystick($('joystick'),{enabled:()=>!paused&&!overview,onChange:value=>{stick=value;$('joystick').setAttribute('aria-valuenow',String(Math.round(value.strength*100)));}});frame=requestAnimationFrame(tick);
 }catch(error){fail('No ha sido posible iniciar WebGL 2 en este navegador. Abre Atlas en Safari o Chrome y vuelve a intentarlo.');console.error('Atlas house renderer:',error);}

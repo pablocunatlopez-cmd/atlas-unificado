@@ -14,5 +14,5 @@ export function installEnvironment(renderer,scene){
  const source=new THREE.DataTexture(environmentPixels(),256,128,THREE.RGBAFormat,THREE.FloatType);source.mapping=THREE.EquirectangularReflectionMapping;source.colorSpace=THREE.LinearSRGBColorSpace;source.needsUpdate=true;
  const pmrem=new THREE.PMREMGenerator(renderer);let target;
  try{pmrem.compileEquirectangularShader();target=pmrem.fromEquirectangular(source);scene.environment=target.texture;scene.environmentIntensity=.65;}finally{source.dispose();pmrem.dispose();}
- let disposed=false;return()=>{if(disposed)return;disposed=true;scene.environment=null;target?.dispose();};
+ let disposed=false;return()=>{if(disposed)return;disposed=true;if(scene.environment===target?.texture)scene.environment=null;target?.dispose();};
 }

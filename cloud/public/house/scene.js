@@ -15,12 +15,14 @@ export function buildHouse(){
  const palette={wall:material('#e8e4d7'),trim:material('#dad6c7'),wood:material('#826044'),darkWood:material('#443e36'),bronze:material('#756d52',{metalness:.55,roughness:.4}),black:material('#202b2d'),white:material('#f1ede2'),sofa:material('#b8b2a0'),rug:material('#d0c3a9'),green:material('#506b55'),leaf:material('#78906d'),soil:material('#a8b59a'),stone:material('#a9aaa0'),glass:new THREE.MeshPhysicalMaterial({color:'#ecf6f3',transparent:true,opacity:1,transmission:.92,thickness:.055,ior:1.5,metalness:0,roughness:.08,envMapIntensity:1.1,clearcoat:1,depthWrite:false}),glow:material('#9ed9c8',{emissive:'#4d9780',emissiveIntensity:.55,roughness:.3}),blue:material('#84b4c8',{emissive:'#456f8f',emissiveIntensity:.28}),violet:material('#b2a6cf',{emissive:'#615878',emissiveIntensity:.2}),gold:material('#d0ac74',{metalness:.35,roughness:.45})};
  let seed=51977;const random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
  const surfaces=Object.fromEntries(['oak','plaster','fabric','stone'].map(kind=>{const maps=createSurfaceMaps(kind);textures.push(...Object.values(maps));return[kind,maps];}));
- const applySurface=(mat,maps,scale=1)=>{Object.assign(mat,maps);mat.normalScale.set(scale,scale);};
+ const applySurface=(mat,maps,scale=1)=>{Object.assign(mat,maps);mat.userData.surfaceKind=Object.entries(surfaces).find(([,m])=>m===maps)?.[0];mat.normalScale.set(scale,scale);};
  applySurface(palette.wall,surfaces.plaster,.3);palette.wall.color.set('#ffffff');
  applySurface(palette.wood,surfaces.oak,.45);palette.wood.color.set('#ffffff');applySurface(palette.darkWood,surfaces.oak,.45);palette.darkWood.color.set('#665b50');
  applySurface(palette.sofa,surfaces.fabric,.28);palette.sofa.color.set('#ffffff');applySurface(palette.rug,surfaces.fabric,.4);applySurface(palette.stone,surfaces.stone,.22);
- const floor=material('#ffffff',{...surfaces.oak,roughness:.85,normalScale:new THREE.Vector2(.4,.4)});
- function add(geometry,mat,x=0,y=0,z=0,rotation=0){geometry.rotateY(rotation);geometry.translate(x,y,z);const room=roomAt(x,z),bindings=HOUSE_FUNCTIONS.filter(fn=>fn.room===room);components.push({id:'house-part-'+components.length,room:room||'environment',owner:bindings[0]?.owner||'salon-centre',functions:bindings.map(fn=>fn.id),relation:room?'Presentación del espacio de trabajo':'Entorno visual de Lía',source:'public/house/scene.js',geometry:geometry.type});if(mat.map)projectSurfaceUV(geometry);if(!batches.has(mat))batches.set(mat,[]);batches.get(mat).push(geometry);}
+ const floor=material('#ffffff',{...surfaces.oak,roughness:.85,normalScale:new THREE.Vector2(.4,.4)});floor.userData.surfaceKind='oak';
+ const water=new THREE.MeshPhysicalMaterial({color:'#61988b',transparent:true,opacity:1,transmission:.65,thickness:.35,ior:1.333,metalness:0,roughness:.09,clearcoat:1,depthWrite:false});
+ applySurface(palette.soil,surfaces.stone,.2);palette.soil.color.set('#8b9870');
+ function add(geometry,mat,x=0,y=0,z=0,rotation=0){geometry.rotateY(rotation);geometry.translate(x,y,z);const room=roomAt(x,z),bindings=HOUSE_FUNCTIONS.filter(fn=>fn.room===room);components.push({id:'house-part-'+components.length,room:room||'environment',owner:bindings[0]?.owner||'salon-centre',functions:bindings.map(fn=>fn.id),relation:room?'Presentación del espacio de trabajo':'Entorno visual de Lía',source:'public/house/scene.js',geometry:geometry.type});if(mat.map&&!mat.userData.contactMask)projectSurfaceUV(geometry);if(!batches.has(mat))batches.set(mat,[]);batches.get(mat).push(geometry);}
  function box(mat,w,h,d,x,y,z,rotation=0){add(furnitureBox(w,h,d),mat,x,y,z,rotation);}
  function cyl(mat,top,bottom,height,x,y,z,segments=14){add(new THREE.CylinderGeometry(top,bottom,height,segments),mat,x,y,z);}
  function ball(mat,r,x,y,z,sx=1,sy=1,sz=1){const g=new THREE.SphereGeometry(r,14,10);g.scale(sx,sy,sz);add(g,mat,x,y,z);}
@@ -103,8 +105,12 @@ export function buildHouse(){
  for(const x of [9.5,12,14.5]){cyl(palette.stone,.36,.42,.55,x,.31,-14.4,16);ball(x===12?palette.glow:palette.violet,.23,x,.95,-14.4);obstacle(x,-14.4,.85,.85);}
  plant(14.8,-9.1,1.0);
  // Garden, reflecting pool and distant silhouette: all lightweight geometry.
- box(palette.stone,5,.15,1.6,-7,.05,10.5);box(palette.glass,4.7,.05,1.3,-7,.15,10.5);for(const x of [-12,-3,12.5,15.5])plant(x,11.4,1.3);
+ box(palette.stone,5,.15,1.6,-7,.05,10.5);box(water,4.7,.05,1.3,-7,.15,10.5);for(const x of [-12,-3,12.5,15.5])plant(x,11.4,1.3);
  for(let i=0;i<22;i++){const a=i*.91,x=Math.sin(a)*(19+random()*12),z=Math.cos(a)*(20+random()*14);cyl(palette.wood,.12,.18,2.2,x,1,z);ball(i%2?palette.green:palette.leaf,1.2,x,3,z,1,1.45,1);}
+ // Bounded, geometry-related ambient contact masks keep furniture grounded.
+ const contactPixels=new Uint8Array(64*64*4);for(let y=0;y<64;y++)for(let x=0;x<64;x++){const edge=Math.max(Math.abs(x/63*2-1),Math.abs(y/63*2-1)),a=Math.max(0,1-edge)**1.35;contactPixels.set([255,255,255,Math.round(a*210)],(y*64+x)*4);}
+ const contactMap=new THREE.DataTexture(contactPixels,64,64,THREE.RGBAFormat);contactMap.needsUpdate=true;contactMap.magFilter=THREE.LinearFilter;textures.push(contactMap);const contactMaterial=new THREE.MeshBasicMaterial({map:contactMap,color:'#10251d',opacity:.22,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1});contactMaterial.userData.contactMask=true;
+ for(const [l,t,r,b] of solids.slice(WALLS.length)){const g=new THREE.PlaneGeometry(r-l+.65,b-t+.65);g.rotateX(-Math.PI/2);add(g,contactMaterial,(l+r)/2,.047,(t+b)/2);}
  // Functional hit volumes bind existing furniture to real application tools.
  for(const fn of HOUSE_FUNCTIONS){const size=fn.hitSize||fn.size||(fn.kind==='cabinet'?[1.08,2.5,.58]:[1.6,1.4,.85]);const hit=new THREE.Mesh(new THREE.BoxGeometry(...size),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));hit.position.set(...fn.position);hit.userData.functionId=fn.id;hit.userData.room=fn.room;interactive.push(hit);scene.add(hit);if(fn.kind==='cabinet')solids.push([fn.position[0]-.56,fn.position[2]-.31,fn.position[0]+.56,fn.position[2]+.31]);}
  // Commit each material group as one draw call. Geometry no longer needed after
