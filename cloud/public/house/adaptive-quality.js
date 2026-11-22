@@ -19,17 +19,17 @@ export function createAdaptiveQuality({maxPixelRatio=1.5,initialPixelRatio=maxPi
     fast=0;slow++;
     if(slow<SLOW_SAMPLES)return result(false,'stable');
     slow=0;
-    if(people>0){people--;return result(true,'reduced-people');}
     const next=clamp(pixelRatio*SCALE,minPixelRatio,maxPixelRatio);
     if(next<pixelRatio){pixelRatio=next;return result(true,'reduced-pixel-ratio');}
+    if(people>0){people--;return result(true,'reduced-people');}
     return result(false,'minimum');
    }
    if(fps>=fastFps){
     slow=0;fast++;
     if(fast<FAST_SAMPLES)return result(false,'stable');
     fast=0;
-    if(pixelRatio<maxPixelRatio){pixelRatio=clamp(pixelRatio/SCALE,minPixelRatio,maxPixelRatio);return result(true,'restored-pixel-ratio');}
     if(people<maxPeople){people++;return result(true,'restored-people');}
+    if(pixelRatio<maxPixelRatio){pixelRatio=clamp(pixelRatio/SCALE,minPixelRatio,maxPixelRatio);return result(true,'restored-pixel-ratio');}
     return result(false,'maximum');
    }
    // A normal interval interrupts either trend. One bad frame or alternating

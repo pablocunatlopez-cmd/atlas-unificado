@@ -82,3 +82,7 @@
 @media(max-height:620px) and (min-width:651px){.house .roomCard{top:138px;max-height:calc(100dvh - 255px)}}
 
 .cleanView .roomCard,.cleanView .dock,.cleanView .sceneStats{display:none}.charterDialog{border:0;padding:0;border-radius:24px;width:min(1100px,95vw);max-height:90dvh;overflow:auto}.charterDialog::backdrop{background:#10282499}
+.portraitControls{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:12px}
+.portraitControls button{background:#193d34;color:#e0f0e5;border:1px solid #a6ceba66;border-radius:7px;min-height:40px;padding:8px 10px;font-size:.875rem}
+.portraitControls button:disabled{opacity:.55;cursor:default}
+.portraitControls span{flex-basis:100%;color:#c0dace;font-size:.8125rem;line-height:1.45}

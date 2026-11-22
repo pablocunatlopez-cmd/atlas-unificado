@@ -5,25 +5,30 @@ import {canUseHouseFunction} from './interaction-policy.js';
 import {installEnvironment} from './environment-light.js';
 import {houseFunction} from './functional-world.js?v=surfaces2';
 import {validateFilmShots,filmCameraAt} from './film-shots.js';
-import {createAdaptiveQuality} from './adaptive-quality.js?v=people1';
+import {createAdaptiveQuality} from './adaptive-quality.js?v=ultra7';
+import {portraitView,capturePortrait4k} from './resident-portrait.js';
 import * as THREE from './vendor/three.module.js';
 import {createRenderEngine} from './render-engine.js';
 import {CircularJoystick,showTouchControls} from './mobile-input.js';
 import {ROOMS,WALLS,roomById,roomAt,movePlayer,navigationVector,blocked} from './layout.js';
 import {WORKSTATIONS,residentById} from './residents.js';
-import {buildHouse} from './scene.js?v=residents6';
+import {residentAppearance} from './resident-appearance.js';
+import {buildHouse} from './scene.js?v=ultra7';
 import {normalizeProcessState,processForRoom,processCaption} from './process-state.js?v=housework1';
 
 const prototype=new URLSearchParams(location.search).get('prototype')==='1';
 const $=id=>document.getElementById(id),canvas=$('scene'),callbacks=[],urls=new Set();
 const send=(event,data={})=>parent.postMessage({type:'atlas:house:'+event,...data},location.origin);
 let photographicSurfaces;
+let portrait=null;
 let atlasMode,atlasLayer,priorAtlasView;
 let disposeEnvironment,quality,renderer,house,frame=0,disposed=false,paused=false,overview=true,recording=null,currentRoom='salon',ready=false;
 let player={x:roomById('salon').spawn[0],z:roomById('salon').spawn[1]},yaw=roomById('salon').yaw,pitch=.02,orbit=.58,elevation=.68,last=0,frames=0,elapsed=0;
 let joystick,stick={x:0,y:0},drag=null,transition=null,recordStart=0,captureAngle=0,recordRooms=[],recordShots=[],recordSeconds=8;
 let processState=normalizeProcessState(null),processReceivedAt=-Infinity,creativeState=null,creativeSource='coordinator',inspection=false;
 const keys=new Set(),camera=new THREE.PerspectiveCamera(52,1,.08,190),target=new THREE.Vector3(),raycaster=new THREE.Raycaster();
+const portraitLight=new THREE.PointLight('#fff1e7',3.7,4,2);
+portraitLight.visible=false;
 const coarse=matchMedia('(pointer:coarse)').matches,touch=showTouchControls('auto',{touchPoints:navigator.maxTouchPoints,coarse,width:innerWidth});
 document.body.classList.add(touch?'touch':'desktop','overview');
 if(new URLSearchParams(location.search).get('embedded')==='1')document.body.classList.add('embedded');
@@ -38,6 +43,7 @@ function updateRoom(id,force=false){
 }
 function updateProcessLegend(){const legend=$('process-legend');if(!legend)return;const sourceAge=processState.at?Date.now()-Date.parse(processState.at):Infinity;const process=processForRoom(processState,currentRoom,{ageMs:sourceAge<0?sourceAge:Math.max(performance.now()-processReceivedAt,sourceAge)});legend.textContent=processCaption(process)+' · Gestos = trabajo comunicado; adornos ≠ aprendizaje.';}
 function setOverview(value){
+ if(portrait)exitPortrait(false);
  overview=value;inspection=false;drag=null;keys.clear();joystick?.reset();transition=null;
  document.body.classList.toggle('overview',value);document.body.classList.toggle('walking',!value);$('walk').classList.toggle('selected',!value);$('overview').classList.toggle('selected',value);$('walk').querySelector('span').textContent=value?'Entrar en casa':'Explorando';$('interact').hidden=value;
  if(house)house.ceilings.visible=!value;
@@ -56,6 +62,37 @@ function focusResident(id){if(atlasMode?.mode==='atlas')atlasMode.deactivate();
  const point=spots.find(([px,pz])=>roomAt(px,pz)===room.id&&!blocked(px,pz,.25,house.solids)&&Math.hypot(px-x,pz-z)>1.5)||room.spawn;
  const from=camera.position.clone();setOverview(false);player={x:point[0],z:point[1]};yaw=Math.atan2(x-player.x,-(z-player.z));pitch=Math.atan2((resident.archetype==='animal'?.85:resident.seated?1.20:1.40)-1.64,Math.hypot(x-player.x,z-player.z));transition={from,at:performance.now()};updateRoom(room.id);resize();send('resident',{id:resident.id,room:room.id});
 }
+function enterPortrait(id){
+ const resident=residentById(id);
+ if(prototype||!house||resident?.archetype!=='human'||recording)throw Error('Selecciona un habitante humano fuera de una grabación.');
+ if(renderer.capabilities.maxTextureSize<4096)throw Error('Este dispositivo no admite texturas 4K.');
+ if(portrait?.resident.id===id)return;
+ if(atlasMode?.mode==='atlas')atlasMode.deactivate();
+ const pose=house.residentPose(id),subject={...resident,...pose,height:residentAppearance(id).height};
+ const position=subject.position;
+ const view=portraitView(subject,position);
+ if(!view)throw Error('No hay espacio para encuadrar a este habitante.');
+ const previous=portrait?.previous||{overview,player:{...player},yaw,pitch,room:currentRoom};
+ setOverview(false);
+ portrait={resident:subject,view,previous};
+ portraitLight.visible=true;
+ $('interact').hidden=true;
+ house.setPortrait(id);
+ updateRoom(roomAt(position[0],position[2])||resident.room);
+ camera.fov=35;
+ camera.updateProjectionMatrix();
+ send('resident',{id,room:currentRoom});
+ send('people',{value:house.peopleStatus()});
+}
+function exitPortrait(restore=true){
+ if(!portrait)return;
+ const {previous}=portrait;
+ portrait=null;
+ portraitLight.visible=false;
+ house?.setPortrait(null);
+ if(restore){updateRoom(previous.room);setOverview(previous.overview);player=previous.player;yaw=previous.yaw;pitch=previous.pitch;resize();}
+ send('people',{value:house?.peopleStatus()});
+}
 function focusEvolution(){if(atlasMode?.mode==='atlas')atlasMode.deactivate();setOverview(true);inspection=true;orbit=.58;elevation=.58;updateRoom('games');resize();}
 function applyCreative(value,source='coordinator'){
  if(!house)return;const result=house.setCreativeState(value);
@@ -66,12 +103,21 @@ function focusWork(id){const room=roomById(id);if(!room)return;const x=(room.bou
 function functionHitAllowed(hit){const point=hit?.point,playerDistance=point?Math.hypot(point.x-player.x,point.y-1.64,point.z-player.z):Infinity;return canUseHouseFunction({prototype,overview,distance:hit?.distance,playerDistance,transitioning:!!transition});}
 function residentHitAllowed(hit){const point=hit?.point,playerDistance=point?Math.hypot(point.x-player.x,point.y-1.64,point.z-player.z):Infinity;if(!canUseHouseFunction({prototype:true,overview,distance:hit?.distance,playerDistance,transitioning:!!transition}))return false;const steps=Math.max(1,Math.ceil(Math.hypot(point.x-player.x,point.z-player.z)/.12));for(let i=1;i<steps;i++){const t=i/steps,y=1.64+(point.y-1.64)*t;if(y<=3.15&&y>=0&&blocked(player.x+(point.x-player.x)*t,player.z+(point.z-player.z)*t,0,WALLS))return false;}return true;}
 function inspectResidentHit(hit){const resident=residentById(hit?.object?.userData?.residentId);if(!resident)return false;if(!residentHitAllowed(hit)){$('room-subtitle').textContent='Acércate al habitante para consultar su oficio.';return false;}$('room-subtitle').textContent=resident.name+' · '+resident.role;send('resident',{id:resident.id,room:hit.object.userData.room||resident.room,action:'inspect'});return true;}
-function interact(){if(overview)return;raycaster.setFromCamera(new THREE.Vector2(0,0),camera);const hit=raycaster.intersectObjects((house?.interactive||[]).filter(item=>item.visible),false).find(hit=>(hit.object.userData.functionId||hit.object.userData.residentId)&&hit.distance<3.5);if(hit?.object.userData.residentId){inspectResidentHit(hit);return;}if(hit&&houseFunction(hit.object.userData.functionId)){if(functionHitAllowed(hit))send('function',{id:hit.object.userData.functionId});return;}send('interact',{room:currentRoom});}
-function resize(){if(!renderer)return;const width=innerWidth,height=innerHeight;camera.aspect=width/height;camera.fov=overview?46:(width<height?67:58);camera.updateProjectionMatrix();renderer.setSize(width,height,false);}
+function interact(){if(overview||portrait)return;raycaster.setFromCamera(new THREE.Vector2(0,0),camera);const hit=raycaster.intersectObjects((house?.interactive||[]).filter(item=>item.visible),false).find(hit=>(hit.object.userData.functionId||hit.object.userData.residentId)&&hit.distance<3.5);if(hit?.object.userData.residentId){inspectResidentHit(hit);return;}if(hit&&houseFunction(hit.object.userData.functionId)){if(functionHitAllowed(hit))send('function',{id:hit.object.userData.functionId});return;}send('interact',{room:currentRoom});}
+function resize(){if(!renderer)return;const width=innerWidth,height=innerHeight;camera.aspect=width/height;camera.fov=portrait?35:overview?46:(width<height?67:58);camera.updateProjectionMatrix();renderer.setSize(width,height,false);}
 function cameraFrame(time){
  const p=camera.position;
  if(recording&&recordShots.length){const shot=filmCameraAt(recordShots,(time-recordStart)/1000);p.fromArray(shot.position);target.fromArray(shot.target);}
  else if(recording&&recordRooms.length){const progress=Math.min(.999,(time-recordStart)/(recordSeconds*1000)),room=roomById(recordRooms[Math.floor(progress*recordRooms.length)]),x=(room.bounds[0]+room.bounds[2])/2,z=(room.bounds[1]+room.bounds[3])/2,angle=(progress*recordRooms.length%1)*.7-.35;p.set(x+Math.sin(angle)*2.7,2.1,z+Math.cos(angle)*2.7);target.set(x,2.35,z);}
+ else if(portrait){
+  const pose=house.residentPose(portrait.resident.id),current=portrait.resident;
+  if(pose&&(pose.seated!==current.seated||Math.abs(pose.yaw-current.yaw)>.08||pose.position.some((value,index)=>Math.abs(value-current.position[index])>.04))){
+   const subject={...current,...pose},view=portraitView(subject,subject.position);
+   if(view){portrait.resident=subject;portrait.view=view;}
+  }
+  p.fromArray(portrait.view.camera);target.fromArray(portrait.view.target);
+  portraitLight.position.copy(p);portraitLight.position.y+=.34;
+ }
  else if(overview){const distance=inspection?Math.max(11,8/camera.aspect):Math.max(42,31/camera.aspect),angle=recording?captureAngle+(time-recordStart)*.00013:orbit;const y=Math.sin(elevation)*distance,z=Math.cos(elevation)*distance;target.set(inspection?7.8:0,inspection?1.05:.3,inspection?10.35:-3.6);p.set(target.x+Math.sin(angle)*z,target.y+y,target.z+Math.cos(angle)*z);}
  else{const desired=new THREE.Vector3(player.x,1.64,player.z);if(transition){const progress=Math.min(1,(time-transition.at)/600),smooth=progress*progress*(3-2*progress);p.lerpVectors(transition.from,desired,smooth);if(progress===1)transition=null;}else p.copy(desired);const lookYaw=yaw+(recording?Math.sin((time-recordStart)*.0004)*.16:0);target.set(p.x+Math.sin(lookYaw)*Math.cos(pitch),p.y+Math.sin(pitch),p.z-Math.cos(lookYaw)*Math.cos(pitch));}
  camera.lookAt(target);
@@ -80,6 +126,7 @@ function renderNow(time){if(!renderer||!house)return;cameraFrame(time);house.upd
 function screenshot(){renderNow(performance.now());return canvas.toDataURL('image/png');}
 async function record(seconds=8,rooms=[],shots){
  if(recording)throw Error('Ya hay una grabación en curso.');
+ if(portrait)exitPortrait();
  if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('Este navegador no permite grabar el lienzo. Puedes exportar una imagen PNG.');
  const mime=['video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type));if(!mime)throw Error('No hay un formato de vídeo compatible en este navegador.');
  const validatedShots=validateFilmShots(shots);
@@ -97,7 +144,7 @@ function tick(now){
  if(disposed)return;frame=requestAnimationFrame(tick);
  const rawDelta=last?Math.max(0,(now-last)/1000):0,delta=Math.min(.045,rawDelta);last=now;
  if(document.hidden||(paused&&!recording))return;
- if(!overview&&!recording){
+ if(!overview&&!recording&&!portrait){
   const forward=(keys.has('w')||keys.has('arrowup')?1:0)-(keys.has('s')||keys.has('arrowdown')?1:0)-stick.y;
   const side=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0)+stick.x;
   if(forward||side){transition=null;const {dx,dz}=navigationVector(yaw,forward,side,(keys.has('shift')?4.2:2.7)*delta);player=movePlayer(player,dx,dz,{walls:house.solids});const id=roomAt(player.x,player.z);if(id)updateRoom(id);}
@@ -111,11 +158,11 @@ function dispose(){if(disposed)return;atlasMode?.dispose();atlasLayer?.dispose()
 for(const room of ROOMS){const button=document.createElement('button');button.type='button';button.dataset.room=room.id;button.textContent=room.short;button.setAttribute('aria-label','Ir a '+room.title);button.setAttribute('aria-pressed','false');listen(button,'click',()=>teleport(room.id));$('roomnav').append(button);}
 listen($('overview'),'click',()=>{atlasMode?.deactivate();setOverview(true);resize();});listen($('walk'),'click',()=>{teleport(currentRoom);resize();});listen($('interact'),'click',interact);listen($('retry'),'click',()=>location.reload());
 listen(window,'resize',resize);
-listen(canvas,'pointerdown',event=>{if(drag||event.button>0)return;canvas.focus();canvas.setPointerCapture(event.pointerId);drag={id:event.pointerId,x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,moved:false};});
+listen(canvas,'pointerdown',event=>{if(portrait||drag||event.button>0)return;canvas.focus();canvas.setPointerCapture(event.pointerId);drag={id:event.pointerId,x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,moved:false};});
 listen(canvas,'pointermove',event=>{if(!drag||drag.id!==event.pointerId||paused)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>6)drag.moved=true;drag.x=event.clientX;drag.y=event.clientY;if(overview){orbit-=dx*.006;elevation=Math.max(.4,Math.min(1.1,elevation+dy*.004));}else{yaw-=dx*.005;pitch=Math.max(-.9,Math.min(.9,pitch-dy*.004));}transition=null;});
 listen(canvas,'pointerup',event=>{if(!drag||drag.id!==event.pointerId)return;const clicked=!drag.moved;drag=null;if(clicked&&house&&!paused){if(atlasMode?.mode==='atlas'){const vertex=atlasLayer.pick({raycaster,camera,ndc:[event.clientX/innerWidth*2-1,-event.clientY/innerHeight*2+1]});const destination=atlasLayer.roomForVertex(vertex);if(destination){atlasMode.deactivate();teleport(destination);resize();}return;}raycaster.setFromCamera(new THREE.Vector2(event.clientX/innerWidth*2-1,-event.clientY/innerHeight*2+1),camera);const hit=raycaster.intersectObjects(house.interactive.filter(item=>item.visible),false)[0];if(hit){if(hit.object.userData.residentId){inspectResidentHit(hit);return;}if(houseFunction(hit.object.userData.functionId)){if(!functionHitAllowed(hit)){if(overview){teleport(hit.object.userData.room);resize();}else $('room-subtitle').textContent='Acércate al objeto para interactuar.';return;}send('function',{id:hit.object.userData.functionId});return;}const id=hit.object.userData.room;if(!overview&&currentRoom===id)interact();else{teleport(id);resize();}}}});
 for(const type of ['pointercancel','lostpointercapture'])listen(canvas,type,()=>drag=null);
-listen(document,'keydown',event=>{const key=event.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key))event.preventDefault();if(paused)return;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)&&overview){teleport(currentRoom);resize();}keys.add(key);if(key==='e'&&!event.repeat)interact();if(key==='h'&&!event.repeat){if(atlasMode?.mode==='atlas')atlasMode.deactivate();else setOverview(!overview);resize();}});
+listen(document,'keydown',event=>{const key=event.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key))event.preventDefault();if(paused)return;if(portrait){if(key==='escape')exitPortrait();return;}if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)&&overview){teleport(currentRoom);resize();}keys.add(key);if(key==='e'&&!event.repeat)interact();if(key==='h'&&!event.repeat){if(atlasMode?.mode==='atlas')atlasMode.deactivate();else setOverview(!overview);resize();}});
 listen(document,'keyup',event=>keys.delete(event.key.toLowerCase()));listen(window,'blur',()=>{keys.clear();joystick?.reset();drag=null;});listen(document,'visibilitychange',()=>{last=0;keys.clear();joystick?.reset();drag=null;});
 listen(canvas,'webglcontextlost',event=>{event.preventDefault();paused=true;fail('El contexto gráfico se ha perdido. Recarga el entorno para continuar; tus herramientas siguen disponibles.');});
 listen(window,'message',async event=>{
@@ -125,6 +172,10 @@ listen(window,'message',async event=>{
  if(message.type==='atlas:house:atlas-mode'&&!prototype&&atlasMode){if(message.value==='enter')atlasMode.activate();else if(message.value==='leave')atlasMode.deactivate();resize();}
  if(message.type==='atlas:house:teleport'){teleport(message.room);resize();}
  if(message.type==='atlas:house:resident'){focusResident(message.id);}
+ if(message.type==='atlas:house:portrait'){
+  try{if(message.id===null)exitPortrait();else enterPortrait(message.id);}
+  catch(error){send('portrait-error',{message:error.message});}
+ }
  if(message.type==='atlas:house:evolution'){focusEvolution();}
  if(message.type==='atlas:house:work'){focusWork(message.room);}
  if(message.type==='atlas:house:creative'){applyCreative(message.value);}
@@ -134,6 +185,14 @@ listen(window,'message',async event=>{
  if(message.type==='atlas:house:processes'){processState=normalizeProcessState(message.value);processReceivedAt=performance.now();house?.setProcessState(processState);updateProcessLegend();}
  if(message.type==='atlas:house:revoke'&&urls.has(message.url)){URL.revokeObjectURL(message.url);urls.delete(message.url);}
  if(message.type==='atlas:house:destroy'){dispose();}
+ if(message.type==='atlas:house:capture-portrait'){
+  try{
+   if(!portrait||house.peopleStatus().ultra?.phase!=='ready')throw Error('La piel 4K todavía no está disponible.');
+   renderNow(performance.now());
+   const result=capturePortrait4k(renderer,house.scene,camera,canvas);
+   send('result',{requestId:message.requestId,result});
+  }catch(error){send('result',{requestId:message.requestId,error:error.message});}
+ }
  if(message.type==='atlas:house:capture'||message.type==='atlas:house:record'){
   if(!ready){send('result',{requestId:message.requestId,error:'El entorno todavía no está listo.'});return;}
   try{const result=message.type==='atlas:house:capture'?screenshot():await record(message.seconds,message.rooms,message.shots);send('result',{requestId:message.requestId,result});}catch(error){send('result',{requestId:message.requestId,error:error.message||'No se pudo exportar.'});}
@@ -143,8 +202,9 @@ listen(window,'pagehide',dispose);
 try{
  const engine=await createRenderEngine(canvas,{gpu:null});renderer=engine.renderer;renderer.setPixelRatio(Math.min(devicePixelRatio||1,touch?1.35:2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
  house=buildHouse();atlasLayer=createAtlasSpiralLayer({THREE,scene:house.scene});atlasLayer.mount();atlasMode=createAtlasHouseMode({enter:()=>{priorAtlasView={overview,player:{...player},yaw,pitch,orbit,elevation};setOverview(true);orbit=.55;elevation=.78;atlasLayer.show();send('atlas-mode',{mode:'atlas'});},leave:()=>{atlasLayer.hide();if(priorAtlasView){const view=priorAtlasView;setOverview(view.overview);player=view.player;yaw=view.yaw;pitch=view.pitch;orbit=view.orbit;elevation=view.elevation;}send('atlas-mode',{mode:'house'});},renderFrame:()=>{}});try{disposeEnvironment=installEnvironment(renderer,house.scene);}catch{console.warn('No se pudo preparar la reflexión de entorno; se conserva la iluminación directa.');}photographicSurfaces=loadPhotographicSurfaces(house.scene,{mobile:touch});canvas.dataset.surfaces='loading';void photographicSurfaces.ready.then(loaded=>{if(!disposed&&loaded)canvas.dataset.surfaces='generated-pbr';}).catch(()=>{if(!disposed)canvas.dataset.surfaces='procedural';});void loadPhotographicEnvironment(renderer,house.scene,{isActive:()=>!disposed}).then(cleanup=>{if(!cleanup)return;if(disposed){cleanup();return;}disposeEnvironment?.();disposeEnvironment=cleanup;canvas.dataset.environment='generated-panorama';}).catch(()=>{if(!disposed)canvas.dataset.environment='procedural';});if(touch)house.sun.shadow.mapSize.set(1024,1024);house.setProcessState(processState);quality=createAdaptiveQuality({maxPixelRatio:Math.min(devicePixelRatio||1,touch?1.35:2),initialPixelRatio:renderer.getPixelRatio(),minPixelRatio:Math.min(.85,renderer.getPixelRatio()),maxPeople:coarse?1:2,mobile:coarse});
+ house.scene.add(portraitLight);
  if(!prototype)void fetch('./initial-creative.json',{cache:'no-cache'}).then(response=>response.ok?response.json():null).then(value=>applyCreative(value,'retained')).catch(()=>{});
-setOverview(true);resize();joystick=new CircularJoystick($('joystick'),{enabled:()=>!paused&&!overview,onChange:value=>{stick=value;$('joystick').setAttribute('aria-valuenow',String(Math.round(value.strength*100)));}});frame=requestAnimationFrame(tick);
+setOverview(true);resize();joystick=new CircularJoystick($('joystick'),{enabled:()=>!paused&&!overview&&!portrait,onChange:value=>{stick=value;$('joystick').setAttribute('aria-valuenow',String(Math.round(value.strength*100)));}});frame=requestAnimationFrame(tick);
 }catch(error){fail('No ha sido posible iniciar WebGL 2 en este navegador. Abre Atlas en Safari o Chrome y vuelve a intentarlo.');console.error('Atlas house renderer:',error);}
 
 async function readLiving(){if(prototype||disposed||!house)return;try{const response=await fetch('/api/living',{cache:'no-store'});if(response.ok){const value=await response.json();if(!disposed)house.setLivingState(value);}}catch{}}

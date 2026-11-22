@@ -3,7 +3,7 @@ import {HOUSE_FUNCTIONS,houseFunction} from '../public/house/functional-world.js
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowUpRight,AudioLines,Brain,Clapperboard,FlaskConical,Gamepad2,Home,Languages,Menu,MessageCircle,Orbit,Share2,ShieldCheck,Wrench,X,type LucideIcon} from 'lucide-react';
-import HouseScene,{HOUSE_ROOMS,type HouseAPI,type HousePerformance,type HouseRoom,type HouseInstallation,type HouseIcarusStatus} from './house-scene';
+import HouseScene,{HOUSE_ROOMS,type HouseAPI,type HousePeopleStatus,type HousePerformance,type HouseRoom,type HouseInstallation,type HouseIcarusStatus} from './house-scene';
 import LivingWorld from './living-world';
 import ResidentPersonality from './resident-personality';
 import HouseWorkLoop,{type HouseWorkUpdate} from './house-work-loop';
@@ -46,13 +46,13 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const [cloudJourneys,setCloudJourneys]=useState<{at:string;icarus:HouseIcarusStatus|null}|null>(null);
  useEffect(()=>{let active=true;const controller=new AbortController();const read=async()=>{try{const r=await fetch('/api/icarus',{cache:'no-store',signal:controller.signal});if(!r.ok)return;const p=await r.json() as {at:string;icarus:unknown};if(active)setCloudJourneys({at:p.at,icarus:normalizeIcarusJourneys(p.icarus) as HouseIcarusStatus|null});}catch{}};void read();const timer=setInterval(read,8000);return()=>{active=false;controller.abort();clearInterval(timer);};},[]);
  const [livingJob,setLivingJob]=useState<{status:string;actorId:string;room:string;at:string}|undefined>(),[livingBusy,setLivingBusy]=useState(false);
- const [peopleStatus,setPeopleStatus]=useState<{enabled:boolean;active:number;loading:boolean;failed:boolean;limit:number}|null>(null);
+ const [peopleStatus,setPeopleStatus]=useState<HousePeopleStatus|null>(null);
  const [worldMemory,setWorldMemory]=useState<WorldState|null>(null);
  useEffect(()=>{let active=true;const controller=new AbortController();const load=async()=>{if(document.hidden)return;try{const response=await fetch('/api/autonomy',{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(8000)])});if(response.ok){const value=await response.json() as {control?:{spiral?:{world?:WorldState}}};if(active)setWorldMemory(value.control?.spiral?.world||null);}}catch{}};void load();const timer=setInterval(()=>void load(),30000);return()=>{active=false;controller.abort();clearInterval(timer);};},[]);
  const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false);
  const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null);
  const charterDialog=useRef<HTMLDialogElement>(null);const [capturing,setCapturing]=useState(false),[hudHidden,setHudHidden]=useState(false);
- const captureView=async()=>{if(!api||capturing)return;setCapturing(true);try{const url=await api.capture();const link=document.createElement('a');link.href=url;link.download='lia-casa.png';link.click();}catch(e){setNotice(e instanceof Error?e.message:'No se pudo capturar.');}finally{setCapturing(false);}};
+ const captureView=async(residentId?:string)=>{if(!api||capturing)return;setCapturing(true);try{const url=await(residentId?api.capturePortrait():api.capture());const link=document.createElement('a');link.href=url;link.download=residentId?`lia-${residentId}-4k.png`:'lia-casa.png';link.click();}catch(e){setNotice(e instanceof Error?e.message:'No se pudo capturar.');}finally{setCapturing(false);}};
  const [spiralOpen,setSpiralOpen]=useState(false);
  const [activeFunction,setActiveFunction]=useState<ReturnType<typeof houseFunction>>(null);
  const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|null>(null),[status,setStatus]=useState<Status|null>(null),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState(''),[sceneError,setSceneError]=useState('');
@@ -71,7 +71,22 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const activateFunction=(id:string)=>{const fn=houseFunction(id);if(!fn)return;api?.teleport(fn.room as HouseRoom);open(fn.room as HouseRoom);setActiveFunction(fn);};
  const close=useCallback(()=>{setActiveFunction(null);setWorkspace(null);},[]);
  const deepLinkHandled=useRef(false);
- useEffect(()=>{if(deepLinkHandled.current||!api)return;deepLinkHandled.current=true;const requested=new URLSearchParams(location.search).get('room');if(requested&&Object.hasOwn(rooms,requested)){const next=requested as HouseRoom;lastRequested.current=next;api.teleport(next);open(next);}},[api,open]);
+ useEffect(()=>{
+  if(deepLinkHandled.current||!api)return;
+  deepLinkHandled.current=true;
+  const params=new URLSearchParams(location.search),id=params.get('resident');
+  const resident=id?residentById(id):null;
+  if(resident?.archetype==='human'&&params.get('detail')==='4k'){
+   setEntered(true);setRoom(resident.room as HouseRoom);setSelectedResident(resident.id);api.portrait(resident.id);return;
+  }
+  const requested=params.get('room');
+  if(requested&&Object.hasOwn(rooms,requested)){const next=requested as HouseRoom;lastRequested.current=next;api.teleport(next);open(next);}
+ },[api,open]);
+ useEffect(()=>{
+  if(!api||!peopleStatus?.ultra)return;
+  const exit=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!workspace&&!residentsOpen&&!menu&&!charterDialog.current?.open)api.portrait(null);};
+  window.addEventListener('keydown',exit);return()=>window.removeEventListener('keydown',exit);
+ },[api,peopleStatus?.ultra,workspace,residentsOpen,menu]);
  useEffect(()=>{
   const current=dialog.current;if(!current)return;
   if(workspace){if(!current.open)current.showModal();closeButton.current?.focus();}
@@ -88,7 +103,9 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const processState=useMemo(()=>{if(!houseWork)return baseProcessState;const age=baseProcessState.at?Date.now()-Date.parse(baseProcessState.at):Infinity,fresh=baseProcessState.connected&&age>=0&&age<=75000;return{...baseProcessState,processes:fresh?baseProcessState.processes:baseProcessState.processes.map(p=>({...p,state:p.state==='running'?'waiting' as const:p.state,counters:undefined})),at:houseWork.at,connected:true,houseWork:houseWork.visual};},[baseProcessState,houseWork]);
  const creative=useMemo(()=>readCreativePreview(status?.capabilities?.processTelemetry?.experience?.creative),[status?.capabilities?.processTelemetry?.experience?.creative]);
  const selectedPerson=selectedResident?residentById(selectedResident):null;
- const inspectResident=(id:string)=>{if(!residentById(id))return;setEntered(true);setSelectedResident(id);setRoomDetailsOpen(true);setResidentsOpen(false);};
+ const inspectResident=(id:string)=>{if(!residentById(id))return;setEntered(true);if(selectedResident!==id)setRoomDetailsOpen(true);setSelectedResident(id);setResidentsOpen(false);};
+ const activePortrait=peopleStatus?.ultra;
+ const portrait=activePortrait&&activePortrait.id===selectedPerson?.id?activePortrait:null;
  const residentVocation=selectedPerson?vocationFor(selectedPerson.id):null;
  const residentToolRoom:HouseRoom=selectedPerson?(({conversation:'salon',music:'music',video:'cinema',games:'games','3d':'body',research:'lab',programming:selectedPerson.room==='refutation'?'refutation':'body',language:'language'} as Record<string,HouseRoom>)[residentVocation?.focus||'']||selectedPerson.room as HouseRoom):room;
  const residentTool=selectedPerson&&residentVocation?.focus!=='programming'?(HOUSE_FUNCTIONS.find(fn=>fn.owner===selectedPerson.id&&fn.room===residentToolRoom&&fn.tool!=='memory')||HOUSE_FUNCTIONS.find(fn=>fn.room===residentToolRoom&&fn.tool!=='memory')):null;
@@ -114,7 +131,7 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const consultationLabel=!processState.connected?'Sin señal reciente':!latestConsultation?'Esperando una consulta registrada':latestConsultation.phase==='seeking'?`${traveler?.name||'Atlas'} prepara su consulta`:latestConsultation.phase==='consulting'?`${traveler?.name||'Atlas'} consulta a Ícaro`:latestConsultation.phase==='returning'?`${traveler?.name||'Atlas'} vuelve con referencias`:'La consulta necesita otro intento';
 
  return <main className={styles.house+(hudHidden?' '+styles.cleanView:'')}>
-  <div className={styles.scene}><HouseScene onAtlasModeChange={value=>{setSpiralOpen(value);if(value)setEntered(true);}} onFunction={activateFunction} onPeopleStatus={setPeopleStatus} creative={creative} onCreativeApplied={setInstallation} onResidentFocus={inspectResident} processState={processState} paused={false} onRoomChange={next=>{setRoomDetailsOpen(false);setRoom(next);}} onInteract={open} onReady={ready} onPerformance={setPerformance} onError={message=>{setSceneError(message);setPerformance(null);}}/></div>
+  <div className={styles.scene}><HouseScene onAtlasModeChange={value=>{setSpiralOpen(value);if(value)setEntered(true);}} onFunction={activateFunction} onPeopleStatus={setPeopleStatus} creative={creative} onCreativeApplied={setInstallation} onResidentFocus={inspectResident} onPortraitError={setNotice} processState={processState} paused={false} onRoomChange={next=>{setRoomDetailsOpen(false);setRoom(next);}} onInteract={open} onReady={ready} onPerformance={setPerformance} onError={message=>{setSceneError(message);setPerformance(null);}}/></div>
   <div className={styles.vignette}/>
   <header className={styles.topbar}>
    <a className={styles.brand} href="/" aria-label="Lía, la casa de ideas"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="22" stroke="currentColor" opacity=".23"/><path d="m24 9 16 28H8L24 9Z" stroke="currentColor" opacity=".6"/><path d="M12 25q12-14 24 0-12 14-24 0Z" stroke="currentColor"/><circle cx="24" cy="25" r="4" fill="currentColor"/></svg><span>Lía<small>ATLAS · ION · ÍCARO</small></span></a>
@@ -138,6 +155,11 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
    <div className={styles.eyebrow}><span>△</span> {entered?'ENTRAS EN LÍA':'ATLAS · ION · ÍCARO'}</div>
    <h1>{entered?(selectedPerson?.name||active.title):<>La pirámide vive<br/>en Lía.</>}</h1>
    <p>{entered?((selectedPerson?vocationFor(selectedPerson.id)?.title||selectedPerson.role:null)||active.description):'Atlas es la mente, Ion el cuerpo e Ícaro el cielo. Los tres desarrollan a Lía en este entorno compartido. Recorre sus habitaciones o elige adónde quieres ir.'}</p>
+   {entered&&selectedPerson?.archetype==='human'&&<div className={styles.portraitControls}>
+    <button type="button" disabled={!api} aria-pressed={!!portrait} onClick={()=>{setRoomDetailsOpen(false);api?.portrait(portrait?null:selectedPerson.id);}}>{portrait?'Cerrar primer plano':'Primer plano 4K'}</button>
+    {portrait?.phase==='ready'&&<button type="button" disabled={capturing} onClick={()=>void captureView(selectedPerson.id)}>{capturing?'Exportando…':'Descargar PNG 4K'}</button>}
+    {portrait&&<span role="status">{portrait.phase==='ready'?'Piel 4096 × 4096':portrait.phase==='loading'?'Cargando piel 4K…':'Piel 4K no disponible. Cierra el primer plano para reintentar.'}</span>}
+   </div>}
    {!entered?<button className={styles.enter} type="button" onClick={()=>walk('salon')}>Entrar en la casa <ArrowUpRight size={15}/></button>:<button className={styles.overview} type="button" onClick={overview}><Home size={13}/> Ver toda la casa</button>}
    {entered&&<button className={styles.detailsToggle} type="button" aria-expanded={roomDetailsOpen} aria-controls="atlas-house-room-details" onClick={()=>setRoomDetailsOpen(value=>!value)}>{roomDetailsOpen?'Ocultar detalles':'Ver detalles'} <span aria-hidden="true">{roomDetailsOpen?'−':'+'}</span></button>}
    <div className={styles.roomDetails} id="atlas-house-room-details" data-expanded={roomDetailsOpen}>

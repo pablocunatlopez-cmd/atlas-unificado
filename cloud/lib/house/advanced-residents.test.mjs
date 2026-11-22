@@ -17,6 +17,32 @@ const candidates=[{id:'language-object',archetype:'human',seated:false,position:
 const camera={position:{x:12,y:1.64,z:-11}};
 const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
 
+test('an explicit 4K portrait renders an articulated human even with the automatic detail budget at zero',async()=>{
+ const actor=residentById('music-console'),parent=new THREE.Scene(),base=await bundle(),map=new THREE.Texture(),normalMap=new THREE.Texture();
+ let releaseCount=0;
+ for(const texture of [map,normalMap])texture.addEventListener('dispose',()=>releaseCount++);
+ const manager=createAdvancedResidents(parent,{enabled:false,limit:0,loadAssets:async()=>base,loadUltra:async()=>({map,normalMap})});
+ try{
+  manager.setPortrait(actor.id);
+  assert.deepEqual(manager.status().ultra,{id:actor.id,phase:'loading'});
+  await flush();
+  manager.prepare(camera,[actor]);
+  assert.equal(manager.update(actor,{time:1}),true);
+  const resident=parent.getObjectByName('advanced-'+actor.id);
+  let skin;resident.traverse(object=>{if(object.userData.anatomyPart==='skin')skin=object;});
+  assert.deepEqual(manager.status().ultra,{id:actor.id,phase:'ready'});
+  assert.equal(resident.userData.posture,'seated');
+  assert.equal(skin.material.map,map);
+  assert.equal(skin.material.normalMap,normalMap);
+  manager.setPortrait(null);
+  assert.equal(skin.material.map,base.textures.skin);
+  assert.equal(skin.material.normalMap,base.textures.normal);
+  assert.equal(releaseCount,2);
+  manager.prepare(camera,[actor]);
+  assert.deepEqual(manager.status().active,[]);
+ }finally{manager.dispose();}
+});
+
 test('detail selection keeps its budget, actual room and species while admitting seated humans',()=>{
  assert.equal(selectAdvancedResidents(candidates,camera).length,2);assert.equal(selectAdvancedResidents(candidates,camera,{limit:1}).length,1);
  assert.deepEqual(selectAdvancedResidents(candidates,{position:{x:12,y:20,z:-11}}),[]);

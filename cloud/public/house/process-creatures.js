@@ -1,7 +1,9 @@
 import {furnitureBox} from './surface-materials.js';
 import {bindResidentSurfaces,residentSurface} from './resident-surfaces.js';
 import {createWorkCourier} from './work-courier.js?v=housework1';
-import {createAdvancedResidents} from './advanced-residents.js?v=characters2';
+import {createAdvancedResidents} from './advanced-residents.js?v=ultra7';
+import {createCompactResidents} from './compact-residents.js';
+import {createCreatureModels} from './creature-models.js';
 import {createLivingPresentations} from './living-presentation.js';
 import * as THREE from './vendor/three.module.js';
 import {roomAt} from './layout.js';
@@ -20,7 +22,7 @@ const dark='#243d43',cream='#e9dfc8',wood='#936d47';
 // Eighteen furnished stations and six quiet cinema seats share two actor draws.
 // Their existence is independent of connectivity; work gestures require a fresh
 // report from an explicitly assigned real process. Presence never adds learning.
-export function createProcessCreatures(scene,textures,{now=Date.now,walls,reducedMotion=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches}={}){
+export function createProcessCreatures(scene,textures,{now=Date.now,walls,reducedMotion=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches,loadCompact,characterMeshes=typeof window!=='undefined'}={}){
  const group=new THREE.Group();group.name='atlas-residents';group.userData.roster=RESIDENTS;scene.add(group);
  const box=furnitureBox(1,1,1),sphere=new THREE.SphereGeometry(1,16,12);
  const bodies=new THREE.InstancedMesh(box,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.72,metalness:.08}),RESIDENTS.length*BOX_PARTS);
@@ -34,8 +36,11 @@ export function createProcessCreatures(scene,textures,{now=Date.now,walls,reduce
  for(const mesh of [bodies,rounds,marks]){mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;group.add(mesh);}
  bodies.castShadow=true;rounds.castShadow=true;
  let telemetry=normalizeProcessState(null),receivedAt=-Infinity,sourceAge=Infinity,actor,motion,actorIndex;
- const renderedPositions=new Map();
+ const renderedPoses=new Map();
  const courier=createWorkCourier({now,walls,reducedMotion}),journeys=createSkyJourneys({now,walls,reducedMotion}),presentations=createLivingPresentations({walls,reducedMotion}),advanced=createAdvancedResidents(group,{reducedMotion});
+ const compact=characterMeshes?createCompactResidents(group,{load:loadCompact}):null;
+ const creatures=characterMeshes?createCreatureModels(group):null;
+ compact?.preload();
  const dummy=new THREE.Object3D(),colour=new THREE.Color(),yawRotation=new THREE.Quaternion(),axis=new THREE.Vector3(0,1,0),cameraPoint=new THREE.Vector3(),actorOrigin=new THREE.Vector3();
  const labels=RESIDENTS.filter(resident=>!resident.cosmetic).map(resident=>{
   const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;
@@ -130,15 +135,18 @@ export function createProcessCreatures(scene,textures,{now=Date.now,walls,reduce
   }
  }
  return {
-  setPeopleBudget:value=>advanced.setBudget(value),setPeopleDetail:value=>advanced.setEnabled(value),peopleStatus:()=>advanced.status(),dispose:()=>advanced.dispose(),
+  setPeopleBudget:value=>advanced.setBudget(value),setPeopleDetail:value=>advanced.setEnabled(value),setPortrait:id=>advanced.setPortrait(id),peopleStatus:()=>({...advanced.status(),compact:compact?.status()}),dispose(){advanced.dispose();compact?.dispose();creatures?.dispose();},
   setLivingState:value=>presentations.setState(value),
   setState(value,at=performance.now()){telemetry=normalizeProcessState(value);receivedAt=Number.isFinite(at)?at:-Infinity;sourceAge=telemetry.at?now()-Date.parse(telemetry.at):Infinity;journeys.setState(value?.icarus,{connected:telemetry.connected,sourceAgeMs:sourceAge,receivedAtMs:receivedAt});courier.setState(value?.houseWork,{connected:telemetry.connected,sourceAgeMs:sourceAge,receivedAtMs:receivedAt});},
-  positionForResident(id){return renderedPositions.get(id)||courier.positionForResident(id)||journeys.positionForResident(id)||residentById(id)?.position.slice()||null;},
+  poseForResident:id=>renderedPoses.get(id)||null,
+  positionForResident(id){return renderedPoses.get(id)?.position||courier.positionForResident(id)||journeys.positionForResident(id)||residentById(id)?.position.slice()||null;},
   update(time,camera,viewportHeight){
    const elapsed=time*1000-receivedAt,ageMs=sourceAge<0||elapsed<0||elapsed>75000?Infinity:sourceAge+elapsed,accepted=measuredChanges(telemetry,{now:now()}),work=[];
    const courierTrip=courier.sample('language-symbol',time*1000),trips=new Map(RESIDENTS.map(resident=>[resident.id,resident.id==='language-symbol'&&courierTrip?.active?courierTrip:journeys.sample(resident.id,time*1000)])),hosting=[...trips.values()].find(trip=>trip?.fresh&&trip.active&&trip.stage==='meeting');
    const frames=RESIDENTS.map((resident,index)=>{const journey=trips.get(resident.id),process=processForResident(telemetry,resident,{ageMs}),recentWork=courier.workForResident(resident.id,time*1000),delivery=courierTrip?.active&&courierTrip.fresh&&courierTrip.stage==='delivering'&&courierTrip.recipientId===resident.id,presentation=!journey?.active&&!process.workVerified&&!recentWork&&!delivery?presentations.sample(resident.id,time):null;return{resident,index,journey,process,presentation,recentWork,delivery};});
    advanced.prepare(camera,frames.map(({resident,journey,presentation})=>({...resident,seated:journey?.active||presentation?.position?false:resident.seated,position:journey?.active?journey.position:presentation?.position||resident.position})));
+   compact?.beginFrame();
+   let needsFallback=false;
    for(const frame of frames){
     const {resident,index,journey,process,presentation,recentWork,delivery}=frame;actor=journey?.active?{...resident,seated:false}:resident;actorIndex=index;actorOrigin.fromArray(journey?.position||actor.position);motion=processMotion(process,time,index*.73);yawRotation.setFromAxisAngle(axis,-(journey?.active?journey.yaw:actor.yaw));
     if(journey?.active){motion.travel=0;if(journey.moving&&journey.fresh){motion.limb=Math.sin(time*7)*.35;motion.leftArm=-Math.sin(time*7)*.22;motion.rightArm=Math.sin(time*7)*.22;motion.bob=Math.abs(Math.sin(time*7))*.025;}else{motion.limb=0;motion.bob=0;motion.leftArm=0;motion.rightArm=0;}}
@@ -147,12 +155,15 @@ export function createProcessCreatures(scene,textures,{now=Date.now,walls,reduce
     if(actor.id==='sky-agents'&&hosting){motion.wing=Math.sin(time*2)*.16;motion.head=Math.sin(time)*.12;}
     if(reducedMotion){motion.travel=0;motion.bob=0;motion.limb=0;motion.head=0;motion.leftArm=process.workVerified?.18:0;motion.rightArm=process.workVerified?.28:0;motion.wing=0;motion.tilt=0;motion.tool=0;}
     for(let part=0;part<BOX_PARTS;part++)hide(bodies,index*BOX_PARTS+part);for(let part=0;part<ROUND_PARTS;part++)hide(rounds,index*ROUND_PARTS+part);
-    const detailed=advanced.update(actor,{position:actorOrigin.toArray(),yaw:journey?.active?journey.yaw:presentation?.position?presentation.yaw:actor.yaw,moving:journey?.active?journey.moving&&journey.fresh:!!presentation?.moving,working:process.workVerified,time});
-    if(actor.archetype==='human'){if(!detailed)human();}else if(actor.archetype==='robot')robot();else if(actor.archetype==='animal')animal();else bird();
-    renderedPositions.set(resident.id,actorOrigin.toArray());
+    const pose={position:actorOrigin.toArray(),yaw:journey?.active?journey.yaw:presentation?.position?presentation.yaw:actor.yaw,moving:journey?.active?journey.moving&&journey.fresh:!!presentation?.moving,working:process.workVerified,time,motion,reducedMotion};
+    const detailed=advanced.update(actor,pose);
+    const mesh=detailed||compact?.update(actor,pose)||creatures?.update(actor,pose)||false;
+    if(!mesh){needsFallback=true;if(actor.archetype==='human')human();else if(actor.archetype==='robot')robot();else if(actor.archetype==='animal')animal();else bird();}
+    renderedPoses.set(resident.id,{position:pose.position,yaw:pose.yaw,seated:actor.seated&&!pose.moving});
     work.push({houseWork:recentWork?{eventId:recentWork.eventId,status:recentWork.status,scripted:true}:delivery?{eventId:courierTrip.eventId,delivery:true,scripted:true}:null,presentation:presentation?{artifactId:presentation.artifactId,scripted:true}:null,detailed,id:actor.id,processId:process.id,state:process.state,workVerified:process.workVerified,phase:process.phase||null,...(journey?{journey:{id:journey.eventId,stage:journey.stage,recorded:journey.recorded,fresh:journey.fresh}}:{})});
     const entry=labels.find(label=>label.resident.id===actor.id);if(entry){const height=actor.archetype==='animal'?1.70:actor.archetype==='bird'?1.93:actor.seated?1.94:2.02;entry.sprite.position.set(actorOrigin.x,actorOrigin.y+height,actorOrigin.z);label(entry,process,journey,actor.id==='sky-agents'?hosting:null);}
    }
+   bodies.visible=rounds.visible=needsFallback;
    bodies.userData.work=work;group.userData.workingResidents=work.filter(item=>item.workVerified).map(item=>item.id);
    const visible=accepted===null?0:Math.min(3,accepted);marks.visible=visible>0;marks.userData.acceptedChanges=accepted;
    for(let index=0;index<3;index++){dummy.position.set(visible>index?-4.6:0,visible>index?.13+index*.21:-30,-13.1);dummy.scale.set(visible>index?.26:.00001,visible>index?.18:.00001,visible>index?.26:.00001);dummy.rotation.set(0,index*.2,0);dummy.updateMatrix();marks.setMatrixAt(index,dummy.matrix);}
