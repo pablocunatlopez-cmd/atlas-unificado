@@ -15,6 +15,8 @@ import * as identity from '../lib/core/identity.ts';
 import * as receiptPolicy from '../lib/collaboration/policy.ts';
 import * as world from '../lib/evolution/world.ts';
 import * as spiral from '../lib/evolution/spiral.ts';
+import * as evidenceRepository from '../lib/evidence-repository.ts';
+import * as evidenceContract from '../lib/evidence-contract.ts';
 import * as engine from '../lib/research/engine.ts';
 import * as web from '../lib/research/web.ts';
 
@@ -42,7 +44,7 @@ async function fixture(){
  class ClockDate extends Date{constructor(value?:string|number){super(value===undefined?clock.now:value);}static now(){return clock.now;}}
  const context=vm.createContext({Date:ClockDate,crypto:globalThis.crypto,structuredClone,URL,console,TextEncoder,TextDecoder,Uint8Array,setTimeout,clearTimeout});
  const modules:Record<string,Record<string,unknown>>={
-  'cloudflare:workers':{env:{DB:db}},
+  'cloudflare:workers':{env:{DB:db}},'../evidence-repository':evidenceRepository,'../evidence-contract':evidenceContract,
   './house-work-policy':workPolicy,'./house-evidence':houseEvidence,
   './foreground-tools':{...tools,performHouseTool:(mission:missions.Mission,previous?:any)=>{calls.tools.push(mission.id);return tools.performHouseTool(mission,previous);}},
   './missions':missions,'../core/identity':identity,'./policy':receiptPolicy,'../evolution/world':world,'../evolution/spiral':spiral,'../research/engine':engine,'../research/web':web,
@@ -54,7 +56,7 @@ async function fixture(){
  const module=new vm.SourceTextModule(source,{context,identifier:'house-work-server.ts'}),linked=new Map<string,vm.Module>();
  await module.link(async(specifier:string)=>{if(linked.has(specifier))return linked.get(specifier)!;const exports=modules[specifier];assert.ok(exports,'Unexpected dependency: '+specifier);const keys=Object.keys(exports);const synthetic=new vm.SyntheticModule(keys,function(){for(const key of keys)this.setExport(key,exports[key]);},{context});linked.set(specifier,synthetic);return synthetic;});
  await module.evaluate();
- const api=module.namespace as unknown as {houseWorkPayload:()=>Promise<any>;stepHouseWork:(requestId:string,sessionId?:string,epoch?:number)=>Promise<any>;houseWorkVisibility:(id:string,epoch:number,visible:boolean)=>Promise<any>;rollbackHouseArtifact:(kind:string)=>Promise<any>;houseWorkControl:(enabled:boolean)=>Promise<any>};
+ const api=module.namespace as unknown as {houseWorkPayload:()=>Promise<any>;houseWorkContext:()=>Promise<any>;stepHouseWork:(requestId:string,sessionId?:string,epoch?:number)=>Promise<any>;houseWorkVisibility:(id:string,epoch:number,visible:boolean)=>Promise<any>;rollbackHouseArtifact:(kind:string)=>Promise<any>;recordHouseEngineering:(actorId:string,receipt:unknown)=>Promise<any>;houseWorkControl:(enabled:boolean)=>Promise<any>};
  const control=()=>JSON.parse(db.raw.prepare("SELECT content FROM research_control WHERE id='main'").get()!.content as string);
  return{db,clock,calls,api,control,advance:(ms=workPolicy.HOUSE_WORK_INTERVAL+1)=>clock.now+=ms};
 }
@@ -148,4 +150,27 @@ test('the continuation callback observes a hidden tab and global pause while a s
   if(action==='hide')await f.api.houseWorkVisibility(id,2,false);else{const control=f.control();control.enabled=false;f.db.raw.prepare("UPDATE research_control SET content=?,revision=revision+1 WHERE id='main'").run(JSON.stringify(control));}
   assert.equal(await f.calls.livingBuilds[0].input.shouldContinue(),false);f.calls.livingGate.release();const result=await running;assert.equal(result.result.works.at(-1).status,'waiting');assert.equal(result.result.works.at(-1).artifactId,undefined);
  }finally{f.db.close();}}
+});
+
+test('durable published reports reach the house context, but unintegrated and unsuccessful reports cannot claim integration',async()=>{
+ const f=await fixture();try{
+  await f.api.houseWorkPayload();const repository=evidenceRepository.createEvidenceRepository(f.db as unknown as D1Database),base={contractVersion:1,taskId:'graphics-realism',processId:'creative',sourceRevision:'source-tested',completedAt:new Date(f.clock.now).toISOString(),testIds:['real-geometry'],criteria:['The reported geometry test passed.']};
+  await repository.remember({...base,artifactId:'report-published',verdict:'passed',integratedRevision:'a'.repeat(40)});
+  await repository.remember({...base,artifactId:'report-only-tested',verdict:'passed'});
+  for(const verdict of ['failed','rejected','unknown'])await repository.remember({...base,artifactId:'report-'+verdict,verdict,integratedRevision:'b'.repeat(40)});
+  const persisted=await evidenceRepository.createEvidenceRepository(f.db as unknown as D1Database).list();assert.equal(persisted.length,5,'The context must read durable SQLite rows, not an in-memory fixture.');
+  const context=await f.api.houseWorkContext();assert.equal(context.integrated.length,1);assert.equal(context.integrated[0].artifactId,'report-published');assert.equal(context.integrated[0].revision,'a'.repeat(40));assert.equal(context.integrated[0].taskId,base.taskId);assert.match(context.integrated[0].claim,/no es verificación independiente/);assert.equal(f.calls.tools.length,0);assert.equal(f.calls.consults.length,0);
+ }finally{f.db.close();}
+});
+
+test('reading similar integration evidence never closes engineering work; an explicit receipt only closes its exact owner',async()=>{
+ const f=await fixture();try{
+  await f.api.houseWorkPayload();const first=missions.missionFor('room:games')!,other=missions.missionFor('module:graphics')!,state=JSON.parse(f.db.raw.prepare("SELECT content FROM house_work WHERE id='main'").get()!.content as string),at=new Date(f.clock.now).toISOString();
+  for(const m of [first,other])state.engineering[m.id]={id:'work-'+m.id,actorId:m.id,title:'Gráficos de ERAS y de la casa',targetProject:m.targetProject,targetFiles:[...m.targetFiles],question:m.question,sourceUrls:[],at,status:'open'};
+  f.db.raw.prepare("UPDATE house_work SET content=? WHERE id='main'").run(JSON.stringify(state));
+  const repository=evidenceRepository.createEvidenceRepository(f.db as unknown as D1Database);await repository.remember({contractVersion:1,taskId:first.id,processId:'creative',artifactId:'graphics-house-integration',sourceRevision:'source-tested',completedAt:at,verdict:'passed',testIds:['graphics-geometry'],criteria:['Gráficos de ERAS y de la casa'],integratedRevision:'c'.repeat(40)});
+  const before=f.db.raw.prepare("SELECT content FROM house_work WHERE id='main'").get()!.content,context=await f.api.houseWorkContext();assert.deepEqual(new Set(context.pending.map((p:any)=>p.actor)),new Set([first.id,other.id]));assert.equal(f.db.raw.prepare("SELECT content FROM house_work WHERE id='main'").get()!.content,before,'Context retrieval must not reconcile work by similar text or IDs.');
+  await f.api.recordHouseEngineering(first.id,{project_id:receiptPolicy.ICARUS_PROJECTS.atlas,commit_sha:'c'.repeat(40),version_id:'fixture-version',summary:'Explicit integration receipt for this engineering owner.',checks:[{name:'Actual fixture geometry check',passed:true}]});
+  const after=await f.api.houseWorkContext();assert.deepEqual(Array.from(after.pending,(p:any)=>p.actor),[other.id]);const stored=JSON.parse(f.db.raw.prepare("SELECT content FROM house_work WHERE id='main'").get()!.content as string);assert.equal(stored.engineering[first.id].status,'reported-applied');assert.equal(stored.engineering[other.id].status,'open');
+ }finally{f.db.close();}
 });

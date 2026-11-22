@@ -49,3 +49,12 @@ test('a new submission in the same conversation invalidates an older pending can
  const old=f.cancel(),next=handler('submit',f.context)();assert.equal(f.context.sequence.current,2);f.calls.length=0;cancelled.resolve({status:'cancelled'});await old;assert.deepEqual(f.calls,[]);
  submitted.resolve({jobId:'new',conversationId:'same-thread',status:'queued'});await next;assert.equal(f.state.job.id,'new');assert.equal(f.state.messages.filter(m=>m.content==='siguiente encargo').length,1);
 });
+
+test('retry identity includes the internet choice while identical retries keep their ID',async()=>{
+ for(const [before,internet] of [[false,false],[true,true],[false,true],[true,false],[undefined,false]]){
+  const f=fixture(),sent=[];Object.assign(f.context,{signedIn:true,draft:'mismo encargo',busy:false,internet,sending:{current:false},nearBottom:{current:false},messages:[],conversationId:'same-thread',title:'contexto',crypto:{randomUUID:()=> 'fresh-request'},setSubmitting(){},retry:{current:{requestId:'previous-request',message:'mismo encargo',conversationId:'same-thread',...(before===undefined?{}:{internet:before})}}});
+  f.context.readJson=async(url,options)=>{sent.push(JSON.parse(options.body));throw Error('transport interrupted');};
+  await handler('submit',f.context)();
+  assert.equal(sent.length,1);assert.equal(sent[0].internet,internet);assert.equal(sent[0].requestId,before===internet?'previous-request':'fresh-request');assert.equal(f.context.retry.current.internet,internet);
+ }
+});

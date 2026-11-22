@@ -1,4 +1,4 @@
-export const PROGRAM_VERSION='atlas-program-tools-1';
+export const PROGRAM_VERSION='atlas-program-tools-3';
 // Every function is self-contained, so its exact implementation can be exported.
 function sortNumbers(input){
  if(!Array.isArray(input)||input.length>128||input.some(v=>typeof v!=='number'||!Number.isFinite(v)))throw Error('Se requiere una lista de hasta 128 números finitos.');
@@ -10,9 +10,14 @@ function deduplicate(input){
 }
 function statistics(input){
  if(!Array.isArray(input)||input.length>128||input.some(v=>typeof v!=='number'||!Number.isFinite(v)))throw Error('Se requiere una lista de hasta 128 números finitos.');
- const count=input.length,total=input.reduce((sum,v)=>sum+v,0);if(!Number.isFinite(total))throw Error('El total supera el rango numérico.');
- const sorted=[...input].sort((a,b)=>a-b);
- return{count,total,mean:count?total/count:null,min:count?sorted[0]:null,max:count?sorted[count-1]:null,median:count?(count%2?sorted[(count-1)/2]:sorted[count/2-1]/2+sorted[count/2]/2):null};
+ const count=input.length;let sum=0,correction=0;
+ // Neumaier compensation preserves small terms lost when opposite large values cancel.
+ // Intermediate overflow is still rejected: this is bounded floating-point arithmetic.
+ for(const value of input){const next=sum+value;if(!Number.isFinite(next))throw Error('El total supera el rango numérico.');correction+=Math.abs(sum)>=Math.abs(value)?(sum-next)+value:(value-next)+sum;sum=next;}
+ const total=sum+correction;if(!Number.isFinite(total))throw Error('El total supera el rango numérico.');
+ const sorted=[...input].sort((a,b)=>a-b);let median=null;
+ if(count){const middle=Math.floor(count/2);if(count%2)median=sorted[middle];else{const lower=sorted[middle-1],upper=sorted[middle],pair=lower+upper;median=Number.isFinite(pair)?pair/2:lower/2+upper/2;}}
+ return{count,total,mean:count?total/count:null,min:count?sorted[0]:null,max:count?sorted[count-1]:null,median};
 }
 function countValues(input){
  if(!Array.isArray(input)||input.length>128||input.some(v=>v!==null&&!['string','number','boolean'].includes(typeof v)||typeof v==='number'&&!Number.isFinite(v)))throw Error('Se requiere una lista de hasta 128 valores simples.');

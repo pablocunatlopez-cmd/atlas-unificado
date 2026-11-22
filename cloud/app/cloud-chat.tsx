@@ -101,7 +101,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
  const[error,setError]=useState('');const[notice,setNotice]=useState('');const[copied,setCopied]=useState(false);
  const inputRef=useRef<HTMLTextAreaElement>(null),scrollRef=useRef<HTMLDivElement>(null),bottomRef=useRef<HTMLDivElement>(null);
  const sequence=useRef(0),pollAbort=useRef<AbortController|null>(null),mounted=useRef(true),sending=useRef(false),nearBottom=useRef(true),pendingText=useRef('');
- const retry=useRef<{requestId:string;message:string;conversationId:string|null}|null>(null);
+ const retry=useRef<{requestId:string;message:string;conversationId:string|null;internet:boolean}|null>(null);
  const busy=submitting||loadingThread||!!job;
 
  const refreshArchive=useCallback(async()=>{
@@ -171,8 +171,8 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
  async function submit(event?:FormEvent){
   event?.preventDefault();const text=draft.trim();if(!signedIn||!text||busy||sending.current)return;
   sending.current=true;setSubmitting(true);setError('');setNotice('');nearBottom.current=true;const previous=messages,current=++sequence.current;pollAbort.current?.abort();setCancelling(false);
-  const sameRetry=retry.current?.message===text&&retry.current?.conversationId===conversationId;
-  const requestId=sameRetry?retry.current!.requestId:crypto.randomUUID();retry.current={requestId,message:text,conversationId};pendingText.current=text;
+  const sameRetry=retry.current?.message===text&&retry.current?.conversationId===conversationId&&retry.current?.internet===internet;
+  const requestId=sameRetry?retry.current!.requestId:crypto.randomUUID();retry.current={requestId,message:text,conversationId,internet};pendingText.current=text;
   setMessages([...previous,{role:'user',content:text}]);
   try{
    const result=await readJson<{jobId:string;conversationId:string;status:JobStatus}>('/api/cloud/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,...(conversationId?{conversationId}:{}),requestId,internet}),signal:AbortSignal.timeout(20000)});
@@ -210,7 +210,7 @@ export default function CloudChat({signedIn,displayName,signInPath}:Props){
    <a href="/" target="_top" className={styles.brand}><Eye/><span>lía<small>El encuentro de tres entornos.</small></span></a>
    <button className={styles.newChat} type="button" onClick={newConversation} disabled={submitting}><Icon name="plus" size={17}/><span>Nueva conversación</span><span className={styles.newArrow}>↗</span></button>
    <div className={styles.sideLabel}>TU ESPACIO</div>
-   <nav className={styles.navigation} aria-label="Navegación principal"><a className={styles.activeNav} href="/chat/"><Icon name="chat" size={17}/>Hablar con Lía<span>AHORA</span></a><a href="/funciones/" target="_top"><Icon name="branch" size={17}/>Funciones y colaboradores<Icon name="external" size={13}/></a><a href="/taller/" target="_top"><Icon name="code" size={17}/>Taller 3D y videojuegos<Icon name="external" size={13}/></a><a href="/?room=music" target="_top"><Icon name="spark" size={17}/>Estudio de música<Icon name="external" size={13}/></a><a href="/?room=cinema" target="_top"><Icon name="orbit" size={17}/>Cine y vídeo<Icon name="external" size={13}/></a><a href="/?room=constellation" target="_top"><Icon name="globe" size={17}/>Cielo y colaboradores<Icon name="external" size={13}/></a><a href="/" target="_top"><Icon name="branch" size={17}/>Volver a la casa<Icon name="external" size={13}/></a></nav>
+   <nav className={styles.navigation} aria-label="Navegación principal"><a className={styles.activeNav} href="/chat/"><Icon name="chat" size={17}/>Hablar con Lía<span>AHORA</span></a><a href="/lia-world" target="_top">Historial y evidencias</a><a href="/funciones/" target="_top"><Icon name="branch" size={17}/>Funciones y colaboradores<Icon name="external" size={13}/></a><a href="/taller/" target="_top"><Icon name="code" size={17}/>Taller 3D y videojuegos<Icon name="external" size={13}/></a><a href="/?room=music" target="_top"><Icon name="spark" size={17}/>Estudio de música<Icon name="external" size={13}/></a><a href="/?room=cinema" target="_top"><Icon name="orbit" size={17}/>Cine y vídeo<Icon name="external" size={13}/></a><a href="/?room=constellation" target="_top"><Icon name="globe" size={17}/>Cielo y colaboradores<Icon name="external" size={13}/></a><a href="/" target="_top"><Icon name="branch" size={17}/>Volver a la casa<Icon name="external" size={13}/></a></nav>
    <section className={styles.archive} aria-label="Conversaciones en la nube"><div className={styles.archiveHeading}><span>CONVERSACIONES</span><span>EN LA NUBE</span></div>
     {!signedIn?<p className={styles.archiveEmpty}>Inicia sesión para guardar tus conversaciones y abrirlas desde otros dispositivos.</p>:<>
      {archiveLoading&&!conversations.length?<p className={styles.archiveEmpty}>Cargando tus conversaciones…</p>:null}

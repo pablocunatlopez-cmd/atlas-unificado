@@ -10,7 +10,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 function fixture(t,options={}){
  const sqlite=new DatabaseSync(':memory:');t.after(()=>sqlite.close());
  for(const file of fs.readdirSync(path.join(root,'drizzle')).filter(name=>name.endsWith('.sql')).sort())sqlite.exec(fs.readFileSync(path.join(root,'drizzle',file),'utf8'));
- const adapter={prepare(sql){let params=[];const item={bind(...values){params=values;return item;},async first(){return sqlite.prepare(sql).get(...params)||null;},async all(){return {results:sqlite.prepare(sql).all(...params)};},async run(){return {meta:sqlite.prepare(sql).run(...params)};},execute(){return sqlite.prepare(sql).run(...params);}};return item;},async batch(statements){sqlite.exec('BEGIN');try{const result=statements.map(statement=>statement.execute());sqlite.exec('COMMIT');return result;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
+ const adapter={prepare(sql){let params=[];const item={bind(...values){params=values;return item;},async first(){return sqlite.prepare(sql).get(...params)||null;},async all(){return {results:sqlite.prepare(sql).all(...params)};},async run(){return {meta:sqlite.prepare(sql).run(...params)};},execute(){return sqlite.prepare(sql).run(...params);}};return item;},async batch(statements){if(options.beforeBatch)await options.beforeBatch();sqlite.exec('BEGIN');try{const result=statements.map(statement=>statement.execute());sqlite.exec('COMMIT');return result;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
  let at=1793470000000;const queue=createCloudQueue(adapter,{...options,now:()=>at});
  return {queue,sqlite,advance(ms){at+=ms;},now:()=>at};
 }
@@ -303,4 +303,118 @@ test('execution receipts preserve bounded verified library metadata without priv
  const {queue}=fixture(t),a=await queue.enqueue('alice',next('Deduplica [1,1,2]')),{job}=await queue.claimOwned('alice',a.jobId);
  await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{answer:'[1,2]',model:'atlas-tools',execution:{tool:'atlas-program-tools-1',operation:'dedupe',passed:3,total:3,input:'private'}}});
  const saved=await queue.getJob('alice',a.jobId);assert.deepEqual(saved.result.execution,{tool:'atlas-program-tools-1',operation:'dedupe',passed:3,total:3});assert.doesNotMatch(JSON.stringify(saved.result.execution),/private/);
+});
+
+test('overlong creative descriptions are rejected before a job or conversation can be inserted',async t=>{
+ for(const [kind,prefix]of [['world','Escena '],['game','Juego '],['chat','Crea una escena 3D '],['chat','Compón una canción '],['chat','Genera un guion ']]){
+  const {queue,sqlite}=fixture(t),message=prefix+'x'.repeat(4001-prefix.length);
+  await assert.rejects(queue.enqueue('alice',next(message,{kind})),e=>e.status===400&&/4000/.test(e.message));
+  for(const table of ['cloud_jobs','cloud_conversations','cloud_messages'])assert.equal(sqlite.prepare('SELECT count(*) AS n FROM '+table).get().n,0,kind+' '+table);
+ }
+ const {queue}=fixture(t),message='Hablemos de mis ideas. '+'x'.repeat(6000-'Hablemos de mis ideas. '.length),accepted=await queue.enqueue('alice',next(message));
+ assert.equal((await queue.claimOwned('alice',accepted.jobId)).job.question.length,6000);
+});
+
+test('a direct scene or game requested through chat stores a project owned by that same user',async t=>{
+ for(const kind of ['world','game']){
+  const calls=[],{queue,sqlite,now}=fixture(t,{compileCreative:compiler(calls)}),input=next(kind==='game'?'Crea un videojuego de exploración':'Crea una escena 3D de un jardín'),accepted=await queue.enqueue('alice',input),{job}=await queue.claimOwned('alice',accepted.jobId);
+  assert.equal(job.kind,'chat');assert.equal(sqlite.prepare('SELECT lease_until FROM cloud_jobs WHERE id=?').get(job.id).lease_until,now()+90000);
+  await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,model:'atlas-cloud',creative:{plan:creativePlan(kind)}}});
+  const saved=await queue.getJob('alice',job.id),project=sqlite.prepare('SELECT * FROM studio_projects WHERE id=?').get(saved.result.creative.projectId);
+  assert.equal(project.user_id,'alice');assert.equal(project.mode,kind==='game'?'game':'3d');assert.equal(calls.length,1);assert.match((await queue.conversation('alice',accepted.conversationId)).messages.at(-1).content,/Abrir en el taller/);
+  await assert.rejects(queue.getJob('bob',job.id),e=>e.status===404);
+ }
+});
+
+function savedCreationTable(sqlite){sqlite.exec('CREATE TABLE ai_creations(user_id TEXT NOT NULL,id TEXT NOT NULL,kind TEXT NOT NULL,prompt TEXT NOT NULL,status TEXT NOT NULL,content TEXT NOT NULL)');return(user,id,kind,prompt,content={id,kind,title:'Una creación'})=>sqlite.prepare('INSERT INTO ai_creations VALUES(?,?,?,?,?,?)').run(user,id,kind,prompt,'completed',JSON.stringify(content));}
+test('chat music and film completion only links the persisted artifact of this user, prompt and kind',async t=>{
+ for(const kind of ['music','film']){
+  const {queue,sqlite}=fixture(t),prompt=kind==='music'?'Compón una canción tranquila':'Crea un guion de cine',accepted=await queue.enqueue('alice',next(prompt)),{job}=await queue.claimOwned('alice',accepted.jobId),insert=savedCreationTable(sqlite),id=crypto.randomUUID(),media=kind==='music'?'music':'video',completion={jobId:job.id,leaseToken:job.leaseToken,result:{...result,model:'atlas-cloud',creationId:id}};
+  insert('bob',id,media,prompt);await assert.rejects(queue.complete(completion),e=>e.status===400);assert.equal((await queue.getJob('alice',job.id)).status,'running');
+  sqlite.prepare('DELETE FROM ai_creations').run();insert('alice',id,media,prompt+' distinto');await assert.rejects(queue.complete(completion),e=>e.status===400);
+  sqlite.prepare('DELETE FROM ai_creations').run();insert('alice',id,kind==='music'?'video':'music',prompt);await assert.rejects(queue.complete(completion),e=>e.status===400);
+  sqlite.prepare('DELETE FROM ai_creations').run();insert('alice',id,media,prompt,{id:crypto.randomUUID(),kind:media});await assert.rejects(queue.complete(completion),e=>e.status===400);
+  sqlite.prepare('DELETE FROM ai_creations').run();insert('alice',id,media,prompt);await queue.complete(completion);
+  const saved=await queue.getJob('alice',job.id);assert.deepEqual(saved.result.creation,{id,kind:media});assert.match(saved.result.answer,new RegExp('creation='+id));assert.equal((await queue.conversation('alice',accepted.conversationId)).messages.length,2);
+ }
+});
+
+test('a missing creative artifact cannot be reported as a successful cloud creation',async t=>{
+ for(const prompt of ['Crea una escena 3D','Crea un videojuego','Compón una canción','Crea un guion de cine']){const {queue,sqlite}=fixture(t),accepted=await queue.enqueue('alice',next(prompt)),{job}=await queue.claimOwned('alice',accepted.jobId);await assert.rejects(queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,model:'atlas-cloud'}}),e=>e.status===400);assert.equal((await queue.getJob('alice',job.id)).status,'running');assert.equal(sqlite.prepare("SELECT count(*) AS n FROM cloud_messages WHERE role='assistant'").get().n,0);}
+});
+
+test('cancellation or lease expiry during compilation cannot publish a late project or assistant message',async t=>{
+ for(const stop of ['cancel','expire']){
+  let stopWork;const calls=[],f=fixture(t,{compileCreative:async(...args)=>{const generated=compiler(calls)(...args);await stopWork();return generated;}}),accepted=await f.queue.enqueue('alice',next('Crea una escena 3D')),{job}=await f.queue.claimOwned('alice',accepted.jobId);
+  stopWork=stop==='cancel'?()=>f.queue.cancel('alice',job.id):()=>f.advance(90001);
+  await assert.rejects(f.queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,model:'atlas-cloud',creative:{plan:creativePlan()}}}),e=>e.status===409);
+  for(const table of ['studio_projects','studio_versions'])assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM '+table).get().n,0,stop+' '+table);
+  assert.equal((await f.queue.conversation('alice',accepted.conversationId)).messages.length,1);assert.equal(await f.queue.continueOwned('alice',job.id,job.leaseToken),false);
+ }
+});
+
+
+test('idempotency binds the public-search choice and preserves the original request',async t=>{
+ for(const internet of [false,true]){
+  const {queue,sqlite}=fixture(t),input=next('Explica un concepto público',{internet}),accepted=await queue.enqueue('alice',input);
+  await assert.rejects(queue.enqueue('alice',{...input,internet:!internet}),error=>error.status===409);
+  assert.equal((await queue.enqueue('alice',input)).jobId,accepted.jobId);
+  assert.equal(sqlite.prepare('SELECT count(*) AS n FROM cloud_jobs').get().n,1);
+  assert.equal(sqlite.prepare('SELECT count(*) AS n FROM cloud_messages').get().n,1);
+  const job=(await queue.claimOwned('alice',accepted.jobId)).job;assert.equal(job.internet,internet);
+ }
+});
+
+test('concurrent reuse compares search, kind and video parameters after the atomic insert',async t=>{
+ for(const change of [{internet:true},{kind:'world'},{kind:'video',parameters:{frames:33,steps:10}}]){
+  let armed=false,arrived=0,release;const gate=new Promise(resolve=>release=resolve);
+  const {queue,sqlite}=fixture(t,{beforeBatch:async()=>{if(!armed)return;if(++arrived===2)release();await gate;}});
+  const seed=await queue.enqueue('alice',next('Inicio'));await queue.cancel('alice',seed.jobId);
+  const kind=change.kind==='video'?'video':'chat',input=next('Encargo compartido',{conversationId:seed.conversationId,kind,internet:false,parameters:{frames:17,steps:5}});
+  armed=true;
+  const outcomes=await Promise.allSettled([queue.enqueue('alice',input),queue.enqueue('alice',{...input,...change})]);
+  assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);
+  const rejected=outcomes.find(r=>r.status==='rejected');assert.equal(rejected.reason.status,409);
+  assert.equal(sqlite.prepare('SELECT count(*) AS n FROM cloud_jobs').get().n,2);
+  assert.equal(sqlite.prepare('SELECT count(*) AS n FROM cloud_messages').get().n,2);
+ }
+});
+
+test('identical concurrent submissions in one conversation replay one stored action',async t=>{
+ let armed=false,arrived=0,release;const gate=new Promise(resolve=>release=resolve);
+ const {queue,sqlite}=fixture(t,{beforeBatch:async()=>{if(!armed)return;if(++arrived===2)release();await gate;}});
+ const seed=await queue.enqueue('alice',next('Inicio'));await queue.cancel('alice',seed.jobId);
+ const input=next('Acción idéntica',{conversationId:seed.conversationId,internet:true});armed=true;
+ const [first,second]=await Promise.all([queue.enqueue('alice',input),queue.enqueue('alice',input)]);
+ assert.deepEqual(first,second);
+ const stored=sqlite.prepare('SELECT internet,kind,parameters FROM cloud_jobs WHERE id=?').get(first.jobId);
+ assert.equal(stored.internet,1);assert.equal(stored.kind,'chat');assert.equal(stored.parameters,'{}');
+ assert.equal(sqlite.prepare('SELECT count(*) AS n FROM cloud_jobs').get().n,2);
+ assert.equal(sqlite.prepare('SELECT count(*) AS n FROM cloud_messages').get().n,2);
+});
+
+test('owner-scoped queue persists and verifies a genuine executed-check journal',async t=>{
+ const {buildLiaHypothesisLedger}=await import('../lia/lia-hypothesis-ledger.mjs');
+ const {journalLiaExecutedChecks}=await import('../lia/lia-execution-journal.mjs');
+ const {queue}=fixture(t);
+ const accepted=await queue.enqueue('owner',next('Check citations'));
+ const {job}=await queue.claim(bridge);
+ const hypotheses=buildLiaHypothesisLedger([{id:'citation-check',claim:'All detected citation labels refer to available sources',origin:'tool',status:'supported',evidence:[{type:'tool-output',reference:'chat:citation-audit',verified:true}],revisionOf:null,conclusion:'No unknown labels detected'}]);
+ const journal=journalLiaExecutedChecks(hypotheses,{timestamp:'2026-11-16T14:00:00Z'});
+ await queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,liaHypotheses:hypotheses,liaTransitionJournal:journal}});
+ const execution=await queue.conversationExecutionEvents('owner',accepted.conversationId);
+ assert.equal(execution.events.length,1);
+ assert.equal(execution.events[0].transitionJournal[0].integrityVerifiedInCloud,true);
+ assert.equal(execution.events[0].hypotheses[0].status,'supported');
+ await assert.rejects(queue.conversationExecutionEvents('other-user',accepted.conversationId));
+});
+test('cloud rejects tampered executed-check journals without completing the job',async t=>{
+ const {buildLiaHypothesisLedger}=await import('../lia/lia-hypothesis-ledger.mjs');
+ const {journalLiaExecutedChecks}=await import('../lia/lia-execution-journal.mjs');
+ const {queue}=fixture(t);
+ await queue.enqueue('owner',next('Check citations'));
+ const {job}=await queue.claim(bridge);
+ const hypotheses=buildLiaHypothesisLedger([{id:'citation-check',claim:'All detected citation labels refer to available sources',origin:'tool',status:'refuted',evidence:[{type:'tool-output',reference:'chat:citation-audit',verified:true}],revisionOf:null,conclusion:'Unknown labels'}]);
+ const journal=journalLiaExecutedChecks(hypotheses,{timestamp:'2026-11-16T14:00:00Z'});
+ await assert.rejects(queue.complete({jobId:job.id,leaseToken:job.leaseToken,result:{...result,liaHypotheses:hypotheses,liaTransitionJournal:[{...journal[0],hash:'0'.repeat(64)}]}}),/cadena de auditoría/);
 });

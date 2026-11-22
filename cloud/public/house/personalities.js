@@ -17,5 +17,11 @@ export const personalities={
  'refutation-control':'Cota es conservadora: separa ensayo, aprobación y cambio de pesos.',
  'language-object':'Sol es estructural: declara objetos, ambientes y transformaciones.',
  'language-symbol':'Sigma es formal: exige símbolos, contratos e invariantes explícitos.',
+ 'cinema-audience-1':'Teo es narrativo: busca propósito, continuidad y claridad en cada secuencia.',
+ 'cinema-audience-2':'Luz es perceptiva: cuida color e iluminación distinguiendo medidas de preferencias.',
+ 'cinema-audience-3':'Mara es atenta: busca claridad sonora y margen sin confundir métricas con escucha.',
+ 'cinema-audience-4':'Mico es explorador: comprueba movimientos, controles y rutas reproducibles.',
+ 'cinema-audience-5':'Leo es inclusivo: exige foco visible, controles comprensibles y alternativas accesibles.',
+ 'cinema-audience-6':'Brisa es rítmica: compara duración y cortes antes de cambiar un montaje.',
  'language-meaning':'Ema es interpretativa: distingue el signo observado del sentido añadido.',
 };

@@ -3,6 +3,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {residentById} from '../public/house/residents.js';
 import {MISSIONS,missionFor} from '../lib/collaboration/missions';
+import CharacterNetwork from './character-network';
 import styles from './icarus-console.module.css';
 
 type MissionKind='resident'|'room'|'module'|'core'|'domain'|'process'|'sense'|'character'|'zone'|'building';
@@ -71,6 +72,7 @@ export default function IcarusConsole({ready=true,onFollow,initialActorId}:{read
   <header className={styles.header}><div><span className={styles.eyebrow}>COLABORAR DESDE CADA OFICIO</span><h3 id="icarus-console-title">Una pregunta propia. Una ayuda concreta.</h3></div><span className={styles.count}>{data?.total||0} consultas registradas</span></header>
   <p className={styles.intro}>Todos los encargos tienen un objetivo común: mejorar a Lía. Atlas aporta la mente, Ion el cuerpo e Ícaro conecta con el cielo. Cada especialista contribuye desde su oficio con propuestas, pruebas y aplicaciones.</p>
   {data&&<p className={styles.small}>{data.missions.length} funciones registradas · {data.missions.filter(m=>m.targetProject==='atlas').length} en Atlas · {data.missions.filter(m=>m.targetProject==='eras').length} en ERAS. Las salas y los módulos colaboran mediante un habitante delegado.</p>}
+  {data&&<CharacterNetwork missions={data.missions} locked={pending} onSelect={id=>{setActor(id);setSelection(null);setError('');}}/>}
   <div className={styles.workflow} aria-label="Ciclo de trabajo"><span>Problema del oficio</span><b aria-hidden="true">→</b><span>Consulta con Ícaro</span><b aria-hidden="true">→</b><span>Propuesta y pruebas</span><b aria-hidden="true">→</b><span>Aplicación y memoria</span></div>
   <div className={styles.workspace}>
    <div className={styles.assignment}><label htmlFor="icarus-resident">¿Qué función consulta?</label><select id="icarus-resident" value={actor} disabled={pending||!data?.missions.length} onChange={event=>{setActor(event.target.value);setSelection(null);setError('');}}>{!data?.missions.length&&<option value="">Leyendo las funciones…</option>}{groups.map(group=><optgroup key={group.kind} label={group.label+' · '+group.missions.length}>{group.missions.map(m=><option key={m.id} value={m.id}>{m.name} · {m.title}</option>)}</optgroup>)}</select>

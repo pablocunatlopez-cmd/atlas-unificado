@@ -1,0 +1,46 @@
+{
+  "source": "user ZIP atlas-unificado-main",
+  "githubRevision": "86b08002ed57a806d3a270f362a326f3ae694dd3",
+  "files": [
+    {
+      "file": "lia-execution-journal.mjs",
+      "source": "continuous/lia-execution-journal.mjs",
+      "sha256": "51880c8d032743933d991d507253786a34f977af404444238237dec016e85a78"
+    },
+    {
+      "file": "lia-transition-journal.mjs",
+      "source": "continuous/lia-transition-journal.mjs",
+      "sha256": "4baad0b3ee36161a367d3f2faac6cf38218bf5580f61229e9ef12a4e418cbcaa"
+    },
+    {
+      "file": "lia-hypothesis-transition.mjs",
+      "source": "continuous/lia-hypothesis-transition.mjs",
+      "sha256": "1d6faa4b93b0f12a7f8d68315db7b21dd0313d3ce48f53b1382a6ebb521aa077"
+    },
+    {
+      "file": "lia-hypothesis-ledger.mjs",
+      "source": "continuous/lia-hypothesis-ledger.mjs",
+      "sha256": "2c96ac9fea86e103d492f7c1693ac7ca3ae307526f1fad00d5fa8da767962d44"
+    },
+    {
+      "file": "lia-conversation-projection.mjs",
+      "source": "continuous/lia-conversation-projection.mjs",
+      "sha256": "a6e59ed43109e5f37156d3e37d6a7e87e5ade2f0ad8c03ac188d96439dd8564c"
+    },
+    {
+      "file": "lia-knowledge-state.mjs",
+      "source": "continuous/lia-knowledge-state.mjs",
+      "sha256": "5da9a778f2a67a776a7c182459a8a75e45a340b529cf890583353b0f740fba14"
+    },
+    {
+      "file": "lia-hypothesis-timeline.mjs",
+      "source": "continuous/lia-hypothesis-timeline.mjs",
+      "sha256": "ff51c832d90381a6f1208a8293df3c9b8759a87b6166bf4a618a62f12d80300c"
+    },
+    {
+      "file": "lia-perspective-state.mjs",
+      "source": "continuous/lia-perspective-state.mjs",
+      "sha256": "e70caf37c3405e9524d701a25a8fdf5ab5421368846f7179bc36ed9288a6aabb"
+    }
+  ]
+}

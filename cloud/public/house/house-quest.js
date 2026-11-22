@@ -20,7 +20,13 @@ export function advanceHouseQuest(previous,id){
 export function housePrototypeRequest(question){
  if(typeof question!=='string')return false;
  const text=question.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
- if(/\b(no|nunca)\s+(quiero|hagas|crees|generes|construyas)\b/.test(text)||/\b(explica|analiza|describe|cuando|si te|como crear|como puedo)\b/.test(text))return false;
- return /^(por favor[, ]+)?(crea|crear|haz|genera|generar|construye|programa|quiero)\b/.test(text)&&/videojuego|juego\b/.test(text)&&/casa|\blia\b|habitacion/.test(text);
+ // Recognise the requested deliverable, not merely words mentioned in a question.
+ if(/\b(?:no|nunca)\s+(?:lo\s+)?(?:quiero|hagas|crees|generes|construyas|programes)\b/.test(text))return false;
+ const request=text.replace(/^(?:por favor[, ]+)/,'');
+ const action=/^(?:crea|crear|haz|genera|generar|construye|programa)\s+/;
+ const desire=/^quiero\s+(?:que\s+(?:me\s+)?(?:crees|hagas|generes|construyas|programes)\s+)?/;
+ const head=action.exec(request)||desire.exec(request);if(!head)return false;
+ const deliverable=request.slice(head[0].length);
+ return /^(?:(?:un|el|este|otro)\s+)?(?:(?:pequeno|nuevo|sencillo|simple|jugable|original|3d)\s+){0,2}(?:(?:prototipo|demo)\s+de\s+(?:(?:un|el)\s+)?)?(?:videojuego|juego)\b/.test(deliverable)&&/\b(?:casa|lia|habitacion)\b/.test(text);
 }
 export const housePrototypeHref=brief=>'/jugar/casa?brief='+encodeURIComponent(String(brief).slice(0,600)).replace(/[()]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());

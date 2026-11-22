@@ -19,3 +19,14 @@ test('unknown or empty references are rejected and known references remain quali
  assert.throws(()=>groundReflection({...raw,claims:[{text:'Afirmación',sourceIds:[]}]},['a']),/INVALID_CITATION/);
  assert.equal(groundReflection(raw,['a']).grounding,'source-linked');
 });
+
+test('historical claims alone cannot restore an explicitly unverified conclusion to model context',()=>{
+ const raw={grounding:'unverified' as const,conclusion:'HIPOTESIS_NO_VERIFICADA',claims:[{text:'AFIRMACION_NO_VERIFICADA',sourceIds:['old-source']}],uncertainties:['Conservar esta duda']};
+ const before=structuredClone(raw),context=reflectionContext(raw);
+ assert.doesNotMatch(JSON.stringify(context),/HIPOTESIS_NO_VERIFICADA|AFIRMACION_NO_VERIFICADA/);assert.deepEqual(context?.uncertainties,raw.uncertainties);assert.deepEqual(raw,before);
+});
+test('legacy citation strings require explicit grounding; source-linked context retains its limitation',()=>{
+ const raw={conclusion:'Conclusión provisional',claims:[{text:'Afirmación',sourceIds:['a']}],uncertainties:['Duda']};
+ assert.doesNotMatch(JSON.stringify(reflectionContext(raw)),/Conclusión provisional/);
+ const linked=reflectionContext(groundReflection(raw,['a']));assert.equal(linked?.conclusion,raw.conclusion);assert.deepEqual(linked?.claims,raw.claims);assert.match(JSON.stringify(linked),/no demuestra|no prueba/);
+});

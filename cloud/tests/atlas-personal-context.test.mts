@@ -29,3 +29,9 @@ test('the design cabinet stays scoped and appends complete records within the wo
  assert.ok(prompt.length<=15000);assert.ok(prompt.startsWith(base));const records=prompt.slice(base.length).split('\n').filter(line=>line.startsWith('{'));assert.ok(records.length>0);for(const record of records)assert.equal(JSON.parse(record).text.length,500);
  assert.equal(withWorkshopMemories(base,[]),base);
 });
+
+test('global corrections do not enter a single resident profile',()=>{
+ const state=JSON.stringify({corrections:[{after:'Sigma conserva esta corrección global',reason:'Sigma'}]});
+ assert.equal(selectPersonalMemories(state,'Sigma',['resident:games-desk']).length,0);
+ assert.equal(selectPersonalMemories(state,'Sigma').length,1);
+});

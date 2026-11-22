@@ -7,6 +7,8 @@ import {DatabaseSync,type SQLInputValue} from 'node:sqlite';
 import {stripTypeScriptTypes} from 'node:module';
 import {readFile} from 'node:fs/promises';
 import * as vm from 'node:vm';
+import * as personalContext from '../lib/cloud/personal-context.ts';
+import * as personality from '../lib/cloud/resident-personality.ts';
 import * as agents from '../lib/cloud/agents.ts';
 import {coachingCases,gradeCoaching} from '../lib/evolution/coaching.ts';
 import * as music from '../lib/music/composition.ts';
@@ -41,13 +43,13 @@ function video(){return{version:1,title:'Una idea encuentra su ritmo',synopsis:'
 
 async function fixture(){
  assert.equal(typeof vm.SourceTextModule,'function','Pass --experimental-vm-modules to exercise the Worker module.');
- const db=new D1(),clock={now:Date.parse('2026-11-15T10:00:00Z')};
+ const db=new D1();db.raw.exec('CREATE TABLE atlas_state(user_id TEXT PRIMARY KEY,content TEXT NOT NULL)');const clock={now:Date.parse('2026-11-15T10:00:00Z')};
  const calls={inferences:[] as Call[],reservations:[] as Record<string,unknown>[],responses:[] as unknown[],gates:new Map<number,Gate>(),registry:0};
  class ClockDate extends Date{constructor(value?:string|number){super(value===undefined?clock.now:value);}static now(){return clock.now;}}
  const context=vm.createContext({Date:ClockDate,crypto:globalThis.crypto,structuredClone,console,TextEncoder,TextDecoder,setTimeout,clearTimeout});
  const cases=coachingCases(1761),score=gradeCoaching(cases,{answers:cases.map(c=>({id:c.id,value:c.expected}))});
  const modules:Record<string,Record<string,unknown>>={
-  'cloudflare:workers':{env:{DB:db}},'../cloud/agents':agents,'../music/composition':music,'../cinema/director':cinema,
+  'cloudflare:workers':{env:{DB:db}},'../cloud/personal-context':personalContext,'../cloud/resident-personality':personality,'../cloud/agents':agents,'../music/composition':music,'../cinema/director':cinema,
   '../cloud/agent-registry':{agentEvaluations:async()=>{calls.registry++;return[{model:'openai/gpt-oss-120b',version:agents.AGENT_EVAL_VERSION,status:'qualified',at:new ClockDate().toISOString(),latencyMs:20,score}];}},
   '../cloud/inference':{inferModel:async(model:string,messages:Call['messages'],options:Call['options'])=>{
    const index=calls.inferences.length;calls.inferences.push({model,messages,options});
@@ -66,7 +68,7 @@ async function fixture(){
   const keys=Object.keys(exports),dependency=new vm.SyntheticModule(keys,function(){for(const key of keys)this.setExport(key,exports[key]);},{context});linked.set(specifier,dependency);return dependency;
  });
  await module.evaluate();
- const api=module.namespace as unknown as {createAI:(userId:string,input:Input)=>Promise<AICreation>;listAICreations:(userId:string,kind?:CreationKind)=>Promise<AICreation[]>};
+ const api=module.namespace as unknown as {createAI:(userId:string,input:Input,options?:{shouldContinue?:()=>Promise<boolean>})=>Promise<AICreation>;listAICreations:(userId:string,kind?:CreationKind)=>Promise<AICreation[]>;getAICreation:(userId:string,id:string)=>Promise<AICreation|null>};
  const row=(userId:string,requestId:string)=>db.raw.prepare('SELECT * FROM ai_creations WHERE user_id=? AND request_id=?').get(userId,requestId)!;
  return{db,clock,calls,api,row};
 }
@@ -224,4 +226,54 @@ test('each creation kind is filtered before the twenty-item limit while preservi
  assert.deepEqual(plain(await f.api.listAICreations('bob','video')),[]);
  await assert.rejects(f.api.listAICreations('alice',"music' OR 1=1 --" as CreationKind),/INPUT/);
  assert.equal(f.calls.inferences.length,1,'Listing persisted artifacts never invokes inference.');
+});
+
+
+test('music and film consume current owner-scoped criteria for their own specialists only',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());
+ const note=(scope:string,text:string,status='Confirmado')=>({scope,title:'Criterio del especialista',text,status,kind:'Regla',date:'2026-11-15'});
+ f.db.raw.prepare('INSERT INTO atlas_state VALUES(?,?)').run('alice',JSON.stringify({memories:[note('resident:music-console','ALICE_NOA: melodía con variación.'),note('resident:music-mixer','ALICE_RITMO: margen para los instrumentos.'),note('room:music','ALICE_MUSIC: evita saturación.'),note('resident:music-console','ALICE_RETIRED: usa el criterio antiguo.','Retirado'),note('resident:cinema-projector','ALICE_FARO: secuencia pausada.'),note('resident:cinema-audience-1','ALICE_TEO: propósito narrativo claro.'),note('resident:cinema-audience-6','ALICE_BRISA: ritmo de montaje estable.'),note('room:cinema','ALICE_CINEMA: cierre coherente.'),note('resident:games-desk','ALICE_TALO: decisiones de geometría.'),note('global','ALICE_GLOBAL: sin coste adicional.')]}));
+ f.db.raw.prepare('INSERT INTO atlas_state VALUES(?,?)').run('bob',JSON.stringify({memories:[note('resident:music-console','BOB_SECRET: otro estilo privado.')]}));
+ f.calls.responses.push(composition(),video());
+ await f.api.createAI('alice',{kind:'music',prompt:'Una pieza tranquila con un motivo que regrese.',requestId:'music-personality'});
+ await f.api.createAI('alice',{kind:'video',prompt:'Un viaje por la casa con principio y cierre.',requestId:'film-personality'});
+ const musicText=JSON.stringify(f.calls.inferences[0].messages),filmText=JSON.stringify(f.calls.inferences[1].messages);
+ for(const marker of ['ALICE_NOA','ALICE_RITMO','ALICE_MUSIC','ALICE_GLOBAL'])assert.ok(musicText.includes(marker),marker);
+ assert.doesNotMatch(musicText,/BOB_SECRET|ALICE_RETIRED|ALICE_FARO|ALICE_CINEMA|ALICE_TALO|ALICE_TEO|ALICE_BRISA/);
+ for(const marker of ['ALICE_FARO','ALICE_TEO','ALICE_BRISA','ALICE_CINEMA','ALICE_GLOBAL'])assert.ok(filmText.includes(marker),marker);
+ assert.doesNotMatch(filmText,/BOB_SECRET|ALICE_RETIRED|ALICE_NOA|ALICE_RITMO|ALICE_MUSIC|ALICE_TALO/);
+ assert.equal(f.calls.inferences.length,2,'Profiles do not trigger separate model calls.');
+});
+
+test('base specialist criteria remain available when an older installation lacks personal state',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());f.db.raw.exec('DROP TABLE atlas_state');
+ await f.api.createAI('alice',{kind:'music',prompt:'Una melodía con variación para la casa.',requestId:'no-personal-table'});
+ assert.match(JSON.stringify(f.calls.inferences[0].messages),/Noa es curiosa|Ritmo es metódico/);assert.equal(f.calls.inferences.length,1);
+});
+
+test('cancellation before generation starts no model and leaves the request retryable',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());const input:Input={kind:'music',prompt:'Una composición breve y tranquila.',requestId:'cancel-before-model'};
+ await assert.rejects(f.api.createAI('alice',input,{shouldContinue:async()=>false}),error=>(error as {code?:string}).code==='cancelled');
+ assert.equal(f.calls.inferences.length,0);assert.equal(f.calls.registry,0);assert.equal(f.row('alice',input.requestId).status,'failed');assert.equal(f.row('alice',input.requestId).content,null);
+ const next=await f.api.createAI('alice',input);assert.equal(f.calls.inferences.length,1);assert.equal(f.row('alice',input.requestId).status,'completed');assert.ok(next.id);
+});
+
+test('cancellation after a draft starts neither a repair nor a publication',async()=>{
+ for(const invalid of [false,true]){
+  const f=await fixture(),barrier=gate();let active=true;f.calls.gates.set(0,barrier);f.calls.responses.push(invalid?{...composition(),arrangement:['missing']}:composition(),composition());
+  const input:Input={kind:'music',prompt:'Una partitura original con inicio y cierre.',requestId:'cancel-after-'+invalid},running=f.api.createAI('alice',input,{shouldContinue:async()=>active});
+  try{await barrier.entered;active=false;barrier.release();await assert.rejects(running,error=>(error as {code?:string}).code==='cancelled');assert.equal(f.calls.inferences.length,1);assert.equal(f.calls.responses.length,1);assert.equal(f.row('alice',input.requestId).content,null);assert.deepEqual(plain(await f.api.listAICreations('alice')),[]);}finally{barrier.release();await running.catch(()=>{});f.db.close();}
+ }
+});
+
+test('an expired valid response cannot publish even before another worker reclaims the request',async()=>{
+ const f=await fixture(),barrier=gate();f.calls.gates.set(0,barrier);const input:Input={kind:'music',prompt:'Un motivo pausado con acordes.',requestId:'expired-without-reclaim'},running=f.api.createAI('alice',input);
+ try{await barrier.entered;f.clock.now+=90001;barrier.release();await assert.rejects(running,/CONFLICT/);assert.equal(f.row('alice',input.requestId).status,'failed');assert.equal(f.row('alice',input.requestId).content,null);assert.equal(f.calls.inferences.length,1);}finally{barrier.release();await running.catch(()=>{});f.db.close();}
+});
+
+test('single-artifact retrieval requires the exact owner and a completed UUID record',async t=>{
+ const f=await fixture();t.after(()=>f.db.close());const creation=await f.api.createAI('alice',{kind:'music',prompt:'Una pieza privada para recuperar por enlace.',requestId:'read-by-id'});
+ assert.deepEqual(plain(await f.api.getAICreation('alice',creation.id)),plain(creation));assert.equal(await f.api.getAICreation('bob',creation.id),null);
+ f.db.raw.prepare("UPDATE ai_creations SET status='generating' WHERE id=?").run(creation.id);assert.equal(await f.api.getAICreation('alice',creation.id),null);
+ await assert.rejects(f.api.getAICreation('alice',"' OR 1=1 --"),/INPUT/);assert.equal(f.calls.inferences.length,1,'Reading is never inference.');
 });

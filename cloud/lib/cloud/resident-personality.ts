@@ -8,9 +8,11 @@ export function residentPersonality(id:string,content?:string|null,question=''){
  const scope='resident:'+id;
  return{id,name:resident.name,role:resident.role,scope,temperament:personalities[id]||resident.name+' contribuye desde la observación y la revisión de su especialidad.',principles:selectPersonalMemories(content,question,[scope]).slice(0,4),source:'Perfil inicial del proyecto y criterios guardados por la persona. No es entrenamiento de pesos.'};
 }
-export function designTeamMemories(content:string|null|undefined,question:string):PersonalMemory[]{
- return DESIGN_TEAM.flatMap(id=>{
-  const profile=residentPersonality(id,content,question)!;
+export function teamMemories(ids:readonly string[],content:string|null|undefined,question:string):PersonalMemory[]{
+ return ids.flatMap(id=>{
+  const profile=residentPersonality(id,content,question);if(!profile)return [];
   return[{title:profile.name,text:profile.temperament,kind:'Perfil del especialista',status:'Perfil inicial',date:'',scope:profile.scope},...profile.principles.slice(0,2)];
  });
 }
+
+export const designTeamMemories=(content:string|null|undefined,question:string)=>teamMemories(DESIGN_TEAM,content,question);

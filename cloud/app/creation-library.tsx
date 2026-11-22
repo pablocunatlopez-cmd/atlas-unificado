@@ -18,13 +18,29 @@ function title(creation:CloudCreation){const content=creation.content;return obj
 /** Reading the signed-in user's saved artifacts does not start an AI job. */
 export default function CreationLibrary({kind,ready,signInPath,disabled=false,onOpen}:Props){
  const[open,setOpen]=useState(false),[loading,setLoading]=useState(false),[loaded,setLoaded]=useState(false),[creations,setCreations]=useState<CloudCreation[]>([]),[error,setError]=useState('');
+ const openCreation=useRef(onOpen),linkHandled=useRef<string|null>(null),disabledNow=useRef(disabled);openCreation.current=onOpen;disabledNow.current=disabled;
  const mounted=useRef(true),request=useRef<AbortController|null>(null),scope=useRef({ready,kind});
  useEffect(()=>{mounted.current=true;if(!ready||scope.current.ready!==ready||scope.current.kind!==kind){request.current?.abort();request.current=null;setCreations([]);setLoaded(false);setOpen(false);setError('');setLoading(false);}scope.current={ready,kind};return()=>{mounted.current=false;request.current?.abort();};},[ready,kind]);
+ useEffect(()=>{
+  if(!ready||disabled)return;
+  const params=new URLSearchParams(location.search),id=params.get('creation');
+  if(!id||params.get('room')!==(kind==='music'?'music':'cinema')||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))return;
+  const key=kind+':'+id;if(linkHandled.current===key)return;
+  const controller=new AbortController();setOpen(true);setLoading(true);setError('');
+  void fetch('/api/create-ai?id='+encodeURIComponent(id)+'&kind='+kind,{cache:'no-store',credentials:'same-origin',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)])}).then(async response=>{
+   const raw:unknown=await response.json();
+   if(!response.ok||!object(raw)||!object(raw.creation))throw Error('No se pudo recuperar la creación enlazada.');
+   const entries=readCreations({creations:[raw.creation]}),entry=entries.find(e=>e.id===id&&e.kind===kind);
+   if(!entry)throw Error('La creación no corresponde a este taller.');
+   if(!controller.signal.aborted&&!disabledNow.current&&linkHandled.current!==key){openCreation.current(entry);linkHandled.current=key;setCreations([entry]);setLoaded(true);}
+  }).catch(error=>{if(!controller.signal.aborted)setError(error instanceof Error?error.message:'No se pudo recuperar la creación.');}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+  return()=>controller.abort();
+ },[ready,kind,disabled]);
  async function read(){
   if(!ready||request.current)return;
   const controller=new AbortController();request.current=controller;setLoading(true);setError('');
   try{
-   const response=await fetch('/api/create-ai?kind='+kind,{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)])});
+   const response=await fetch('/api/create-ai?kind='+kind,{cache:'no-store',credentials:'same-origin',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)])});
    const raw:unknown=await response.json();
    if(!response.ok)throw Error(response.status===401?'Tu sesión ha terminado. Inicia sesión de nuevo para recuperar tu biblioteca.':object(raw)&&typeof raw.error==='string'?raw.error.slice(0,220):'No se pudo abrir tu biblioteca. Vuelve a intentarlo.');
    const entries=readCreations(raw);if(!mounted.current||controller.signal.aborted||request.current!==controller)return;

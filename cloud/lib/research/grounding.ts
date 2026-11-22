@@ -1,4 +1,4 @@
-type Reflection={conclusion:string;claims:{text:string;sourceIds:string[]}[];uncertainties:string[]};
+type Reflection={grounding?:'source-linked'|'unverified';conclusion:string;claims:{text:string;sourceIds:string[]}[];uncertainties:string[]};
 export function groundReflection<T extends Reflection>(reflection:T,sourceIds:string[]){
  const valid=new Set(sourceIds);
  if(reflection.claims.some(c=>!c.sourceIds.length||c.sourceIds.some(id=>!valid.has(id))))throw new Error('INVALID_CITATION');
@@ -8,6 +8,6 @@ export function groundReflection<T extends Reflection>(reflection:T,sourceIds:st
 export function reflectionContext<T extends Reflection>(reflection:T|undefined){
  if(!reflection)return undefined;
  const {conclusion,claims,uncertainties}=reflection;
- const linked=claims.length>0&&claims.every(c=>c.sourceIds.length>0);
- return{conclusion:linked?conclusion:'La reflexión anterior no aportó afirmaciones respaldadas por citas aceptadas.',claims:linked?claims:[],uncertainties};
+ const linked=reflection.grounding==='source-linked'&&claims.length>0&&claims.every(c=>c.sourceIds.length>0);
+ return{grounding:linked?'source-linked' as const:'unverified' as const,conclusion:linked?conclusion:'La reflexión anterior no tiene procedencia de citas aceptada explícitamente; su conclusión no se reutiliza como respaldo factual.',claims:linked?claims:[],uncertainties,epistemicStatus:'source-linked sólo identifica referencias enlazadas; no demuestra verdad ni implicación lógica.'};
 }

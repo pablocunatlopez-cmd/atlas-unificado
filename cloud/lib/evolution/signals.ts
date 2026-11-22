@@ -14,10 +14,17 @@ export function masterChannels(channels:Float32Array[],ceiling=.94){
  const gain=peak>ceiling?ceiling/peak:1;
  return{channels:channels.map((c,k)=>Float32Array.from(c,v=>((Number.isFinite(v)?v:0)-means[k])*gain)),gain,removedDC:means,ceiling};
 }
+// W3C relative luminance: decode 8-bit sRGB channels before applying the weights.
+// A 256-entry table avoids three power operations per pixel in bounded local scans.
+const SRGB_LINEAR=Float64Array.from({length:256},(_,i)=>{const s=i/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;});
+/** RGBA8 in sRGB. All nonzero-alpha pixels have equal weight, with no background
+ * compositing. This measures their color values, not their perceived opacity.
+ * Contrast is a standard deviation, not the WCAG text/background contrast ratio.
+ */
 export function imageFeatures(rgba:Uint8ClampedArray,width:number,height:number){
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width*height>1048576||rgba.length!==width*height*4)throw Error('Imagen fuera de los límites de análisis.');
  let count=0,sum=0,sq=0,edge=0,edges=0;const histogram=Array<number>(16).fill(0),gray=new Float32Array(width*height);
- for(let i=0;i<gray.length;i++){const k=i*4,a=rgba[k+3]/255,v=(.2126*rgba[k]+.7152*rgba[k+1]+.0722*rgba[k+2])/255;gray[i]=v;if(!a)continue;count++;sum+=v;sq+=v*v;histogram[Math.min(15,Math.floor(v*16))]++;if(i%width&&rgba[k-1]){edge+=Math.abs(v-gray[i-1]);edges++;}if(i>=width&&rgba[k-width*4+3]){edge+=Math.abs(v-gray[i-width]);edges++;}}
+ for(let i=0;i<gray.length;i++){const k=i*4,a=rgba[k+3]/255,v=.2126*SRGB_LINEAR[rgba[k]]+.7152*SRGB_LINEAR[rgba[k+1]]+.0722*SRGB_LINEAR[rgba[k+2]];gray[i]=v;if(!a)continue;count++;sum+=v;sq+=v*v;histogram[Math.min(15,Math.floor(v*16))]++;if(i%width&&rgba[k-1]){edge+=Math.abs(v-gray[i-1]);edges++;}if(i>=width&&rgba[k-width*4+3]){edge+=Math.abs(v-gray[i-width]);edges++;}}
  const luminance=count?sum/count:0;
- return{width,height,visiblePixels:count,luminance,contrast:Math.sqrt(Math.max(0,count?sq/count-luminance*luminance:0)),edgeEnergy:edges?edge/edges:0,histogram};
+ return{metric:'srgb-relative-luminance/v1' as const,alphaPolicy:'exclude-zero-alpha' as const,width,height,visiblePixels:count,luminance,contrast:Math.sqrt(Math.max(0,count?sq/count-luminance*luminance:0)),edgeEnergy:edges?edge/edges:0,histogram};
 }

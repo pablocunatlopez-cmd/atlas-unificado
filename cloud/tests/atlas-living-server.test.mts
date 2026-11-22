@@ -196,13 +196,13 @@ test('repair preserves the reserved reviewer request under both daily budget lim
  for(const scenario of [{trigger:'schedule' as const,used:45,allowed:true,final:48},{trigger:'schedule' as const,used:46,allowed:false,final:47},{trigger:'manual' as const,used:57,allowed:true,final:60},{trigger:'manual' as const,used:58,allowed:false,final:59}]){
   const f=await fixture();try{
    f.calls.reserveBudget=true;f.calls.creatorOutputs=[invalidProposal(),proposal()];f.db.raw.prepare('INSERT INTO cloud_inference_budget VALUES(?,?,0)').run(at.slice(0,10),scenario.used);const result=await f.api.buildLiving({requestId:'repair-budget-'+scenario.used,actorId,trigger:scenario.trigger});
-   assert.equal(result.status,scenario.allowed?'applied':'rejected');assert.equal(result.repairAttempted,scenario.allowed?true:undefined);assert.equal(f.calls.inference.length,scenario.allowed?3:1);assert.equal(f.db.raw.prepare('SELECT requests FROM cloud_inference_budget WHERE day=?').get(at.slice(0,10))!.requests,scenario.final);assert.equal(result.artifactIds.length,scenario.allowed?1:0);
+   assert.equal(result.status,scenario.allowed?'applied':'waiting');assert.equal(result.repairAttempted,scenario.allowed?true:undefined);assert.equal(f.calls.inference.length,scenario.allowed?3:1);assert.equal(f.db.raw.prepare('SELECT requests FROM cloud_inference_budget WHERE day=?').get(at.slice(0,10))!.requests,scenario.final);assert.equal(result.artifactIds.length,scenario.allowed?1:0);
   }finally{f.db.close();}
  }
 });
 test('a provider pause discovered after invalid output prevents repair despite spare daily quota',async()=>{
  const f=await fixture();try{
-  f.calls.reserveBudget=true;f.calls.creatorOutputs=[invalidProposal(),proposal()];f.calls.afterCreator=()=>{f.db.raw.prepare('UPDATE cloud_inference_budget SET blocked_until=? WHERE day=?').run(Date.parse(at)+60000,at.slice(0,10));};const result=await f.api.buildLiving({requestId:'repair-provider-paused',actorId});assert.equal(result.status,'rejected');assert.equal(result.repairAttempted,undefined);assert.equal(f.calls.inference.length,1);assert.deepEqual(f.state().artifacts,{});
+  f.calls.reserveBudget=true;f.calls.creatorOutputs=[invalidProposal(),proposal()];f.calls.afterCreator=()=>{f.db.raw.prepare('UPDATE cloud_inference_budget SET blocked_until=? WHERE day=?').run(Date.parse(at)+60000,at.slice(0,10));};const result=await f.api.buildLiving({requestId:'repair-provider-paused',actorId});assert.equal(result.status,'waiting');assert.equal(result.repairAttempted,undefined);assert.equal(f.calls.inference.length,1);assert.deepEqual(f.state().artifacts,{});
  }finally{f.db.close();}
 });
 test('transport errors do not enter the contract repair path',async()=>{

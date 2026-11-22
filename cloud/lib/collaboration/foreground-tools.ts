@@ -64,9 +64,9 @@ function lor(m:Mission,previous?:Previous):HouseToolResult{
 }
 
 function image(m:Mission,previous?:Previous):HouseToolResult{
- const rgba=new Uint8ClampedArray([255,255,255,255,0,0,0,255,128,128,128,255,255,255,255,0]),features=imageFeatures(rgba,2,2),expected=(1+128/255)/3;
- const checks=[check('Transparencia excluida de la medida',features.visiblePixels===3),check('Luminancia calculada sobre píxeles visibles',Math.abs(features.luminance-expected)<1e-6),check('Contraste y bordes finitos',Number.isFinite(features.contrast)&&features.contrast>0&&Number.isFinite(features.edgeEnergy))];
- return output(m,previous,{status:'tested',title:'Medición de imagen comprobada',summary:'Se ejecutó imageFeatures sobre cuatro píxeles sintéticos, incluida transparencia. No se ha observado una imagen del juego ni se reconocen objetos o personajes.',artifact:{kind:'image',value:{version,fixture:{width:2,height:2,rgba:Array.from(rgba)},features}},checks,needsEngineering:true});
+ const rgba=new Uint8ClampedArray([255,255,255,255,0,0,0,255,128,128,128,255,255,255,255,0]),features=imageFeatures(rgba,2,2),expected=(1+0.21586050011389926)/3;
+ const checks=[check('Transparencia excluida de la medida',features.visiblePixels===3),check('Luminancia sRGB lineal calibrada con referencia W3C',Math.abs(features.luminance-expected)<1e-6),check('Contraste y bordes finitos',Number.isFinite(features.contrast)&&features.contrast>0&&Number.isFinite(features.edgeEnergy))];
+ return output(m,previous,{status:'tested',title:'Medición de imagen comprobada',summary:'Se ejecutó imageFeatures sobre cuatro píxeles sintéticos, incluida transparencia, con luminancia relativa sRGB lineal. El alfa no nulo se incluye sin ponderar ni componer sobre fondo. No se ha observado una imagen del juego ni se reconocen objetos o personajes.',artifact:{kind:'image',value:{version,fixture:{width:2,height:2,rgba:Array.from(rgba)},features}},checks,needsEngineering:true});
 }
 
 function program(m:Mission,previous?:Previous):HouseToolResult{

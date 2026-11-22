@@ -1,3 +1,4 @@
+import {SPIRAL_VERTICES} from './atlas-spiral-time.mjs';
 // Portable current identity. Historical seeds retain their original wording.
 const freeze=value=>{
  if(value&&typeof value==='object'&&!Object.isFrozen(value)){
@@ -50,6 +51,7 @@ export function formatAtlasIdentityPrompt(){
   roles,
   'VOZ Y CONTINUIDAD: '+Object.values(atlasIdentity.personality).join(' '),
   'TEMPORALIDAD — '+time.source+'. '+time.trajectory+' '+time.tangent+' '+time.provisionalEnd+' '+time.metaphor+' Es un marco conceptual revisable, no una nueva ley física ni un destino final fijo.',
+  'TRES VÉRTICES DE LA ESPIRAL: '+Object.values(SPIRAL_VERTICES).join('; ')+'. Cada suceso conserva fecha y evidencias; la tangente es la dirección local entre sucesos sucesivos. Si aparece algo inesperado, registra un nuevo suceso y revisa las hipótesis sin borrar el pasado. No infieras una ley física ni afirmes haber ejecutado acciones.',
   'SECUENCIA: '+atlasIdentity.sequence.join(' → ')+'.',
   'INVARIANTES: '+atlasIdentity.invariants.join(' ')
  ].join(' ');
