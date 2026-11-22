@@ -1,4 +1,5 @@
 'use client';
+import {residentById} from '../public/house/residents.js';
 import {houseFunction} from '../public/house/functional-world.js';
 
 import {useEffect,useMemo,useRef,useState} from 'react';
@@ -76,7 +77,7 @@ export function HouseScene(props:Props){
    if(data.type==='atlas:house:room'&&validRoom(data.room)){currentRoom.current=data.room;latest.current.onRoomChange?.(data.room);}
    if(data.type==='atlas:house:interact'&&validRoom(data.room))latest.current.onInteract?.(data.room);
    if(data.type==='atlas:house:performance'&&[data.fps,data.frames,data.drawCalls,data.triangles].every(value=>typeof value==='number'&&Number.isFinite(value)))latest.current.onPerformance?.({fps:data.fps,frames:data.frames,drawCalls:data.drawCalls,triangles:data.triangles,backend:String(data.backend)});
-   if(data.type==='atlas:house:resident'&&typeof data.id==='string'&&/^[a-z0-9-]{1,64}$/.test(data.id))latest.current.onResidentFocus?.(data.id);
+   if(data.type==='atlas:house:resident'&&typeof data.id==='string'&&residentById(data.id))latest.current.onResidentFocus?.(data.id);
    if(data.type==='atlas:house:creative'){
     const value=data.value;if(value?.applied===true&&typeof value.artifactId==='string'&&/^creative-[a-f0-9]{24}$/.test(value.artifactId)&&typeof value.at==='string'&&Number.isFinite(Date.parse(value.at))&&Number.isInteger(value.objects)&&value.objects>=1&&value.objects<=8&&value.cases===6&&value.passed===6)latest.current.onCreativeApplied?.({applied:true,artifactId:value.artifactId,at:value.at,objects:value.objects,cases:6,passed:6,renderVerified:false,source:value.source==='retained'?'retained':'coordinator'});
    }
@@ -94,7 +95,7 @@ export function HouseScene(props:Props){
  useEffect(()=>{if(ready&&props.processState)api.setProcessState(props.processState);},[api,props.processState,ready]);
  useEffect(()=>{if(ready)api.setCreativeState(props.creative||null);},[api,props.creative,ready]);
  return <div className={[styles.scene,props.className||''].join(' ')} data-house-ready={ready} aria-busy={!ready&&!error}>
-  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=photo5'+(props.embedded===false?'':'&embedded=1')+(props.prototype?'&prototype=1':'')} allow="fullscreen; autoplay" className={styles.frame} />
+  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=residents6'+(props.embedded===false?'':'&embedded=1')+(props.prototype?'&prototype=1':'')} allow="fullscreen; autoplay" className={styles.frame} />
  </div>;
 }
 

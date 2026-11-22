@@ -4,21 +4,23 @@ import {readFile} from 'node:fs/promises';
 import * as THREE from '../../public/house/vendor/three.module.js';
 import {GLTFLoader} from '../../public/house/vendor/GLTFLoader.js';
 import {cloneSkinnedTemplate,selectAdvancedResidents,createAdvancedResidents} from '../../public/house/advanced-residents.js';
+import {residentById} from '../../public/house/residents.js';
+import {residentAppearance} from '../../public/house/resident-appearance.js';
 import {decodeMotionLibrary,sampleMotion} from '../../public/house/motion-player.js';
 const asset=new URL('../../public/house/assets/',import.meta.url);
 async function bundle(sex='female'){
  const [bytes,manifest,poses]=await Promise.all([readFile(new URL('models/avatar/'+sex+'.glb',asset)),readFile(new URL('motion/manifest.json',asset),'utf8'),readFile(new URL('motion/poses.bin',asset))]);
  const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
- return{scene:gltf.scene,height:gltf.asset.extras.height,textures:Object.fromEntries(['skin','normal','roughness','hair','eyes','eyebrows','eyelashes'].map(k=>[k,new THREE.Texture()])),motion:decodeMotionLibrary(JSON.parse(manifest),poses.buffer.slice(poses.byteOffset,poses.byteOffset+poses.byteLength)),sample:sampleMotion};
+ return{scene:gltf.scene,height:gltf.asset.extras.height,textures:Object.fromEntries(['skin','normal','roughness','hair','eyes','eyebrows','eyelashes','fabric'].map(k=>[k,new THREE.Texture()])),motion:decodeMotionLibrary(JSON.parse(manifest),poses.buffer.slice(poses.byteOffset,poses.byteOffset+poses.byteLength)),sample:sampleMotion};
 }
 const candidates=[{id:'language-object',archetype:'human',seated:false,position:[9.5,0,-13.25],yaw:0},{id:'language-meaning',archetype:'human',seated:false,position:[14.5,0,-13.25],yaw:0},{id:'language-symbol',archetype:'robot',seated:false,position:[12,0,-13.25],yaw:0}];
 const camera={position:{x:12,y:1.64,z:-11}};
 const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
 
-test('detail selection keeps its budget, actual room, species and seating boundaries',()=>{
+test('detail selection keeps its budget, actual room and species while admitting seated humans',()=>{
  assert.equal(selectAdvancedResidents(candidates,camera).length,2);assert.equal(selectAdvancedResidents(candidates,camera,{limit:1}).length,1);
  assert.deepEqual(selectAdvancedResidents(candidates,{position:{x:12,y:20,z:-11}}),[]);
- assert.deepEqual(selectAdvancedResidents(candidates.map(c=>({...c,seated:true})),camera),[]);
+ assert.equal(selectAdvancedResidents(candidates.map(c=>({...c,seated:true})),camera).length,2);
  assert.deepEqual(selectAdvancedResidents(candidates,{position:{x:5,y:1.64,z:3}}),[]);
  assert.equal(selectAdvancedResidents([...candidates,...candidates],camera,{limit:20}).length,2);
 });
@@ -61,4 +63,25 @@ test('adaptive budgets obey the device ceiling and yield back to instanced fallb
  manager.setBudget(0);manager.prepare(camera,candidates);assert.deepEqual(manager.status().active,[]);assert.equal(manager.status().limit,0);
  manager.setBudget(50);manager.prepare(camera,candidates);assert.equal(manager.status().limit,1);assert.equal(manager.status().active.length,1);
  manager.setEnabled(false);manager.setBudget(1);manager.prepare(camera,candidates);assert.deepEqual(manager.status().active,[]);manager.dispose();
+});
+
+test('real seated specialists keep articulated thighs, grounded feet, role materials and a stable pose',async()=>{
+ for(const [id,position]of [['music-console',[-10.5,1.64,4.5]],['lab-desk',[-9.5,1.64,-2]],['mind-desk',[-11,1.64,-12]],['cinema-audience-1',[5.8,1.64,-2.6]]]){
+  const actor=residentById(id),parent=new THREE.Scene(),view={position:new THREE.Vector3(...position)},manager=createAdvancedResidents(parent,{enabled:true,limit:1,loadAssets:bundle});
+  try{
+   manager.prepare(view,[actor]);while(manager.status().loading.length)await flush();manager.prepare(view,[actor]);assert.deepEqual(manager.status().active,[id]);manager.update(actor,{time:.7});
+   const root=parent.getObjectByName('advanced-'+id),bones={},meshes={};root.traverse(o=>{if(o.userData.anatomyBone)bones[o.userData.anatomyBone]=o;if(o.isSkinnedMesh)meshes[o.userData.anatomyPart]=o;});
+   assert.equal(root.userData.posture,'seated');assert.equal(root.userData.appearance.residentId,id);assert.equal(root.userData.height,residentAppearance(id).height);assert.equal(meshes.skin.material.isMeshPhysicalMaterial,true);assert.equal(meshes.tunic.material.sheen,.3);assert.ok(meshes.tunic.material.map);assert.ok(meshes.eyes.material.clearcoat>=.9);
+   for(const side of ['L','R']){const hip=bones['upperleg01.'+side].getWorldPosition(new THREE.Vector3()),knee=bones['lowerleg01.'+side].getWorldPosition(new THREE.Vector3()),foot=bones['foot.'+side].getWorldPosition(new THREE.Vector3());assert.ok(Math.abs(knee.y-hip.y)<.1,'thigh is nearly horizontal');assert.ok(knee.distanceTo(hip)>.3);assert.ok(knee.y-foot.y>.3,'shin descends');assert.ok(foot.y>.14&&foot.y<.15,'ankle leaves sole over floor');}
+   meshes.boots.skeleton.update();const point=new THREE.Vector3();let lowest=Infinity;for(let i=0;i<meshes.boots.geometry.attributes.position.count;i++){meshes.boots.getVertexPosition(i,point);meshes.boots.localToWorld(point);lowest=Math.min(lowest,point.y);}assert.ok(lowest>=.033&&lowest<.09,'authored boot soles remain near the floor');
+   const before=Object.values(bones).map(b=>b.quaternion.toArray()),height=root.children[0].position.y;for(let i=0;i<12;i++)manager.update(actor,{time:.7});assert.deepEqual(Object.values(bones).map(b=>b.quaternion.toArray()),before);assert.ok(Math.abs(root.children[0].position.y-height)<1e-10,'seated alignment does not accumulate');
+   manager.update(actor,{moving:true,time:.7});assert.equal(root.userData.posture,'standing');assert.equal(root.userData.clip,'Walk_Loop');manager.update(actor,{working:true,time:.7});assert.equal(root.userData.posture,'seated');assert.equal(root.userData.clip,'Interact');assert.equal(bones['eye.L'].quaternion.angleTo(new THREE.Quaternion()),0,'work keeps gaze on the station, not the camera');
+  }finally{manager.dispose();}
+ }
+});
+
+test('occupation clothing is invariant under candidate order and camera gaze remains a bounded scripted detail',async()=>{
+ const actor=residentById('music-console'),parent=new THREE.Scene(),view={position:new THREE.Vector3(-10.5,1.64,4.5)},manager=createAdvancedResidents(parent,{enabled:true,limit:1,loadAssets:bundle});
+ try{manager.prepare(view,[actor]);while(manager.status().loading.length)await flush();manager.prepare(view,[actor]);manager.update(actor,{time:.7});const root=parent.getObjectByName('advanced-'+actor.id),eye=root.getObjectByName('eye_L');assert.equal(root.userData.gaze,'scripted-viewer');assert.ok(eye.quaternion.angleTo(new THREE.Quaternion())>.01);assert.ok(eye.quaternion.angleTo(new THREE.Quaternion())<.4);const appearance=JSON.stringify(root.userData.appearance);manager.prepare(view,[...candidates,actor]);manager.update(actor,{time:.7});assert.equal(JSON.stringify(root.userData.appearance),appearance);}
+ finally{manager.dispose();}
 });

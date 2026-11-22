@@ -1,10 +1,10 @@
+import {prepareSkinDetail} from './skin-detail.js';
 import * as THREE from './vendor/three.module.js';
 import {roomAt} from './layout.js';
+import {residentAppearance} from './resident-appearance.js';
 
 const BASE='/house/assets/models/avatar/';
-const palette=['#497f79','#a96d51','#657690','#9a8558','#7b6d90'];
-const maleIds=new Set(['language-object','cinema-audience-1','cinema-audience-5']);
-const sexFor=id=>maleIds.has(id)?'male':'female';
+const sexFor=id=>residentAppearance(id)?.template||'female';
 const materialList=mesh=>Array.isArray(mesh.material)?mesh.material:[mesh.material];
 
 // Every clone keeps a distinct bone graph. Geometry belongs to its loaded
@@ -33,14 +33,16 @@ async function defaultAssets(sex){
  const [{GLTFLoader},motion]=await Promise.all([import('./vendor/GLTFLoader.js'),import('./motion-player.js')]);
  const textures={},completed=[];let model;
  const texture=async(name,color=true)=>{const t=await new THREE.TextureLoader().loadAsync(BASE+name);completed.push(t);t.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;t.flipY=true;return t;};
+ const fabric=async()=>{try{const image=await new THREE.ImageLoader().loadAsync('/house/assets/generated/material-atlas.png');const canvas=document.createElement('canvas'),size=Math.min(512,Math.floor(image.width/2));canvas.width=canvas.height=size;const ctx=canvas.getContext('2d');if(!ctx)return;ctx.drawImage(image,0,image.height/2,image.width/2,image.height/2,0,0,size,size);const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3,3);t.anisotropy=4;completed.push(t);textures.fabric=t;}catch{/* Clothing remains physically shaded if the optional atlas is unavailable. */}};
  const jobs=[
   new GLTFLoader().loadAsync(BASE+sex+'.glb').then(g=>{model=g;return g;}),
   motion.loadMotionLibrary(),
-  ...Object.entries({skin:[sex+'-skin.png',true],normal:[sex+'-normal.webp',false],roughness:[sex+'-roughness.webp',false],hair:[sex==='male'?'short02.png':'braid01.png',true],eyes:['eyes.png',true],eyebrows:['eyebrows.png',true],eyelashes:['eyelashes.png',true]}).map(async([key,[path,color]])=>{textures[key]=await texture(path,color);})
+  ...Object.entries({skin:[sex+'-skin.png',true],normal:[sex+'-normal.webp',false],roughness:[sex+'-roughness.webp',false],hair:[sex==='male'?'short02.png':'braid01.png',true],eyes:['eyes.png',true],eyebrows:['eyebrows.png',true],eyelashes:['eyelashes.png',true]}).map(async([key,[path,color]])=>{textures[key]=await texture(path,color);}),fabric()
  ];
  const results=await Promise.allSettled(jobs),failed=results.find(r=>r.status==='rejected');
  if(failed){for(const t of completed)t.dispose();if(model)disposeTemplate({scene:model.scene,textures:{}});throw Error('No se pudo preparar el personaje; se conserva la figura ligera.');}
  const library=results[1].value;
+ try{const detail=prepareSkinDetail(textures.normal,textures.roughness);if(detail){textures.normal.dispose();textures.roughness.dispose();textures.normal=detail.normal;textures.roughness=detail.roughness;}}catch{/* Preserve authored normal/roughness maps if optional microdetail cannot load. */}
  for(const clip of ['Idle_Loop','Walk_Loop','Interact'])if(!library.clips[clip]){disposeTemplate({scene:model.scene,textures});throw Error('Falta una animación de la biblioteca.');}
  model.scene.traverse(mesh=>{if(mesh.isSkinnedMesh&&mesh.userData.anatomyPart==='skin')maskCoveredSkin(mesh);});
  return{scene:model.scene,height:model.asset?.extras?.height||1.84,textures,motion:library,sample:motion.sampleMotion};
@@ -49,7 +51,28 @@ async function defaultAssets(sex){
 export function selectAdvancedResidents(candidates,camera,{limit=2,range=8}={}){
  if(!camera?.position||camera.position.y>3.2||camera.position.y<.3)return[];
  const room=roomAt(camera.position.x,camera.position.z);if(!room)return[];
- return candidates.filter(c=>c.archetype==='human'&&!c.seated&&roomAt(c.position[0],c.position[2])===room).map(c=>({id:c.id,distance:Math.hypot(camera.position.x-c.position[0],camera.position.z-c.position[2])})).filter(c=>c.distance<=range).sort((a,b)=>a.distance-b.distance||a.id.localeCompare(b.id)).slice(0,Math.max(0,Math.min(2,limit))).map(c=>c.id);
+ return [...new Map(candidates.filter(c=>c.archetype==='human'&&roomAt(c.position[0],c.position[2])===room).map(c=>[c.id,c])).values()].map(c=>({id:c.id,distance:Math.hypot(camera.position.x-c.position[0],camera.position.z-c.position[2])})).filter(c=>c.distance<=range).sort((a,b)=>a.distance-b.distance||a.id.localeCompare(b.id)).slice(0,Math.max(0,Math.min(2,limit))).map(c=>c.id);
+}
+
+// The authored rig faces +Z. Align each leg segment in world space so this also
+// works when the chair rotates; retain the live authored upper-body animation.
+function pointBone(a,name,childName,direction){
+ const bone=a.bones[name],child=a.bones[childName];if(!bone||!child)return;
+ a.root.updateMatrixWorld(true);
+ const current=child.getWorldPosition(new THREE.Vector3()).sub(bone.getWorldPosition(new THREE.Vector3())).normalize(),desired=new THREE.Vector3(...direction).transformDirection(a.root.matrixWorld),world=new THREE.Quaternion().setFromUnitVectors(current,desired).multiply(bone.getWorldQuaternion(new THREE.Quaternion()));
+ bone.quaternion.copy(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(world));bone.updateWorldMatrix(false,true);
+}
+function seatedPose(a){
+ for(const side of ['L','R']){pointBone(a,'upperleg01.'+side,'lowerleg01.'+side,[side==='L'?.035:-.035,-.17,1]);pointBone(a,'lowerleg01.'+side,'foot.'+side,[0,-1,0]);pointBone(a,'foot.'+side,'toe2-1.'+side,[0,0,1]);}
+ // Both templates have different authored leg lengths. Place their ankle at a
+// consistent height above the floor instead of guessing a fixed root offset.
+ a.root.updateMatrixWorld(true);const feet=['L','R'].map(side=>a.bones['foot.'+side]).filter(Boolean);if(feet.length){const ankle=feet.reduce((n,b)=>n+b.getWorldPosition(new THREE.Vector3()).y,0)/feet.length;a.rig.position.y+=a.root.position.y+.145-ankle;}
+ a.root.userData.posture='seated';
+}
+function scriptedGaze(a,viewer,enabled){
+ const point=new THREE.Vector3(),direction=new THREE.Vector3(),rotation=new THREE.Quaternion();let active=false;
+ for(const side of ['L','R']){const eye=a.bones['eye.'+side];if(!eye)continue;eye.quaternion.identity();if(!enabled||!viewer)continue;eye.getWorldPosition(point);direction.copy(viewer).sub(point);if(direction.length()>4)continue;direction.applyQuaternion(eye.parent.getWorldQuaternion(rotation).invert());if(direction.z<.2)continue;const yaw=THREE.MathUtils.clamp(Math.atan2(direction.x,direction.z),-.25,.25),pitch=THREE.MathUtils.clamp(Math.atan2(direction.y,Math.hypot(direction.x,direction.z)),-.13,.13);eye.quaternion.setFromEuler(new THREE.Euler(-pitch,yaw,0));active=true;}
+ a.root.userData.gaze=active?'scripted-viewer':'neutral';
 }
 function initialDetail(){
  if(typeof window==='undefined')return false;
@@ -60,42 +83,43 @@ function initialDetail(){
 export function createAdvancedResidents(parent,{enabled=initialDetail(),limit=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches?1:2,reducedMotion=false,loadAssets=defaultAssets}={}){
  const deviceLimit=Math.max(0,Math.min(2,Number.isInteger(limit)?limit:2));limit=deviceLimit;
  const root=new THREE.Group();root.name='atlas-advanced-residents';parent.add(root);
- const templates=new Map(),pending=new Map(),failed=new Set(),actors=new Map();let disposed=false,selected=new Set();
+ const templates=new Map(),pending=new Map(),failed=new Set(),actors=new Map();let disposed=false,selected=new Set(),viewer=null;
  function removeActor(id){const a=actors.get(id);if(!a)return;a.root.removeFromParent();for(const m of a.materials)m.dispose();for(const s of a.skeletons)s.dispose();actors.delete(id);}
  function request(sex){
   if(disposed||templates.has(sex)||pending.has(sex)||failed.has(sex))return;
   const promise=Promise.resolve().then(()=>loadAssets(sex)).then(bundle=>{if(disposed){disposeTemplate(bundle);return;}templates.set(sex,bundle);}).catch(()=>{failed.add(sex);}).finally(()=>pending.delete(sex));pending.set(sex,promise);
  }
- function build(id,index){
+ function build(id){
+  const appearance=residentAppearance(id);if(!appearance||appearance.archetype!=='human')throw Error('Anatomical detail requires a known human resident.');
   const sex=sexFor(id),bundle=templates.get(sex);if(!bundle)return null;
-  const rig=cloneSkinnedTemplate(bundle.scene),holder=new THREE.Group();holder.name='advanced-'+id;holder.userData={residentId:id,anatomy:'MakeHuman CC0',source:'ERAS',scripted:true};holder.add(rig);
+  const rig=cloneSkinnedTemplate(bundle.scene),holder=new THREE.Group();holder.name='advanced-'+id;holder.userData={residentId:id,anatomy:'MakeHuman CC0',source:'ERAS',scripted:true,appearance};holder.add(rig);
   const t=bundle.textures,materials={
-   skin:new THREE.MeshStandardMaterial({map:t.skin,normalMap:t.normal,roughnessMap:t.roughness,normalScale:new THREE.Vector2(.48,.48),color:'#f3e3d7',roughness:.76}),
-   tunic:new THREE.MeshStandardMaterial({color:palette[index%palette.length],roughness:.88}),trousers:new THREE.MeshStandardMaterial({color:'#46545c',roughness:.9}),boots:new THREE.MeshStandardMaterial({color:'#243d43',roughness:.85}),
-   hair:new THREE.MeshStandardMaterial({map:t.hair,color:'#938b7d',alphaTest:.28,side:THREE.DoubleSide,roughness:.76}),eyes:new THREE.MeshStandardMaterial({map:t.eyes,color:'#f3f0e8',roughness:.25}),
+   skin:new THREE.MeshPhysicalMaterial({map:t.skin,normalMap:t.normal,roughnessMap:t.roughness,normalScale:new THREE.Vector2(.42,.42),color:appearance.skinTint,roughness:.78,metalness:0,ior:1.4,specularIntensity:.35,envMapIntensity:.65}),
+   tunic:new THREE.MeshPhysicalMaterial({...(t.fabric?{map:t.fabric}:{}),color:appearance.uniform,roughness:.9,sheen:.3,sheenRoughness:.8,sheenColor:appearance.uniform}),trousers:new THREE.MeshStandardMaterial({...(t.fabric?{map:t.fabric}:{}),color:'#46545c',roughness:.93}),boots:new THREE.MeshPhysicalMaterial({color:'#293d40',roughness:.59,clearcoat:.12,clearcoatRoughness:.45}),
+   hair:new THREE.MeshStandardMaterial({map:t.hair,color:appearance.hair,alphaTest:.22,alphaToCoverage:true,side:THREE.DoubleSide,roughness:.8}),eyes:new THREE.MeshPhysicalMaterial({map:t.eyes,color:'#fffaf4',roughness:.2,clearcoat:1,clearcoatRoughness:.06,ior:1.38,envMapIntensity:.9}),
    eyebrows:new THREE.MeshStandardMaterial({map:t.eyebrows,color:'#b49b88',alphaTest:.02,transparent:true,opacity:.6,depthWrite:false,side:THREE.DoubleSide,roughness:.9}),eyelashes:new THREE.MeshStandardMaterial({map:t.eyelashes,color:'#8a7b6d',alphaTest:.08,transparent:true,depthWrite:false,side:THREE.DoubleSide,roughness:.9})
   };
   const bones={},skeletons=new Set();let ground=0;
   rig.traverse(o=>{if(o.userData.anatomyBone)bones[o.userData.anatomyBone]=o;if(!o.isSkinnedMesh)return;const part=o.userData.anatomyPart||o.name;o.visible=!['mantle','cuirass','hem','belt',sex==='male'?'hair_long':'hair_short'].includes(part);o.material=part.startsWith('hair_')?materials.hair:materials[part]||materials.tunic;if(part==='boots'){o.geometry.computeBoundingBox();ground=-o.geometry.boundingBox.min.y;}skeletons.add(o.skeleton);});
-  const scale=1.65/bundle.height;rig.scale.setScalar(scale);rig.position.y=.04+ground*scale;holder.userData.height=1.65;
+  const scale=appearance.height/bundle.height;rig.scale.setScalar(scale);rig.position.y=.04+ground*scale;holder.userData.height=appearance.height;
   const pose={quaternions:bundle.motion.bones.map(()=>new THREE.Quaternion()),pelvis:0};
-  const a={root:holder,rig,bones,skeletons,materials:new Set(Object.values(materials)),bundle,pose,sex,baseY:rig.position.y,lastClip:null};root.add(holder);actors.set(id,a);return a;
+  const a={root:holder,rig,bones,skeletons,materials:new Set(Object.values(materials)),bundle,pose,sex,appearance,baseY:rig.position.y,lastClip:null};root.add(holder);actors.set(id,a);return a;
  }
  return{
   setBudget(value){if(Number.isInteger(value))limit=Math.max(0,Math.min(deviceLimit,value));},
   setEnabled(value){enabled=value===true;if(!enabled){selected.clear();for(const id of [...actors.keys()])removeActor(id);}},
   prepare(camera,candidates){
-   if(disposed)return;selected=new Set(enabled?selectAdvancedResidents(candidates,camera,{limit}):[]);
+   if(disposed)return;viewer=camera?.position&&[camera.position.x,camera.position.y,camera.position.z].every(Number.isFinite)?new THREE.Vector3(camera.position.x,camera.position.y,camera.position.z):null;selected=new Set(enabled?selectAdvancedResidents(candidates,camera,{limit}):[]);
    for(const id of [...actors.keys()])if(!selected.has(id))removeActor(id);
-   for(const id of selected){const sex=sexFor(id);request(sex);if(templates.has(sex)&&!failed.has(sex)&&!actors.has(id)){try{build(id,candidates.findIndex(c=>c.id===id));}catch{failed.add(sex);}}}
+   for(const id of selected){const sex=sexFor(id);request(sex);if(templates.has(sex)&&!failed.has(sex)&&!actors.has(id)){try{build(id);}catch{failed.add(sex);}}}
    root.userData={enabled,selected:[...selected],active:[...actors.keys()],loading:[...pending.keys()],failed:[...failed],limit:Math.min(2,limit),source:'ERAS CC0',weightsChanged:false};
   },
   update(actor,{position,yaw,moving=false,working=false,time=0}={}){
    const a=actors.get(actor.id);if(disposed||!enabled||!selected.has(actor.id)||!a)return false;
-   const clip=reducedMotion?'Idle_Loop':moving?'Walk_Loop':working?'Interact':'Idle_Loop',motion=a.bundle.motion.clips[clip];
-   const phase=reducedMotion?0:(time/motion.duration)%1;a.bundle.sample(a.bundle.motion,a.sex,clip,phase,a.pose,clip!=='Interact');
+   const seated=actor.seated&&!moving,clip=reducedMotion?'Idle_Loop':moving?'Walk_Loop':working?'Interact':'Idle_Loop',motion=a.bundle.motion.clips[clip];
+   const phase=reducedMotion?0:(time/motion.duration+a.appearance.motionPhase)%1;a.bundle.sample(a.bundle.motion,a.sex,clip,phase,a.pose,clip!=='Interact');
    for(let i=0;i<a.bundle.motion.bones.length;i++){const bone=a.bones[a.bundle.motion.bones[i]];if(bone)bone.quaternion.copy(a.pose.quaternions[i]);}
-   a.rig.position.y=a.baseY+(reducedMotion?0:a.pose.pelvis*a.rig.scale.y);a.root.position.fromArray(position||actor.position);a.root.rotation.y=Math.PI-(Number.isFinite(yaw)?yaw:actor.yaw);a.root.visible=true;a.root.userData.clip=clip;a.lastClip=clip;a.root.updateMatrixWorld(true);return true;
+   a.rig.position.y=a.baseY+(reducedMotion?0:a.pose.pelvis*a.rig.scale.y);a.root.position.fromArray(position||actor.position);a.root.rotation.y=Math.PI-(Number.isFinite(yaw)?yaw:actor.yaw);a.root.visible=true;if(seated)seatedPose(a);else a.root.userData.posture='standing';a.root.updateMatrixWorld(true);scriptedGaze(a,viewer,!reducedMotion&&!working&&!moving);a.root.userData.clip=clip;a.lastClip=clip;a.root.updateMatrixWorld(true);return true;
   },
   status(){return{...root.userData,enabled,selected:[...selected],active:[...actors.keys()],loading:[...pending.keys()],failed:[...failed],limit:Math.min(2,limit)};},
   dispose(){if(disposed)return;disposed=true;selected.clear();for(const id of [...actors.keys()])removeActor(id);for(const bundle of templates.values())disposeTemplate(bundle);templates.clear();root.removeFromParent();}

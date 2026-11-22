@@ -6,6 +6,15 @@ export function audioFeatures(samples:Float32Array,sampleRate:number){
  const mean=sum/samples.length,rms=Math.sqrt(power/samples.length);
  return{frames:samples.length,duration:samples.length/sampleRate,mean,rms,peak,clipped,invalid,zeroCrossingsPerSecond:crossings/(samples.length/sampleRate),dbfs:rms?20*Math.log10(rms):null};
 }
+/** Joint sample peak and RMS across equal-length channels, without mixing the waves.
+ * Keep DC per channel: opposite offsets would cancel in a single average. */
+export function channelMetrics(channels:Float32Array[],sampleRate:number){
+ if(channels.length<1||channels.length>2||channels.some(c=>c.length!==channels[0].length))throw Error('Se necesitan uno o dos canales de igual duración.');
+ const measured=channels.map(channel=>audioFeatures(channel,sampleRate));
+ return {duration:measured[0].duration,peak:Math.max(...measured.map(m=>m.peak)),
+  rms:Math.sqrt(measured.reduce((n,m)=>n+m.rms*m.rms,0)/measured.length),
+  dc:measured.map(m=>m.mean),clipped:measured.reduce((n,m)=>n+m.clipped,0)};
+}
 /** Stereo-linked DC removal and peak attenuation. Never boosts quiet audio. */
 export function masterChannels(channels:Float32Array[],ceiling=.94){
  if(!channels.length||channels.length>2||!channels[0].length||channels[0].length>96000*120||channels.some(c=>c.length!==channels[0].length)||!Number.isFinite(ceiling)||ceiling<.5||ceiling>.98)throw Error('Canales no válidos.');

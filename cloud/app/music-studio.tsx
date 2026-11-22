@@ -5,7 +5,7 @@ import {useCallback,useEffect,useRef,useState,type ChangeEvent} from 'react';
 import {TRACK_IDS,PRESETS,createPattern,clonePattern,validatePattern,varyPattern,patternDuration,type Pattern,type TrackId} from '@/lib/music/pattern.mjs';
 import {transposePattern,canTranspose,transpositionRange} from '@/lib/music/transposition.mjs';
 import {encodeWav} from '@/lib/music/wav.mjs';
-import {masterChannels,audioFeatures} from '@/lib/evolution/signals';
+import {masterChannels,channelMetrics} from '@/lib/evolution/signals';
 import {buildMixer,updateMixer,scheduleHit,playPiano,stopSources,renderPattern,type Mixer} from '@/lib/music/audio';
 import MusicAIComposer from './music-ai-composer';
 import styles from './music-studio.module.css';
@@ -87,7 +87,7 @@ export default function MusicStudio({onClose,ready=false,signInPath='/'}:Props={
  };
  const exportWav=async()=>{
   if(exporting)return;setExporting(true);setError('');setStatus('Renderizando las cuatro pistas como audio WAV…');
-  try{const value=clonePattern(patternRef.current),audio=await renderPattern(value,bars);if(!mounted.current)return;const raw=Array.from({length:audio.numberOfChannels},(_,i)=>audio.getChannelData(i)),channels=mastering?masterChannels(raw).channels:raw,features=audioFeatures(channels[0],audio.sampleRate);download(new Blob([encodeWav(channels,audio.sampleRate)],{type:'audio/wav'}),`atlas-${value.bpm}bpm-${bars}compases.wav`);setStatus(`WAV exportado: ${bars} compases. Pico ${features.peak.toFixed(3)}; ${features.clipped} muestras en el límite. ${mastering?'Perfil aprobado: DC eliminado y margen de pico 0,94.':'Perfil base.'} Audio procesado en este dispositivo.`);}
+  try{const value=clonePattern(patternRef.current),audio=await renderPattern(value,bars);if(!mounted.current)return;const raw=Array.from({length:audio.numberOfChannels},(_,i)=>audio.getChannelData(i)),channels=mastering?masterChannels(raw).channels:raw,features=channelMetrics(channels,audio.sampleRate);download(new Blob([encodeWav(channels,audio.sampleRate)],{type:'audio/wav'}),`atlas-${value.bpm}bpm-${bars}compases.wav`);setStatus(`WAV exportado: ${bars} compases. Pico máximo entre canales ${features.peak.toFixed(3)}; ${features.clipped} muestras en el límite. ${mastering?'Perfil aprobado: DC eliminado y margen de pico 0,94.':'Perfil base.'} Audio procesado en este dispositivo.`);}
   catch(problem){if(mounted.current)setError(problem instanceof Error?problem.message:'No se pudo renderizar el WAV. Prueba con menos compases.');}
   finally{if(mounted.current)setExporting(false);}
  };

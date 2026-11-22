@@ -13,7 +13,7 @@ const stations=[
  {id:'lab-bench',room:'lab',position:[-8.2,0,-5.35],yaw:0,archetype:'animal',processIds:['experience'],activePhases:['apply','refute'],name:'Nilo · experimentos',role:'Contraste de la experiencia',seated:false,cosmetic:false},
  {id:'games-desk',room:'games',position:[8.8,0,4],yaw:Math.PI/2,archetype:'robot',processIds:['creative'],name:'Talo · constructor',role:'Generación de planes 3D',seated:true,cosmetic:false},
  {id:'games-maquette',room:'games',position:[7.5,0,5.25],yaw:Math.PI,archetype:'animal',processIds:['creative'],name:'Zuri · maquetas',role:'Prototipos 3D con contratos',seated:false,cosmetic:false},
- {id:'cinema-projector',room:'cinema',position:[5.2,0,-4.8],yaw:Math.PI/2,archetype:'robot',processIds:['video'],name:'Faro · vídeo',role:'Generación de vídeo local',seated:false,cosmetic:false},
+ {id:'cinema-projector',room:'cinema',position:[5.2,0,-4.8],yaw:Math.PI/2,archetype:'robot',processIds:['video'],name:'Faro · vídeo',role:'Dirección de planos y captura de la casa',seated:false,cosmetic:false},
  {id:'sky-sources',room:'constellation',position:[-2.3,0,-5.5],yaw:0,archetype:'bird',processIds:['research','external'],name:'Alba · referencias',role:'Fuentes de la Constelación',seated:true,cosmetic:false},
  {id:'sky-agents',room:'constellation',position:[2.3,0,-5.5],yaw:0,archetype:'bird',processIds:['agents'],name:'Ícaro · agentes',role:'Dios · cielo · conexión externa de Lía',seated:true,cosmetic:false},
  {id:'mind-desk',room:'mind',position:[-10,0,-13.6],yaw:0,archetype:'human',processIds:['experience'],activePhases:['observe','understand','retain'],name:'Nora · memoria',role:'Observación y memoria situada',seated:true,cosmetic:false},
@@ -25,6 +25,9 @@ const stations=[
  {id:'language-symbol',room:'language',position:[12,0,-13.25],yaw:0,archetype:'robot',processIds:['core'],name:'Sigma · símbolos',role:'Políticas y símbolos verificables',seated:false,cosmetic:false},
  {id:'language-meaning',room:'language',position:[14.5,0,-13.25],yaw:0,archetype:'human',processIds:['experience'],activePhases:['connect','retain'],name:'Ema · sentido',role:'Interpretación situada de la experiencia',seated:false,cosmetic:false}
 ];
+// Critic vocations share the cinema tools; the legacy cosmetic flag only keeps
+// unreported presence from being displayed as an active inference process.
+const audienceRoles=['Crítica de narrativa audiovisual','Color e iluminación','Escucha y claridad sonora','Movimiento e interacción','Accesibilidad y comprensión','Ritmo de montaje'];
 const audience=[
  ['cinema-audience-1',6.5,-2.6,'human','Teo · espectador'],
  ['cinema-audience-2',8.2,-2.6,'robot','Luz · espectadora'],
@@ -32,7 +35,7 @@ const audience=[
  ['cinema-audience-4',8.2,-4.3,'animal','Mico · espectador'],
  ['cinema-audience-5',6.5,-6,'human','Leo · espectador'],
  ['cinema-audience-6',8.2,-6,'bird','Brisa · espectadora']
-].map(([id,x,z,archetype,name])=>({id,room:'cinema',position:[x,0,z],yaw:Math.PI/2,archetype,processIds:[],name,role:'Habitante del cine · presencia decorativa',seated:true,cosmetic:true}));
+].map(([id,x,z,archetype,name],index)=>({id,room:'cinema',position:[x,0,z],yaw:Math.PI/2,archetype,processIds:[],name,role:audienceRoles[index],seated:true,cosmetic:true}));
 
 export const RESIDENTS=freeze([...stations,...audience]);
 export const WORKSTATIONS=freeze(RESIDENTS.filter(resident=>!resident.cosmetic));

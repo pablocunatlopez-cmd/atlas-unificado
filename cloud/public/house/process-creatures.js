@@ -1,5 +1,7 @@
+import {furnitureBox} from './surface-materials.js';
+import {bindResidentSurfaces,residentSurface} from './resident-surfaces.js';
 import {createWorkCourier} from './work-courier.js?v=housework1';
-import {createAdvancedResidents} from './advanced-residents.js?v=people1';
+import {createAdvancedResidents} from './advanced-residents.js?v=characters2';
 import {createLivingPresentations} from './living-presentation.js';
 import * as THREE from './vendor/three.module.js';
 import {roomAt} from './layout.js';
@@ -20,10 +22,11 @@ const dark='#243d43',cream='#e9dfc8',wood='#936d47';
 // report from an explicitly assigned real process. Presence never adds learning.
 export function createProcessCreatures(scene,textures,{now=Date.now,walls,reducedMotion=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches}={}){
  const group=new THREE.Group();group.name='atlas-residents';group.userData.roster=RESIDENTS;scene.add(group);
- const box=new THREE.BoxGeometry(1,1,1),sphere=new THREE.SphereGeometry(1,10,6);
+ const box=furnitureBox(1,1,1),sphere=new THREE.SphereGeometry(1,16,12);
  const bodies=new THREE.InstancedMesh(box,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.72,metalness:.08}),RESIDENTS.length*BOX_PARTS);
  const rounds=new THREE.InstancedMesh(sphere,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.66,metalness:.04}),RESIDENTS.length*ROUND_PARTS);
  const marks=new THREE.InstancedMesh(box,new THREE.MeshStandardMaterial({color:'#c9ddb1',roughness:.5,metalness:.2}),3);
+ const bodySurfaces=bindResidentSurfaces(bodies.material,box,RESIDENTS.length*BOX_PARTS),roundSurfaces=bindResidentSurfaces(rounds.material,sphere,RESIDENTS.length*ROUND_PARTS);
  bodies.name='atlas-process-bodies';rounds.name='atlas-process-heads';marks.name='atlas-measured-changes';
  bodies.userData.roster=RESIDENTS;bodies.userData.parts=BOX_PARTS;rounds.userData.parts=ROUND_PARTS;
  bodies.userData.archetypes=RESIDENTS.map(resident=>resident.archetype);bodies.userData.work=[];
@@ -46,6 +49,7 @@ export function createProcessCreatures(scene,textures,{now=Date.now,walls,reduce
  function put(mesh,index,tint,x,y,z,sx,sy,sz,rx=0,ry=0,rz=0){
   dummy.position.set(x+motion.travel,y+motion.bob,z).applyQuaternion(yawRotation).add(actorOrigin);
   dummy.scale.set(sx,sy,sz);dummy.rotation.set(rx,ry,rz);dummy.quaternion.premultiply(yawRotation);dummy.updateMatrix();mesh.setMatrixAt(index,dummy.matrix);mesh.setColorAt(index,colour.set(tint));
+  const surfaces=mesh===bodies?bodySurfaces:roundSurfaces,part=index%(mesh===bodies?BOX_PARTS:ROUND_PARTS);surfaces.setXYZ(index,...residentSurface(actor,mesh===bodies?'body':'round',part,{working:motion.working===true}));
  }
  const b=(part,...pose)=>put(bodies,actorIndex*BOX_PARTS+part,...pose);
  const r=(part,...pose)=>put(rounds,actorIndex*ROUND_PARTS+part,...pose);
@@ -141,6 +145,7 @@ export function createProcessCreatures(scene,textures,{now=Date.now,walls,reduce
     if(presentation){process.displayState='Presentación programada';if(presentation.position){actor={...resident,seated:false};actorOrigin.fromArray(presentation.position);yawRotation.setFromAxisAngle(axis,-presentation.yaw);}if(presentation.moving){motion.limb=Math.sin(time*7)*.32;motion.leftArm=-Math.sin(time*7)*.22;motion.rightArm=Math.sin(time*7)*.22;motion.bob=Math.abs(Math.sin(time*7))*.02;}else motion.rightArm=.4+Math.sin(time)*.15;}
     if(!journey?.active&&!process.workVerified&&(recentWork||delivery)){process.displayState=delivery?'Recibe resultado registrado':recentWork.displayState;if(!reducedMotion&&(delivery||recentWork.gesture)){motion.head=Math.sin(time*1.4)*.12;motion.rightArm=.28+Math.sin(time*2)*.12;motion.leftArm=-.14;motion.tool=Math.max(0,Math.sin(time*2))*.08;}}
     if(actor.id==='sky-agents'&&hosting){motion.wing=Math.sin(time*2)*.16;motion.head=Math.sin(time)*.12;}
+    if(reducedMotion){motion.travel=0;motion.bob=0;motion.limb=0;motion.head=0;motion.leftArm=process.workVerified?.18:0;motion.rightArm=process.workVerified?.28:0;motion.wing=0;motion.tilt=0;motion.tool=0;}
     for(let part=0;part<BOX_PARTS;part++)hide(bodies,index*BOX_PARTS+part);for(let part=0;part<ROUND_PARTS;part++)hide(rounds,index*ROUND_PARTS+part);
     const detailed=advanced.update(actor,{position:actorOrigin.toArray(),yaw:journey?.active?journey.yaw:presentation?.position?presentation.yaw:actor.yaw,moving:journey?.active?journey.moving&&journey.fresh:!!presentation?.moving,working:process.workVerified,time});
     if(actor.archetype==='human'){if(!detailed)human();}else if(actor.archetype==='robot')robot();else if(actor.archetype==='animal')animal();else bird();
@@ -152,6 +157,7 @@ export function createProcessCreatures(scene,textures,{now=Date.now,walls,reduce
    const visible=accepted===null?0:Math.min(3,accepted);marks.visible=visible>0;marks.userData.acceptedChanges=accepted;
    for(let index=0;index<3;index++){dummy.position.set(visible>index?-4.6:0,visible>index?.13+index*.21:-30,-13.1);dummy.scale.set(visible>index?.26:.00001,visible>index?.18:.00001,visible>index?.26:.00001);dummy.rotation.set(0,index*.2,0);dummy.updateMatrix();marks.setMatrixAt(index,dummy.matrix);}
    for(const mesh of [bodies,rounds,marks]){mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}
+   bodySurfaces.needsUpdate=true;roundSurfaces.needsUpdate=true;
    fitLabels(camera,viewportHeight);
   }
  };
