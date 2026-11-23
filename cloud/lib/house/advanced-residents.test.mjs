@@ -7,6 +7,7 @@ import {cloneSkinnedTemplate,selectAdvancedResidents,createAdvancedResidents} fr
 import {residentById} from '../../public/house/residents.js';
 import {residentAppearance} from '../../public/house/resident-appearance.js';
 import {decodeMotionLibrary,sampleMotion} from '../../public/house/motion-player.js';
+import {createResidentTextileMaps} from '../../public/house/resident-textile.js';
 const asset=new URL('../../public/house/assets/',import.meta.url);
 async function bundle(sex='female'){
  const [bytes,manifest,poses]=await Promise.all([readFile(new URL('models/avatar/'+sex+'.glb',asset)),readFile(new URL('motion/manifest.json',asset),'utf8'),readFile(new URL('motion/poses.bin',asset))]);
@@ -19,9 +20,10 @@ const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
 
 test('an explicit 4K portrait renders an articulated human even with the automatic detail budget at zero',async()=>{
  const actor=residentById('music-console'),parent=new THREE.Scene(),base=await bundle(),map=new THREE.Texture(),normalMap=new THREE.Texture();
+ const textile=createResidentTextileMaps();
  let releaseCount=0;
- for(const texture of [map,normalMap])texture.addEventListener('dispose',()=>releaseCount++);
- const manager=createAdvancedResidents(parent,{enabled:false,limit:0,loadAssets:async()=>base,loadUltra:async()=>({map,normalMap})});
+ for(const texture of [map,normalMap,...Object.values(textile)])texture.addEventListener('dispose',()=>releaseCount++);
+ const manager=createAdvancedResidents(parent,{enabled:false,limit:0,loadAssets:async()=>base,loadUltra:async()=>({map,normalMap,...textile})});
  try{
   manager.setPortrait(actor.id);
   assert.deepEqual(manager.status().ultra,{id:actor.id,phase:'loading'});
@@ -29,15 +31,20 @@ test('an explicit 4K portrait renders an articulated human even with the automat
   manager.prepare(camera,[actor]);
   assert.equal(manager.update(actor,{time:1}),true);
   const resident=parent.getObjectByName('advanced-'+actor.id);
-  let skin;resident.traverse(object=>{if(object.userData.anatomyPart==='skin')skin=object;});
+  let skin,tunic;resident.traverse(object=>{if(object.userData.anatomyPart==='skin')skin=object;if(object.userData.anatomyPart==='tunic')tunic=object;});
   assert.deepEqual(manager.status().ultra,{id:actor.id,phase:'ready'});
   assert.equal(resident.userData.posture,'seated');
   assert.equal(skin.material.map,map);
   assert.equal(skin.material.normalMap,normalMap);
+  assert.equal(tunic.material.normalMap,textile.fabricNormal);
+  assert.equal(tunic.material.roughnessMap,textile.fabricRoughness);
+  assert.equal(tunic.material.map,base.textures.fabric);
   manager.setPortrait(null);
   assert.equal(skin.material.map,base.textures.skin);
   assert.equal(skin.material.normalMap,base.textures.normal);
-  assert.equal(releaseCount,2);
+  assert.equal(tunic.material.normalMap,null);
+  assert.equal(tunic.material.roughnessMap,null);
+  assert.equal(releaseCount,4);
   manager.prepare(camera,[actor]);
   assert.deepEqual(manager.status().active,[]);
  }finally{manager.dispose();}

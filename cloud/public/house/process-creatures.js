@@ -1,7 +1,7 @@
 import {furnitureBox} from './surface-materials.js';
 import {bindResidentSurfaces,residentSurface} from './resident-surfaces.js';
 import {createWorkCourier} from './work-courier.js?v=housework1';
-import {createAdvancedResidents} from './advanced-residents.js?v=ultra7';
+import {createAdvancedResidents} from './advanced-residents.js?v=ultra9';
 import {createCompactResidents} from './compact-residents.js';
 import {createCreatureModels} from './creature-models.js';
 import {createLivingPresentations} from './living-presentation.js';
@@ -37,6 +37,7 @@ export function createProcessCreatures(scene,textures,{now=Date.now,walls,reduce
  bodies.castShadow=true;rounds.castShadow=true;
  let telemetry=normalizeProcessState(null),receivedAt=-Infinity,sourceAge=Infinity,actor,motion,actorIndex;
  const renderedPoses=new Map();
+ let portraitId=null;
  const courier=createWorkCourier({now,walls,reducedMotion}),journeys=createSkyJourneys({now,walls,reducedMotion}),presentations=createLivingPresentations({walls,reducedMotion}),advanced=createAdvancedResidents(group,{reducedMotion});
  const compact=characterMeshes?createCompactResidents(group,{load:loadCompact}):null;
  const creatures=characterMeshes?createCreatureModels(group):null;
@@ -129,13 +130,13 @@ export function createProcessCreatures(scene,textures,{now=Date.now,walls,reduce
   if(!camera?.isPerspectiveCamera||!Number.isFinite(viewportHeight)||viewportHeight<=0){for(const {sprite} of labels)sprite.visible=false;return;}
   camera.updateMatrixWorld();const overview=camera.position.y>6,room=roomAt(camera.position.x,camera.position.z),projection=viewportHeight/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2));
   for(const entry of labels){const {sprite,resident}=entry,depth=-cameraPoint.copy(sprite.position).applyMatrix4(camera.matrixWorldInverse).z;
-   sprite.visible=!overview&&roomAt(sprite.position.x,sprite.position.z)===room&&depth>camera.near&&camera.position.distanceTo(sprite.position)<8;
+   sprite.visible=!portraitId&&!overview&&roomAt(sprite.position.x,sprite.position.z)===room&&depth>camera.near&&camera.position.distanceTo(sprite.position)<8;
    if(!sprite.visible)continue;
    const factor=Math.min(1,LABEL_MAX_PX*depth/(LABEL_WIDTH*projection));sprite.scale.set(LABEL_WIDTH*factor,LABEL_HEIGHT*factor,1);sprite.material.opacity=Math.max(.55,Math.min(.97,1.25-depth*.08));
   }
  }
  return {
-  setPeopleBudget:value=>advanced.setBudget(value),setPeopleDetail:value=>advanced.setEnabled(value),setPortrait:id=>advanced.setPortrait(id),peopleStatus:()=>({...advanced.status(),compact:compact?.status()}),dispose(){advanced.dispose();compact?.dispose();creatures?.dispose();},
+  setPeopleBudget:value=>advanced.setBudget(value),setPeopleDetail:value=>advanced.setEnabled(value),setPortrait:id=>{portraitId=id;advanced.setPortrait(id);},peopleStatus:()=>({...advanced.status(),compact:compact?.status()}),dispose(){advanced.dispose();compact?.dispose();creatures?.dispose();},
   setLivingState:value=>presentations.setState(value),
   setState(value,at=performance.now()){telemetry=normalizeProcessState(value);receivedAt=Number.isFinite(at)?at:-Infinity;sourceAge=telemetry.at?now()-Date.parse(telemetry.at):Infinity;journeys.setState(value?.icarus,{connected:telemetry.connected,sourceAgeMs:sourceAge,receivedAtMs:receivedAt});courier.setState(value?.houseWork,{connected:telemetry.connected,sourceAgeMs:sourceAge,receivedAtMs:receivedAt});},
   poseForResident:id=>renderedPoses.get(id)||null,

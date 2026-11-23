@@ -52,7 +52,23 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
  const[residentsOpen,setResidentsOpen]=useState(false),[selectedResident,setSelectedResident]=useState<string|null>(null),[installation,setInstallation]=useState<HouseInstallation|null>(null),[roomDetailsOpen,setRoomDetailsOpen]=useState(false);
  const residentsPanel=useRef<HTMLElement>(null),residentsToggle=useRef<HTMLButtonElement>(null);
  const charterDialog=useRef<HTMLDialogElement>(null);const [capturing,setCapturing]=useState(false),[hudHidden,setHudHidden]=useState(false);
- const captureView=async(residentId?:string)=>{if(!api||capturing)return;setCapturing(true);try{const url=await(residentId?api.capturePortrait():api.capture());const link=document.createElement('a');link.href=url;link.download=residentId?`lia-${residentId}-4k.png`:'lia-casa.png';link.click();}catch(e){setNotice(e instanceof Error?e.message:'No se pudo capturar.');}finally{setCapturing(false);}};
+ const captureView=async(residentId?:string)=>{
+  if(!api||capturing)return;
+  setCapturing(true);
+  try{
+   const link=document.createElement('a');
+   if(residentId){
+    const blob=await api.capturePortrait();
+    if(!(blob instanceof Blob)||blob.type!=='image/png')throw Error('No se recibió una captura PNG.');
+    const url=URL.createObjectURL(blob);
+    link.href=url;link.download=`lia-${residentId}-4k.png`;link.click();
+    window.setTimeout(()=>URL.revokeObjectURL(url),30000);
+   }else{
+    link.href=await api.capture();link.download='lia-casa.png';link.click();
+   }
+  }catch(error){setNotice(error instanceof Error?error.message:'No se pudo capturar.');}
+  finally{setCapturing(false);}
+ };
  const [spiralOpen,setSpiralOpen]=useState(false);
  const [activeFunction,setActiveFunction]=useState<ReturnType<typeof houseFunction>>(null);
  const[room,setRoom]=useState<HouseRoom>('salon'),[entered,setEntered]=useState(false),[workspace,setWorkspace]=useState<HouseRoom|null>(null),[menu,setMenu]=useState(false),[api,setApi]=useState<HouseAPI|null>(null),[performance,setPerformance]=useState<HousePerformance|null>(null),[status,setStatus]=useState<Status|null>(null),[statusFailed,setStatusFailed]=useState(false),[notice,setNotice]=useState(''),[sceneError,setSceneError]=useState('');
@@ -157,6 +173,10 @@ export default function AtlasHouse({signedIn,displayName,signInPath}:Props){
    <p>{entered?((selectedPerson?vocationFor(selectedPerson.id)?.title||selectedPerson.role:null)||active.description):'Atlas es la mente, Ion el cuerpo e Ícaro el cielo. Los tres desarrollan a Lía en este entorno compartido. Recorre sus habitaciones o elige adónde quieres ir.'}</p>
    {entered&&selectedPerson?.archetype==='human'&&<div className={styles.portraitControls}>
     <button type="button" disabled={!api} aria-pressed={!!portrait} onClick={()=>{setRoomDetailsOpen(false);api?.portrait(portrait?null:selectedPerson.id);}}>{portrait?'Cerrar primer plano':'Primer plano 4K'}</button>
+    {portrait&&<div className={styles.portraitFraming} role="group" aria-label="Encuadre del retrato">
+     <button type="button" aria-pressed={portrait.framing==='face'} onClick={()=>api?.portrait(selectedPerson.id,'face')}>Rostro</button>
+     <button type="button" aria-pressed={portrait.framing==='torso'} onClick={()=>api?.portrait(selectedPerson.id,'torso')}>Medio cuerpo</button>
+    </div>}
     {portrait?.phase==='ready'&&<button type="button" disabled={capturing} onClick={()=>void captureView(selectedPerson.id)}>{capturing?'Exportando…':'Descargar PNG 4K'}</button>}
     {portrait&&<span role="status">{portrait.phase==='ready'?'Piel 4096 × 4096':portrait.phase==='loading'?'Cargando piel 4K…':'Piel 4K no disponible. Cierra el primer plano para reintentar.'}</span>}
    </div>}

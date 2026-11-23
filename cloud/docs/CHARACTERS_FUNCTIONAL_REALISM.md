@@ -19,6 +19,10 @@ Se reutilizan los GLB, animaciones y mapas CC0 cuya integridad se ha comprobado,
 
 La ficha de cada humano abre un primer plano con su malla articulada y mapas de color y relieve de 4096 × 4096. Los mapas conservan las UV existentes y combinan las texturas CC0 remuestreadas con microporos generados a resolución completa. El archivo `public/house/assets/models/ultra/provenance.json` registra sus fuentes y hashes. ERAS carga el detalle de un solo humano a petición y libera los mapas al salir. La captura requiere un lienzo WebGL capaz de generar los 3840 × 2160 píxeles del PNG.
 
+Los encuadres de rostro y medio cuerpo comprueban la visibilidad contra las mallas opacas de la casa. Los párpados y las pestañas parpadean con las articulaciones CC0 y respetan el ajuste de movimiento reducido. La exportación usa el encuadre activo, oculta los rótulos flotantes y vuelve al tamaño de pantalla antes de que termine la codificación del PNG.
+
+La prueba de Higgsfield Soul 2 aportó una referencia de vestuario. En primer plano, ERAS añade a la túnica mapas procedurales de relieve y rugosidad ajustados a la escala del tejido y los libera al salir. Se preservan el uniforme, sus UV y el esqueleto. SAM 3D Body exportó una malla de 36.874 triángulos con 70 marcadores anatómicos. El GLB carece de texturas y pesos de esqueleto, por lo que se conservó como material de diagnóstico fuera del juego.
+
 Pruebas CPU con modelos y animaciones reales comprueban postura, pies, ausencia de deriva, materiales, aparición por ID, transiciones y recursos. Raycast y handlers reales comprueban acceso a los 24 personajes, viajes y restricciones de interacción. Se comprueban parámetros PBR, señales verificadas y movimiento reducido. También se ejecutan tipos y compilación.
 
 No se ha observado la escena en una GPU. La respuesta final de materiales, expresiones, comodidad y rendimiento requiere revisión visual; este pase acerca el mundo al objetivo de realismo sin declararlo alcanzado.

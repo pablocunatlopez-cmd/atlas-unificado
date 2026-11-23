@@ -27,15 +27,16 @@ export type HouseInstallation={applied:true;artifactId:string;at:string;objects:
 export type HouseFilmShot={room:string;seconds:number;framing:'wide'|'medium'|'detail';movement:'orbit'|'push'|'still'};
 export type HouseRecording={url:string;mime:string;filename:string;bytes:number;method:string};
 export type HousePerformance={fps:number;frames:number;drawCalls:number;triangles:number;backend:string};
-export type HousePeopleStatus={enabled:boolean;active:number;loading:boolean;failed:boolean;limit:number;ultra:{id:string;phase:'loading'|'ready'|'failed'}|null};
+type PortraitFraming='face'|'torso';
+export type HousePeopleStatus={enabled:boolean;active:number;loading:boolean;failed:boolean;limit:number;ultra:{id:string;phase:'loading'|'ready'|'failed';framing:PortraitFraming}|null};
 export type HouseAPI={
  atlasMode:(value:'enter'|'leave')=>void;
  setPeopleDetail:(enabled:boolean)=>void;
  teleport:(room:HouseRoom)=>void;
  overview:()=>void;
  focusResident:(id:string)=>void;
- portrait:(id:string|null)=>void;
- capturePortrait:()=>Promise<string>;
+ portrait:(id:string|null,framing?:PortraitFraming)=>void;
+ capturePortrait:()=>Promise<Blob>;
  focusEvolution:()=>void;
  activateWork:(room:HouseRoom)=>void;
  setCreativeState:(value:PublicCreativePreview|null)=>void;
@@ -60,7 +61,7 @@ export function HouseScene(props:Props){
     pending.current.set(requestId,{resolve:result=>resolve(result as T),reject,timeout});send(kind,{requestId,...value});
    });
   }
-  return {atlasMode:value=>send('atlas-mode',{value}),setPeopleDetail:value=>send('people',{value}),teleport:room=>send('teleport',{room}),overview:()=>send('overview'),focusResident:id=>send('resident',{id}),portrait:id=>send('portrait',{id}),capturePortrait:()=>request<string>('capture-portrait',{},20000),focusEvolution:()=>send('evolution'),activateWork:room=>send('work',{room}),setCreativeState:value=>send('creative',{value}),capture:()=>request<string>('capture',{},8000),record:options=>{const seconds=Math.max(2,Math.min(16,options?.seconds||8));return request<HouseRecording>('record',{seconds,rooms:options?.rooms,shots:options?.shots},seconds*1000+10000);},revoke:url=>send('revoke',{url}),pause:value=>send('pause',{value}),setProcessState:value=>send('processes',{value})};
+  return {atlasMode:value=>send('atlas-mode',{value}),setPeopleDetail:value=>send('people',{value}),teleport:room=>send('teleport',{room}),overview:()=>send('overview'),focusResident:id=>send('resident',{id}),portrait:(id,framing)=>send('portrait',{id,framing}),capturePortrait:()=>request<Blob>('capture-portrait',{},20000),focusEvolution:()=>send('evolution'),activateWork:room=>send('work',{room}),setCreativeState:value=>send('creative',{value}),capture:()=>request<string>('capture',{},8000),record:options=>{const seconds=Math.max(2,Math.min(16,options?.seconds||8));return request<HouseRecording>('record',{seconds,rooms:options?.rooms,shots:options?.shots},seconds*1000+10000);},revoke:url=>send('revoke',{url}),pause:value=>send('pause',{value}),setProcessState:value=>send('processes',{value})};
  },[]);
  useEffect(()=>{
   const requests=pending.current;
@@ -73,7 +74,7 @@ export function HouseScene(props:Props){
    if(event.origin!==location.origin||event.source!==frame.current?.contentWindow||!event.data||typeof event.data!=='object')return;
    const data=event.data;
    if(data.type==='atlas:house:atlas-mode'&&(data.mode==='atlas'||data.mode==='house'))latest.current.onAtlasModeChange?.(data.mode==='atlas');
-   if(data.type==='atlas:house:people'&&data.value&&typeof data.value==='object'&&typeof data.value.enabled==='boolean'){const v=data.value;latest.current.onPeopleStatus?.({enabled:v.enabled,active:Array.isArray(v.active)?Math.min(2,v.active.length):0,loading:Array.isArray(v.loading)&&v.loading.length>0,failed:Array.isArray(v.failed)&&v.failed.length>0,limit:v.limit===0?0:v.limit===1?1:2,ultra:typeof v.ultra?.id==='string'&&residentById(v.ultra.id)?.archetype==='human'&&['loading','ready','failed'].includes(v.ultra.phase)?{id:v.ultra.id,phase:v.ultra.phase}:null});}
+   if(data.type==='atlas:house:people'&&data.value&&typeof data.value==='object'&&typeof data.value.enabled==='boolean'){const v=data.value;latest.current.onPeopleStatus?.({enabled:v.enabled,active:Array.isArray(v.active)?Math.min(2,v.active.length):0,loading:Array.isArray(v.loading)&&v.loading.length>0,failed:Array.isArray(v.failed)&&v.failed.length>0,limit:v.limit===0?0:v.limit===1?1:2,ultra:typeof v.ultra?.id==='string'&&residentById(v.ultra.id)?.archetype==='human'&&['loading','ready','failed'].includes(v.ultra.phase)?{id:v.ultra.id,phase:v.ultra.phase,framing:v.ultra.framing==='torso'?'torso':'face'}:null});}
    if(data.type==='atlas:house:ready'){stopHello();setReady(true);setError(null);api.pause(latest.current.paused===true);latest.current.onReady?.(api);}
    if(data.type==='atlas:house:function'&&typeof data.id==='string'&&houseFunction(data.id))latest.current.onFunction?.(data.id);
    if(data.type==='atlas:house:room'&&validRoom(data.room)){currentRoom.current=data.room;latest.current.onRoomChange?.(data.room);}
@@ -98,7 +99,7 @@ export function HouseScene(props:Props){
  useEffect(()=>{if(ready&&props.processState)api.setProcessState(props.processState);},[api,props.processState,ready]);
  useEffect(()=>{if(ready)api.setCreativeState(props.creative||null);},[api,props.creative,ready]);
  return <div className={[styles.scene,props.className||''].join(' ')} data-house-ready={ready} aria-busy={!ready&&!error}>
-  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/index.html?v=ultra7'+(props.embedded===false?'':'&embedded=1')+(props.prototype?'&prototype=1':'')} allow="fullscreen; autoplay" className={styles.frame} />
+  <iframe ref={frame} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'atlas:house:hello'},location.origin)} title="Casa de Atlas: entorno 3D navegable" src={'/house/?v=ultra9'+(props.embedded===false?'':'&embedded=1')+(props.prototype?'&prototype=1':'')} allow="fullscreen; autoplay" className={styles.frame} />
  </div>;
 }
 

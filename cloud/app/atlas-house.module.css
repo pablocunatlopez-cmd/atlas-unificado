@@ -86,3 +86,5 @@
 .portraitControls button{background:#193d34;color:#e0f0e5;border:1px solid #a6ceba66;border-radius:7px;min-height:40px;padding:8px 10px;font-size:.875rem}
 .portraitControls button:disabled{opacity:.55;cursor:default}
 .portraitControls span{flex-basis:100%;color:#c0dace;font-size:.8125rem;line-height:1.45}
+.portraitFraming{flex-basis:100%;display:flex;flex-wrap:wrap;gap:7px}
+.portraitFraming button[aria-pressed=true]{background:#b7e4d0;color:#152f27;border-color:#b7e4d0}

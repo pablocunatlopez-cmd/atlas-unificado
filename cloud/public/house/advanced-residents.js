@@ -2,6 +2,8 @@ import {prepareSkinDetail} from './skin-detail.js';
 import * as THREE from './vendor/three.module.js';
 import {roomAt} from './layout.js';
 import {residentAppearance} from './resident-appearance.js';
+import {createResidentBlink} from './resident-face.js';
+import {createResidentTextileMaps} from './resident-textile.js';
 
 const BASE='/house/assets/models/avatar/';
 const ULTRA_BASE='/house/assets/models/ultra/';
@@ -72,7 +74,7 @@ async function loadUltraSkin(sex){
   texture.flipY=true;
   texture.anisotropy=8;
  }
- return {map:textures[0],normalMap:textures[1]};
+ return {map:textures[0],normalMap:textures[1],...createResidentTextileMaps()};
 }
 
 // The authored rig faces +Z. Align each leg segment in world space so this also
@@ -111,6 +113,9 @@ export function createAdvancedResidents(parent,{enabled=initialDetail(),limit=ty
   actor.skin.map=maps?.map||actor.bundle.textures.skin||null;
   actor.skin.normalMap=maps?.normalMap||actor.bundle.textures.normal||null;
   actor.skin.needsUpdate=true;
+  actor.tunic.normalMap=maps?.fabricNormal||null;
+  actor.tunic.roughnessMap=maps?.fabricRoughness||null;
+  actor.tunic.needsUpdate=true;
   actor.root.userData.skinResolution=maps?4096:actor.bundle.textures.skin?.image?.width||null;
  }
  function releasePortrait(){
@@ -146,7 +151,7 @@ export function createAdvancedResidents(parent,{enabled=initialDetail(),limit=ty
   const rig=cloneSkinnedTemplate(bundle.scene),holder=new THREE.Group();holder.name='advanced-'+id;holder.userData={residentId:id,anatomy:'MakeHuman CC0',source:'ERAS',scripted:true,appearance};holder.add(rig);
   const t=bundle.textures,materials={
    skin:new THREE.MeshPhysicalMaterial({map:t.skin,normalMap:t.normal,roughnessMap:t.roughness,normalScale:new THREE.Vector2(.42,.42),color:appearance.skinTint,roughness:.78,metalness:0,ior:1.4,specularIntensity:.35,envMapIntensity:.65}),
-   tunic:new THREE.MeshPhysicalMaterial({...(t.fabric?{map:t.fabric}:{}),color:appearance.uniform,roughness:.9,sheen:.3,sheenRoughness:.8,sheenColor:appearance.uniform}),trousers:new THREE.MeshStandardMaterial({...(t.fabric?{map:t.fabric}:{}),color:'#46545c',roughness:.93}),boots:new THREE.MeshPhysicalMaterial({color:'#293d40',roughness:.59,clearcoat:.12,clearcoatRoughness:.45}),
+   tunic:new THREE.MeshPhysicalMaterial({...(t.fabric?{map:t.fabric}:{}),normalScale:new THREE.Vector2(.65,.65),color:appearance.uniform,roughness:.9,sheen:.3,sheenRoughness:.8,sheenColor:appearance.uniform}),trousers:new THREE.MeshStandardMaterial({...(t.fabric?{map:t.fabric}:{}),color:'#46545c',roughness:.93}),boots:new THREE.MeshPhysicalMaterial({color:'#293d40',roughness:.59,clearcoat:.12,clearcoatRoughness:.45}),
    hair:new THREE.MeshStandardMaterial({map:t.hair,color:appearance.hair,alphaTest:.22,alphaToCoverage:true,side:THREE.DoubleSide,roughness:.8}),eyes:new THREE.MeshPhysicalMaterial({map:t.eyes,color:'#fffaf4',roughness:.2,clearcoat:1,clearcoatRoughness:.06,ior:1.38,envMapIntensity:.9}),
    eyebrows:new THREE.MeshStandardMaterial({map:t.eyebrows,color:'#b49b88',alphaTest:.02,transparent:true,opacity:.6,depthWrite:false,side:THREE.DoubleSide,roughness:.9}),eyelashes:new THREE.MeshStandardMaterial({map:t.eyelashes,color:'#8a7b6d',alphaTest:.08,transparent:true,depthWrite:false,side:THREE.DoubleSide,roughness:.9})
   };
@@ -154,7 +159,8 @@ export function createAdvancedResidents(parent,{enabled=initialDetail(),limit=ty
   rig.traverse(o=>{if(o.userData.anatomyBone)bones[o.userData.anatomyBone]=o;if(!o.isSkinnedMesh)return;const part=o.userData.anatomyPart||o.name;o.visible=!['mantle','cuirass','hem','belt',sex==='male'?'hair_long':'hair_short'].includes(part)&&(!['eyebrows','eyelashes'].includes(part)||!!t[part]);o.material=part.startsWith('hair_')?materials.hair:materials[part]||materials.tunic;if(part==='boots'){o.geometry.computeBoundingBox();ground=-o.geometry.boundingBox.min.y;}skeletons.add(o.skeleton);});
   const scale=appearance.height/bundle.height;rig.scale.setScalar(scale);rig.position.y=.04+ground*scale;holder.userData.height=appearance.height;
   const pose={quaternions:bundle.motion.bones.map(()=>new THREE.Quaternion()),pelvis:0};
-  const a={root:holder,rig,bones,skeletons,materials:new Set(Object.values(materials)),skin:materials.skin,bundle,pose,sex,appearance,baseY:rig.position.y,lastClip:null};
+  const a={root:holder,rig,bones,skeletons,materials:new Set(Object.values(materials)),skin:materials.skin,tunic:materials.tunic,bundle,pose,sex,appearance,baseY:rig.position.y,lastClip:null};
+  a.blink=createResidentBlink(bones,appearance.motionPhase);
   if(portrait?.id===id)applyPortrait(a,portrait.maps);
   root.add(holder);actors.set(id,a);return a;
  }
@@ -174,6 +180,7 @@ export function createAdvancedResidents(parent,{enabled=initialDetail(),limit=ty
    const seated=actor.seated&&!moving,clip=reducedMotion?'Idle_Loop':moving?'Walk_Loop':working?'Interact':'Idle_Loop',motion=a.bundle.motion.clips[clip];
    const phase=reducedMotion?0:(time/motion.duration+a.appearance.motionPhase)%1;a.bundle.sample(a.bundle.motion,a.sex,clip,phase,a.pose,clip!=='Interact');
    for(let i=0;i<a.bundle.motion.bones.length;i++){const bone=a.bones[a.bundle.motion.bones[i]];if(bone)bone.quaternion.copy(a.pose.quaternions[i]);}
+   a.blink(time,!reducedMotion);
    a.rig.position.y=a.baseY+(reducedMotion?0:a.pose.pelvis*a.rig.scale.y);a.root.position.fromArray(position||actor.position);a.root.rotation.y=Math.PI-(Number.isFinite(yaw)?yaw:actor.yaw);a.root.visible=true;if(seated)seatedPose(a);else a.root.userData.posture='standing';a.root.updateMatrixWorld(true);scriptedGaze(a,viewer,!reducedMotion&&!working&&!moving);a.root.userData.clip=clip;a.lastClip=clip;a.root.updateMatrixWorld(true);return true;
   },
   status(){
