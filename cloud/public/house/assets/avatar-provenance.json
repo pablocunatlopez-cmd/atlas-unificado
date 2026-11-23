@@ -1,0 +1,37 @@
+{
+  "format": "atlas-eras-avatar-assets-v1",
+  "project": "ERAS",
+  "source_commit": "43ea8968dc66c453da9c29d1ca469c91e177a2bc",
+  "source_root": "dist",
+  "three_revision": "180",
+  "changes": [
+    "motion-player.js manifest and pose URLs made absolute under /house/assets/motion; remaining sampling logic unchanged."
+  ],
+  "licenses": {
+    "avatar": "assets/models/avatar/CC0-LICENSE.md",
+    "motion": "assets/motion/LICENSE.txt",
+    "three": "vendor/THREE-LICENSE.txt"
+  },
+  "files": {
+    "assets/models/avatar/female-roughness.webp": "c32cf34c150a488f578a4e77064d8e25b033f3f31139128068c39a9cbde04645",
+    "assets/models/avatar/braid01.png": "24c0d2a639f04704734c3e38af97d110777c1b203e5a10c66a5c89563643a018",
+    "assets/models/avatar/sources.json": "e39705a2a441511ecd2ee08194ac1d8099a2257ec57dce1421f7ce3745e24771",
+    "assets/models/avatar/eyelashes.png": "4b69c0fff2648874460e9caf80c31413c444218a5c50afebc425aeaa65484a35",
+    "assets/models/avatar/female-normal.webp": "dbf860e54d725edbe484cabf7b42a40a4060fc6f1692e1be17a02aa3063742fb",
+    "assets/models/avatar/male-normal.webp": "ff0a7170f28e1ed57f8e9210c53662f2efe5e742c905e8f0120f8c83ca09dc95",
+    "assets/models/avatar/male-skin.png": "862a26e335e958b70534cb5f0d7c47ef30ab148a56c42b3e9da969cf76f12963",
+    "assets/models/avatar/CC0-LICENSE.md": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c",
+    "assets/models/avatar/eyebrows.png": "9940f7d0b1b223709a19b05156ba6f6e9e4dbdbced02d7574f4d51d72c58967b",
+    "assets/models/avatar/female-skin.png": "b2a6ac8cd4f9febdb447368e29c76cd68410bb66e46d9dcfa2d5f75126eea8fc",
+    "assets/models/avatar/male-roughness.webp": "3ee2874bb5e1c9cd26156b8e95aa7c9a3a6db79a393dee414d096003bb0c05eb",
+    "assets/models/avatar/short02.png": "47fe33831a3929567c733356dd66243116e05df2ace1f884ddca0080b728229f",
+    "assets/models/avatar/female.glb": "3b51b243fb1efeffe4abab022706546955681684cdadb699d61dd266f6a097c3",
+    "assets/models/avatar/eyes.png": "4659691c7295ad6206c78b003e5fd0e5f91dcd53032fa914a229bb48cabe424b",
+    "assets/models/avatar/male.glb": "f098db2f38a3cdac286d7c9d0bde69ee99056b082e538193c036e2a9d1ab6df6",
+    "assets/motion/manifest.json": "aad8b3f74658d4276888ad7ac19e04ef868e17299a48571580d2168834ed3e5c",
+    "assets/motion/LICENSE.txt": "86e0232ee0b7f441ca4041f3402114cab40e3df78efa0888e48cdd0c819cf7cc",
+    "assets/motion/poses.bin": "fcebba62c45fa708da7b3934e9f9523c7d230bdc34b6051c2280398f5f0ede7d",
+    "vendor/GLTFLoader.js": "2904f2823e23d5bc1d64512bf4c0d777ac44d728d47c34a9e3d48ce8ef6b761d",
+    "motion-player.js": "dae61ed057f0de60905970e134cc5282a10cf61125a3c1f7c6d1fa9cc8308c0a"
+  }
+}

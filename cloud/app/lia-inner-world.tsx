@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
-import {initialLiaPerspective,transitionLiaPerspective,liaPerspectiveLevels} from '../../continuous/lia-perspective-state.mjs';
+import {initialLiaPerspective,transitionLiaPerspective,liaPerspectiveLevels} from '../lib/lia/lia-perspective-state.mjs';
 import LiaAvatar from './lia-avatar';
 type Level={depth:number;label:string;focus:string};
 type Conversation={id:string;title:string};
@@ -12,12 +12,12 @@ type ExecutionEvent={id:string;kind:string;status:string;stage:string|null;updat
 type HistoryEvent={id:string;role:string;summary:string;vertex:string;verified:boolean;provenance:string;time:string|null};
 const MAX_DEPTH=6;
 const VERTICES=[
- {name:'Mundo Mental · Atlas',detail:'Hipótesis, recuerdos y simulaciones. No son observaciones verificadas.'},
- {name:'Mundo Físico · Ion',detail:'Sensores y acciones futuras requieren herramientas reales y autorización.'},
- {name:'Dios · Suceso',detail:'Lo inesperado puede motivar una revisión; no es un agente ejecutable.'}
+ {name:'Atlas · Mente',detail:'Hipótesis, recuerdos y simulaciones al servicio de Lía; conservar su procedencia.'},
+ {name:'Ion · Cuerpo y ERAS',detail:'Herramientas, acciones y motor gráfico para desarrollar los entornos de Lía.'},
+ {name:'Ícaro · Cielo y constelación',detail:'Fuentes, perspectivas y colaboración para ampliar las posibilidades de Lía.'}
 ] as const;
 export default function LiaInnerWorld(){
- const [perspective,setPerspective]=useState(initialLiaPerspective);
+ const [perspective,setPerspective]=useState<{identity:string;depth:number;focus:string;yaw:number;mode:string;revision:number}>(initialLiaPerspective);
  const [conversations,setConversations]=useState<Conversation[]>([]);
  const [selectedConversation,setSelectedConversation]=useState('');
  const [history,setHistory]=useState<HistoryEvent[]>([]);
@@ -29,7 +29,7 @@ export default function LiaInnerWorld(){
  useEffect(()=>{
   let active=true;
   fetch('/api/cloud/conversations',{credentials:'same-origin',cache:'no-store'})
-   .then(async response=>{if(!response.ok)throw Error(response.status===401?'Inicia sesión para ver tus conversaciones.':'No se pudo consultar el historial.');return response.json()})
+   .then(async response=>{if(!response.ok)throw Error(response.status===401?'Inicia sesión para ver tus conversaciones.':'No se pudo consultar el historial.');return response.json() as Promise<{conversations?:Conversation[]}>})
    .then(data=>{if(active)setConversations(Array.isArray(data.conversations)?data.conversations:[])})
    .catch(error=>{if(active)setHistoryError(error.message)});
   return ()=>{active=false};
@@ -39,8 +39,8 @@ export default function LiaInnerWorld(){
   const controller=new AbortController();
   setHistoryLoading(true);setHistoryError('');setHistory([]);setExecutions([]);setTimeline([]);setKnowledge([]);
   fetch('/api/lia-world/conversations/'+encodeURIComponent(selectedConversation),{credentials:'same-origin',cache:'no-store',signal:controller.signal})
-   .then(async response=>{if(!response.ok)throw Error('No se pudo recuperar la conversación seleccionada.');return response.json()})
-   .then(data=>{setHistory(Array.isArray(data.events)?data.events:[]);setExecutions(Array.isArray(data.executionEvents)?data.executionEvents:[]);setTimeline(Array.isArray(data.hypothesisTimeline)?data.hypothesisTimeline:[]);setKnowledge(Array.isArray(data.knowledgeState)?data.knowledgeState:[])})
+   .then(async response=>{if(!response.ok)throw Error('No se pudo recuperar la conversación seleccionada.');return response.json() as Promise<{events?:HistoryEvent[];executionEvents?:ExecutionEvent[];hypothesisTimeline?:TimelineRecord[];knowledgeState?:KnowledgeRecord[]}>})
+   .then(data=>{if(controller.signal.aborted)return;setHistory(Array.isArray(data.events)?data.events:[]);setExecutions(Array.isArray(data.executionEvents)?data.executionEvents:[]);setTimeline(Array.isArray(data.hypothesisTimeline)?data.hypothesisTimeline:[]);setKnowledge(Array.isArray(data.knowledgeState)?data.knowledgeState:[])})
    .catch(error=>{if(!controller.signal.aborted)setHistoryError(error.message)})
    .finally(()=>{if(!controller.signal.aborted)setHistoryLoading(false)});
   return ()=>controller.abort();
@@ -61,14 +61,14 @@ export default function LiaInnerWorld(){
   <div role="img" aria-label={`Vista espacial de Lía con ${depth+1} representaciones anidadas, foco en ${VERTICES[focus].name}`} style={{height:330,overflow:'hidden',position:'relative',perspective:900,borderRadius:18,background:'radial-gradient(ellipse at 50% 35%,#202b50,#0b0f1d 75%)',color:'#e8eaff'}}>
    <div style={{position:'absolute',inset:0,display:'grid',placeItems:'center',transformStyle:'preserve-3d',transform:immersive?`rotateY(${yaw}deg) rotateX(-9deg)`:'none',transition:'transform 350ms ease'}}>
     {levels.map(level=><div key={level.depth} style={{position:'absolute',width:`${Math.max(90,260-level.depth*34)}px`,height:`${Math.max(90,260-level.depth*34)}px`,border:'2px solid rgba(153,176,255,.8)',borderRadius:20,boxShadow:'0 0 25px #818cf855,inset 0 0 30px #818cf822',transform:immersive?`translateZ(${(depth-level.depth)*35}px) rotateZ(${level.depth*9}deg)`:'none',display:'grid',placeItems:'start center',paddingTop:12,background:'rgba(35,48,88,.08)'}}>
-     <span style={{fontSize:12,textShadow:'0 1px 4px #000'}}>{level.label}</span>
+     <span style={{fontSize:14,textShadow:'0 1px 4px #000'}}>{level.label}</span>
     </div>)}
-    <div style={{transform:immersive?`translateZ(${depth*35+40}px)`:'none',display:'grid',placeItems:'center',gap:3,textAlign:'center',fontSize:13}}>
+    <div style={{transform:immersive?`translateZ(${depth*35+40}px)`:'none',display:'grid',placeItems:'center',gap:3,textAlign:'center',fontSize:14}}>
      <LiaAvatar size={110} mode={depth===0?'exterior':'interior'} focus={(['mental','physical','god'] as const)[focus]}/><strong>LÍA</strong>
-     <span style={{maxWidth:160,fontSize:11}}>{VERTICES[focus].name}</span>
+     <span style={{maxWidth:160,fontSize:14}}>{VERTICES[focus].name}</span>
     </div>
    </div>
-   {!immersive&&<div style={{position:'absolute',bottom:12,left:12,fontSize:12}}>Vista espacial en pausa</div>}
+   {!immersive&&<div style={{position:'absolute',bottom:12,left:12,fontSize:14}}>Vista espacial en pausa</div>}
   </div>
   <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
    <button type="button" onClick={()=>dispatch({type:'rotate',degrees:-20})} aria-label="Girar vista a la izquierda">↶ Girar</button>
@@ -135,6 +135,6 @@ export default function LiaInnerWorld(){
     {history.map(event=><li key={event.id} style={{marginBottom:12}}><strong>{event.role==='assistant'?'Lía · respuesta':'Usuario · mensaje'}</strong>{' '}<small>· {event.time||'fecha desconocida'} · no verificado</small><div>{event.summary}</div></li>)}
    </ol>}
   </div>
-  <p style={{fontSize:13,opacity:.8}}>Prototipo espacial CSS 3D sin WebGL, sin sensores y sin avatar robótico. La memoria persistente y la conexión con Ion siguen pendientes.</p>
+  <p style={{fontSize:14,opacity:.8}}>Prototipo espacial CSS 3D sin WebGL, sin sensores y sin avatar robótico. La memoria persistente y la conexión con Ion siguen pendientes.</p>
  </section>;
 }

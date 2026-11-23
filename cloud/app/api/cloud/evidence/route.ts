@@ -1,16 +1,19 @@
+import {env} from 'cloudflare:workers';
+import {getChatGPTUser} from '@/app/chatgpt-auth';
+import {createEvidenceRepository} from '@/lib/evidence-repository';
 import {NextResponse} from 'next/server';
 import {bridgeAuthorized, cloudError} from '@/lib/cloud/http';
 import {
   EVIDENCE_CONTRACT_VERSION,
   parseEvidenceRecord,
 } from '../../../../lib/evidence-contract';
-import {listEvidence, rememberEvidence} from '../../../../lib/evidence-store';
+function repository(){if(!env.DB)throw Error('DB');return createEvidenceRepository(env.DB);}
 
 export const dynamic = 'force-dynamic';
 
 /** Public read: absence means unknown, not success. */
 export async function GET() {
-  const evidence = listEvidence();
+  let evidence;try{evidence=await repository().list();}catch(error){return cloudError(error);}
   return NextResponse.json({
     ok: true,
     contractVersion: EVIDENCE_CONTRACT_VERSION,
@@ -26,7 +29,10 @@ export async function GET() {
 /** Bridge-only write. Unauthenticated clients remain forbidden. */
 export async function POST(request: Request) {
   try {
-    await bridgeAuthorized(request);
+    const user=await getChatGPTUser();
+    // Private Sites dispatch authorizes service requests; browser/legacy writes
+    // retain bridge authentication and cannot invent verification from UI.
+    if(user||request.headers.has('origin')||request.headers.has('sec-fetch-site')||!request.headers.has('x-dispatched-app'))await bridgeAuthorized(request);
   } catch (error) {
     let body: unknown = null;
     try {
@@ -57,6 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ok: false, error: 'invalid_json'}, {status: 400});
   }
 
+  if(JSON.stringify(body).length>48000)return NextResponse.json({error:'Evidence payload too large'},{status:413});
   const recordsIn = Array.isArray(body)
     ? body
     : body && typeof body === 'object' && Array.isArray((body as {records?: unknown}).records)
@@ -67,7 +74,7 @@ export async function POST(request: Request) {
   for (const item of recordsIn.slice(0, 16)) {
     const parsed = parseEvidenceRecord(item);
     if (parsed) {
-      rememberEvidence(parsed);
+      await repository().remember(parsed);
       accepted.push(parsed);
     }
   }
@@ -88,7 +95,7 @@ export async function POST(request: Request) {
     ok: true,
     accepted: accepted.length,
     contractVersion: EVIDENCE_CONTRACT_VERSION,
-    evidence: listEvidence(),
-    note: 'Ephemeral store updated. Integration claims still require integratedRevision.',
+    evidence: await repository().list(),
+    note: 'Durable reports saved in D1. Integration claims still require integratedRevision; external checks are reported, not independently verified by this endpoint.',
   });
 }

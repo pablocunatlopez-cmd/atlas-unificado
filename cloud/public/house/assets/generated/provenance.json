@@ -1,0 +1,26 @@
+{
+  "origin": "model-generated",
+  "note": "Generated assets, not measured scan data. Normal and roughness channels are constructed in code. No external model API is required at runtime.",
+  "assets": [
+    {
+      "file": "material-atlas.png",
+      "source": "ChatGPT image generation tool",
+      "generatedAt": "2026-11-22",
+      "purpose": "albedo of oak, plaster, linen and limestone",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 3284997,
+      "sha256": "0a58a636af31c16fca43f2128138ef21975178dbc61e83cc67602ca092a487cc"
+    },
+    {
+      "file": "garden-environment.png",
+      "source": "ChatGPT image generation tool",
+      "generatedAt": "2026-11-22",
+      "purpose": "equirectangular garden background and reflection environment",
+      "width": 1774,
+      "height": 887,
+      "bytes": 2752053,
+      "sha256": "b3c949b5bdc578a00b4cb51c97dd4578c81204d00411ce24be8fa4ed0c16d809"
+    }
+  ]
+}

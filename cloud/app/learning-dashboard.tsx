@@ -126,7 +126,7 @@ export default function LearningDashboard(){
    </section>
 
    <ExperienceSpiral value={experience} connected={connected} now={clock}/>
-   {experience?.creative&&<ExperienceCreativePreview value={experience.creative}/>}
+   {experience?.creative&&<ExperienceCreativePreview value={experience.creative} connected={connected}/>}
 
    <div className={styles.metrics} aria-label="Métricas comunicadas">
     <article><span>Procesos en ejecución</span><strong>{connected?running.length:'—'}</strong><p>Solo con señal fresca</p></article>

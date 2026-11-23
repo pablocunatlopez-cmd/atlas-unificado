@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "engine": "ERAS",
+  "projectId": "appgprj_6ad66800b1888191b0fc84e227cad74f",
+  "commit": "43ea8968dc66c453da9c29d1ca469c91e177a2bc",
+  "scope": "Renderer, GPU pipeline and cinematography are exact copies from ERAS. The scene adapter accepts data only; this is not the original game runtime or neural video generation.",
+  "files": [
+    {
+      "path": "render-engine.js",
+      "source": "dist/render-engine.js",
+      "sha256": "0bfc74414d99018c10521c3cf416b96c68dc9d657e3b8f22fba05e27c4331641"
+    },
+    {
+      "path": "gpu-renderer.js",
+      "source": "dist/gpu-renderer.js",
+      "sha256": "4f4b751e974bddb95725bd94ae46b810779aca2c8327d0e98a54d60b8cf4f827"
+    },
+    {
+      "path": "cinematography.js",
+      "source": "dist/cinematography.js",
+      "sha256": "6bf781db6b2a124759910ce98f1b0b1ec3a7722411eac7b6bb2e78b7c1d6ed52"
+    },
+    {
+      "path": "graphics.js",
+      "source": "dist/graphics.js",
+      "sha256": "344bcda985ece5793752960d956efccfc07d8ba3d8f1242c3ea8090183921304"
+    },
+    {
+      "path": "vendor/FXAANode.js",
+      "source": "dist/vendor/FXAANode.js",
+      "sha256": "f6e02213dfd4eadf5083973b5e5d442517d89466ff23ceab5f2f4341378ff408"
+    },
+    {
+      "path": "vendor/GLTFLoader.js",
+      "source": "dist/vendor/GLTFLoader.js",
+      "sha256": "2904f2823e23d5bc1d64512bf4c0d777ac44d728d47c34a9e3d48ce8ef6b761d"
+    },
+    {
+      "path": "vendor/GaussianBlurNode.js",
+      "source": "dist/vendor/GaussianBlurNode.js",
+      "sha256": "89b230ff104689a317aab2e46c1264bdd76d8298b983ba5e2e13665e25ed6e14"
+    },
+    {
+      "path": "vendor/THREE-LICENSE.txt",
+      "source": "dist/vendor/THREE-LICENSE.txt",
+      "sha256": "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601"
+    },
+    {
+      "path": "vendor/GTAONode.js",
+      "source": "dist/vendor/GTAONode.js",
+      "sha256": "79eb7c65ca25580168ce4c7994b41b719fc5d112277d8e28340cd2ab1e2d5351"
+    },
+    {
+      "path": "vendor/three.core.js",
+      "source": "dist/vendor/three.core.js",
+      "sha256": "eb077d2417f61d3e6d9264c317cabc4ea35769ed6b0ab533067292a550784c20"
+    },
+    {
+      "path": "vendor/BloomNode.js",
+      "source": "dist/vendor/BloomNode.js",
+      "sha256": "9eea73bb26dba5e1aebb0a53e891396851be913e37229234ec2e86d0bc93ec15"
+    },
+    {
+      "path": "vendor/three.module.js",
+      "source": "dist/vendor/three.module.js",
+      "sha256": "c8211c69345d2e9949dc7a8ac969380497aa0600a5a8ac6a459c8cd02dd9cb8a"
+    },
+    {
+      "path": "vendor/DepthOfFieldNode.js",
+      "source": "dist/vendor/DepthOfFieldNode.js",
+      "sha256": "9b5c945e1890b48516ec2a19fb2caf14b183010ffe3475ca13b5481f0098c68b"
+    },
+    {
+      "path": "vendor/three.webgpu.js",
+      "source": "dist/vendor/three.webgpu.js",
+      "sha256": "c6b225365368fc052bd96ebfae1363324ea526e59f15a60e201e1257c3adc12f"
+    },
+    {
+      "path": "vendor/HDRLoader.js",
+      "source": "dist/vendor/HDRLoader.js",
+      "sha256": "d3a9522cd17b988a4fe93e1be799e59f06c8e9bd0d811665a917df140350eef4"
+    },
+    {
+      "path": "vendor/BufferGeometryUtils.js",
+      "source": "dist/vendor/BufferGeometryUtils.js",
+      "sha256": "248b3e8420bd3de805ca01845c1b0cc62aa2766f3c56bdcead265e306f8e715c"
+    },
+    {
+      "path": "vendor/three.tsl.js",
+      "source": "dist/vendor/three.tsl.js",
+      "sha256": "665484364e4c5e021bb0d8360f3ef6afb18476586e61f4ca1a0ad4b0878d0f07"
+    }
+  ]
+}

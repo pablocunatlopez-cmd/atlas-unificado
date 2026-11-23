@@ -23,9 +23,9 @@ export async function POST(request:Request){
   if(args.engine==='native'){
    const recall=recallRecentUserTurn(args.text,args.history);
    if(recall)reply={...reply,answer:recall.answer,basis:'Recuperación literal de un mensaje previo proporcionado en esta petición; no se ha consultado memoria persistente.',confidence:recall.found?'Alta':'Limitada',claims:[],sources:[],unknowns:['El historial enviado puede ser parcial y no se ha verificado fuera de esta sesión.'],nextSteps:[],searched:false};
-   else if(/^(?:¿\\s*)?(?:que|qué) (?:te )?(?:dije|he dicho|hablamos) (?:sobre|de) /i.test(args.text.trim())){
+   else if(/^(?:¿\s*)?(?:que|qué) (?:te )?(?:dije|he dicho|hablamos) (?:sobre|de) /i.test(args.text.trim())){
     const matches=retrieveSavedUserMessages(args.text,state.threads);
-    reply={...reply,answer:matches.length?'En tus conversaciones guardadas encuentro estos mensajes escritos por ti (no son hechos verificados):\\n\\n'+matches.map(item=>'• '+item.excerpt+' [conversación: '+item.title+']').join('\\n'): 'No encuentro mensajes tuyos coincidentes en las conversaciones guardadas de Atlas.',basis:'Búsqueda léxica en conversaciones privadas del usuario autenticado; sin modelo generativo ni validación externa.',confidence:'Limitada',claims:[],sources:[],unknowns:['Las coincidencias léxicas no garantizan que el mensaje sea relevante ni verdadero.'],nextSteps:[],searched:false};
+    reply={...reply,answer:matches.length?'En tus conversaciones guardadas encuentro estos mensajes escritos por ti (no son hechos verificados):\n\n'+matches.map(item=>'• '+item.excerpt+' [conversación: '+item.title+']').join('\n'): 'No encuentro mensajes tuyos coincidentes en las conversaciones guardadas de Atlas.',basis:'Búsqueda léxica en conversaciones privadas del usuario autenticado; sin modelo generativo ni validación externa.',confidence:'Limitada',claims:[],sources:[],unknowns:['Las coincidencias léxicas no garantizan que el mensaje sea relevante ni verdadero.'],nextSteps:[],searched:false};
    }
   }
   if(wantsInternet(args.text,args.web))reply=addInternetReply(reply,await internetForQuestion(args.text),research.profile);

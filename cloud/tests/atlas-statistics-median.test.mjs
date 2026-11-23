@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {runProgramTool} from '../lib/cloud/program-tools.mjs';
+const median=input=>runProgramTool('stats',input).result.median;
+test('equal nonzero subnormal values keep their value as median',()=>{for(const x of [Number.MIN_VALUE,-Number.MIN_VALUE,3*Number.MIN_VALUE,-3*Number.MIN_VALUE])assert.equal(median([x,x]),x);});
+test('adjacent subnormals round the midpoint once and opposite signs retain cancellation',()=>{const x=Number.MIN_VALUE;assert.equal(median([x,2*x]),2*x);assert.equal(median([-2*x,-x]),-2*x);assert.equal(median([-x,x]),0);});
+test('large and ordinary medians, empty samples and exported source retain their contracts',async()=>{const m=Number.MAX_VALUE,a=.75*m,input=[-m,a,a,-m,a,a];assert.equal(median(input),a);assert.equal(median([1,2,3,4]),2.5);assert.equal(median([]),null);assert.equal(median([-1e308,1e308]),0);const result=runProgramTool('stats',[Number.MIN_VALUE,Number.MIN_VALUE]),module=await import('data:text/javascript;base64,'+Buffer.from(result.source).toString('base64'));assert.deepEqual(module.stats([Number.MIN_VALUE,Number.MIN_VALUE]),result.result);});

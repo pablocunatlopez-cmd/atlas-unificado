@@ -1,8 +1,9 @@
-import {buildLiaHypothesisLedger} from '../../../continuous/lia-hypothesis-ledger.mjs';
+import {buildLiaHypothesisLedger} from '../lia/lia-hypothesis-ledger.mjs';
+import {creationIntent} from '../core/atlas-intent.mjs';
+import {RESIDENT_MEMORY_LIMIT,RESIDENT_MEMORY_RETENTION_MS,buildResidentMemoryEvents,isResidentId} from '../core/resident-memory.mjs';
 /** D1-backed, user-isolated handoff to the owner's local inference worker. */
 import {validateCreativePlan} from '../creative/plan.mjs';
 import {sanitizeProcessTelemetry} from '../core/process-telemetry.mjs';
-import {RESIDENT_MEMORY_LIMIT,RESIDENT_MEMORY_RETENTION_MS,buildResidentMemoryEvents,isResidentId} from '../core/resident-memory.mjs';
 export class CloudQueueError extends Error {
  constructor(message,status=400){super(message);this.status=status;}
 }
@@ -13,7 +14,6 @@ const fail=(message,status=400)=>{throw new CloudQueueError(message,status);};
 const validId=value=>typeof value==='string'&&UUID.test(value);
 const safeTitle=text=>text.replace(/\s+/g,' ').trim().slice(0,80);
 const safeAgent=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(value);
-
 async function verifyLiaJournalInCloud(journal,allowedHypotheses){
  if(!Array.isArray(journal)||journal.length>30)return false;
  const encoder=new TextEncoder();let previousHash=null;
@@ -44,7 +44,7 @@ function publicJob(row){
 }
 function contextWindow(rows){
  const result=[];let size=0;
- for(const row of rows){if(result.length>=15||size+row.content.length>10000)break;result.unshift({role:row.role,content:row.content});size+=row.content.length;}
+ for(const row of rows){if(result.length>=48||size+row.content.length>48000)break;result.unshift({role:row.role,content:row.content});size+=row.content.length;}
  while(result[0]?.role==='assistant')result.shift();
  return result;
 }
@@ -71,12 +71,13 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   if(!validId(input.requestId))fail('El identificador de la solicitud no es válido.');
   if(input.conversationId!==undefined&&!validId(input.conversationId))fail('El identificador de la conversación no es válido.');
   const kind=input.kind??'chat';if(!['chat','world','game','video','lor','review'].includes(kind))fail('Herramienta no disponible.');
+  if((['world','game'].includes(kind)||kind==='chat'&&creationIntent(input.message))&&input.message.length>4000)fail('Los encargos creativos admiten hasta 4000 caracteres.');
   const parameters=kind==='video'?{frames:input.parameters?.frames??17,steps:input.parameters?.steps??5,fps:8,width:480,height:272}:{};
   if(kind==='video'&&(![17,33,49,65,81].includes(parameters.frames)||!Number.isInteger(parameters.steps)||parameters.steps<5||parameters.steps>30))fail('La duración o los pasos de vídeo exceden los límites.');
-  const serializedParameters=JSON.stringify(parameters);
+  const serializedParameters=JSON.stringify(parameters),internet=input.internet===true?1:0;
   const message=input.message.trim(),id=await jobId(userId,input.requestId),at=now();
   const previous=await one('SELECT * FROM cloud_jobs WHERE id=? AND user_id=?',id,userId);
-  if(previous){if(previous.question!==message||previous.kind!==kind||previous.parameters!==serializedParameters||(input.conversationId&&input.conversationId!==previous.conversation_id))fail('Ese identificador ya pertenece a otra solicitud.',409);return {jobId:id,conversationId:previous.conversation_id,status:previous.status};}
+  if(previous){if(previous.question!==message||previous.kind!==kind||previous.parameters!==serializedParameters||previous.internet!==internet||(input.conversationId&&input.conversationId!==previous.conversation_id))fail('Ese identificador ya pertenece a otra solicitud.',409);return {jobId:id,conversationId:previous.conversation_id,status:previous.status};}
   const conversationId=input.conversationId||uuid();
   if(input.conversationId)await ownedConversation(userId,conversationId);
   else{
@@ -92,18 +93,18 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
     SELECT ?,?,?,?,?,?,?,?,'queued',0,?,? WHERE
     (SELECT count(*) FROM cloud_jobs WHERE user_id=? AND created_at>=?)<20 AND
     (SELECT count(*) FROM cloud_jobs WHERE status IN ${active})<30 AND
-    NOT EXISTS(SELECT 1 FROM cloud_jobs WHERE conversation_id=? AND status IN ${active})`,id,userId,input.requestId,conversationId,message,input.internet===true?1:0,kind,serializedParameters,at,at,userId,at-3600000,conversationId),
+    NOT EXISTS(SELECT 1 FROM cloud_jobs WHERE conversation_id=? AND status IN ${active})`,id,userId,input.requestId,conversationId,message,internet,kind,serializedParameters,at,at,userId,at-3600000,conversationId),
    statement(`INSERT OR IGNORE INTO cloud_messages(id,conversation_id,role,content,created_at)
     SELECT ?,?,'user',?,? WHERE EXISTS(SELECT 1 FROM cloud_jobs WHERE id=? AND user_id=?)`,id+'-user',conversationId,message,at,id,userId),
    statement('UPDATE cloud_conversations SET updated_at=? WHERE id=? AND user_id=? AND EXISTS(SELECT 1 FROM cloud_jobs WHERE id=?)',at,conversationId,userId,id),
   ]);
-  const saved=await one('SELECT id,status,question,conversation_id FROM cloud_jobs WHERE id=? AND user_id=?',id,userId);
+  const saved=await one('SELECT id,status,question,conversation_id,internet,kind,parameters FROM cloud_jobs WHERE id=? AND user_id=?',id,userId);
   if(!saved){
    const running=await one(`SELECT id FROM cloud_jobs WHERE conversation_id=? AND status IN ${active} LIMIT 1`,conversationId);
    if(running)fail('Esta conversación ya tiene una respuesta pendiente.',409);
    fail('Se alcanzó el límite de solicitudes. Prueba más tarde.',429);
   }
-  if(saved.question!==message||saved.conversation_id!==conversationId)fail('Ese identificador ya pertenece a otra solicitud.',409);
+  if(saved.question!==message||saved.conversation_id!==conversationId||saved.internet!==internet||saved.kind!==kind||saved.parameters!==serializedParameters)fail('Ese identificador ya pertenece a otra solicitud.',409);
   return {jobId:id,conversationId,status:saved.status};
  }
  async function status(){
@@ -161,9 +162,9 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    WHERE id=(SELECT id FROM cloud_jobs WHERE (status='queued' OR (status='running' AND lease_until<?)) AND attempts<2 ORDER BY created_at,id LIMIT 1)
    AND (status='queued' OR (status='running' AND lease_until<?)) RETURNING id,conversation_id,question,internet,kind,parameters`,leaseToken,at+LEASE_MS,input.agentId,at,at,at).first();
   if(!row)return {job:null};
-  const messages=await all('SELECT role,content FROM cloud_messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 15',row.conversation_id);
+  const messages=await all('SELECT role,content FROM cloud_messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 48',row.conversation_id);
   let transport=contextWindow(messages);
-  if(typeof enrichMessages==='function'&&row.kind==='chat')try{const enriched=await enrichMessages(structuredClone(transport),{kind:row.kind,internet:row.internet===1});if(Array.isArray(enriched)&&enriched.length===transport.length&&enriched.every((item,i)=>item?.role===transport[i].role&&typeof item.content==='string'&&(i===transport.length-1?item.content.startsWith(transport[i].content):item.content===transport[i].content)&&item.content.length<=(item.role==='user'?6000:16000))&&enriched.reduce((n,item)=>n+item.content.length,0)<=10000)transport=enriched.map(({role,content})=>({role,content}));}catch{}
+  if(typeof enrichMessages==='function'&&row.kind==='chat')try{const enriched=await enrichMessages(structuredClone(transport),{kind:row.kind,internet:row.internet===1});if(Array.isArray(enriched)&&enriched.length===transport.length&&enriched.every((item,i)=>item?.role===transport[i].role&&typeof item.content==='string'&&(i===transport.length-1?item.content.startsWith(transport[i].content):item.content===transport[i].content)&&item.content.length<=(item.role==='user'?6000:26000))&&enriched.reduce((n,item)=>n+item.content.length,0)<=48000)transport=enriched.map(({role,content})=>({role,content}));}catch{}
   const reservation=await one('SELECT status,lease_token FROM cloud_jobs WHERE id=?',row.id);
   if(reservation?.status!=='running'||reservation.lease_token!==leaseToken)return {job:null};
   return {job:{id:row.id,conversationId:row.conversation_id,messages:transport,kind:row.kind,parameters:JSON.parse(row.parameters||'{}'),internet:row.internet===1,leaseToken}};
@@ -171,8 +172,10 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
  async function complete(input){
   if(typeof input?.jobId!=='string'||!validId(input.leaseToken))fail('Resultado sin reserva válida.');
   const result=input.result;
-  if(!result||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>16000||!['atlas-local','atlas-coordinator'].includes(result.model))fail('El resultado local no es válido.');
+  if(!result||typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>26000||!['atlas-local','atlas-coordinator','atlas-cloud','atlas-tools'].includes(result.model))fail('El resultado no es válido.');
   const value={answer:result.answer,model:result.model,modelName:typeof result.modelName==='string'?result.modelName.slice(0,120):'Qwen local'};
+  if(result.model==='atlas-tools'&&result.execution?.tool==='atlas-program-tools-1'&&['sort','dedupe','stats','counts','intervals'].includes(result.execution.operation)&&Number.isInteger(result.execution.passed)&&result.execution.passed===result.execution.total&&result.execution.total===3)value.execution={tool:result.execution.tool,operation:result.execution.operation,passed:3,total:3};
+  if(Array.isArray(result.agents))value.agents=result.agents.slice(0,3).filter(a=>a&&['programmer','researcher','reasoner','conversation','reviewer'].includes(a.role)&&['qwen/qwen3.8-27b','openai/gpt-oss-120b','openai/gpt-oss-20b'].includes(a.model)&&['completed','unavailable','skipped'].includes(a.status)).map(({role,model,status})=>({role,model,status}));
   if(result.liaExecutionAudit?.schema===1&&result.liaExecutionAudit.source==='local-chat-result'){
    const audit=result.liaExecutionAudit;
    value.liaExecutionAudit={schema:1,source:'local-chat-result',review:['completed','failed','not-recorded'].includes(audit.review)?audit.review:'not-recorded',reviewAttempted:audit.reviewAttempted===true,citationAuditRecorded:audit.citationAuditRecorded===true,unknownCitationLabels:Array.isArray(audit.unknownCitationLabels)?audit.unknownCitationLabels.filter(x=>typeof x==='string').slice(0,12).map(x=>x.slice(0,100)):[],sourcesReturned:Number.isInteger(audit.sourcesReturned)&&audit.sourcesReturned>=0?Math.min(audit.sourcesReturned,100):null,webRead:audit.webRead===true,hypothesis:'not-recorded',revision:audit.review==='completed'?'answer-revised-without-diff':'not-recorded',factualAccuracyVerified:false};
@@ -194,28 +197,50 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
    const lor=sanitizeProcessTelemetry({lor:result.lor})?.lor;if(result.lor?.synthetic!==true||!lor||![lor.baseline,lor.score,lor.delta,lor.negativeControlDelta].every(Number.isFinite))fail('El experimento LOR no produjo métricas válidas.');
    value.lor=lor;value.answer=`Ensayo sintético LOR-ΩΣ ejecutado en CPU: ${lor.verdict}. Precisión base ${lor.baseline}; con rasgos LOR ${lor.score}; diferencia ${lor.delta}. El resultado se conserva sin cambiar los pesos de Qwen. Es geometría de datos, no una demostración física.`;
   }
-  if(['world','game'].includes(row.kind)){
-   const mode=row.kind==='game'?'game':'3d';let plan;
+  const intent=row.kind==='chat'?creationIntent(row.question):null;
+  if(row.kind==='chat'&&result.model==='atlas-cloud'&&(['world','game'].includes(intent)&&!result.creative||['music','film'].includes(intent)&&!result.creationId))fail('El encargo creativo terminó sin una creación guardada válida.');
+  if(['world','game'].includes(row.kind)||['world','game'].includes(intent)&&result.creative){
+   const mode=(row.kind==='game'||intent==='game')?'game':'3d';let plan;
    try{plan=validateCreativePlan(result.creative?.plan,mode);}catch{fail('El diseño no superó la validación geométrica.');}
    if(typeof compileCreative!=='function')fail('El compilador 3D no está disponible.',503);
-   const generated=compileCreative(row.question,mode,{plan});
+   const generated=await compileCreative(row.question,mode,{plan});
    const h=input.jobId.slice(4),projectId=`${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-8${h.slice(17,20)}-${h.slice(20,32)}`;
    const date=new Date(at).toISOString(),content=JSON.stringify({brief:generated.brief,code:generated.code});
    value.answer=`He creado ${mode==='game'?'un prototipo 3D jugable':'un entorno 3D'} con un plan de Qwen validado y geometría procedural. [Abrir en el taller](/taller?project=${projectId}). Puedes recorrerlo, modificarlo y exportar sus archivos. La revisión es otra pasada del mismo Qwen; no acredita calidad AAA.`;
-   value.creative={projectId,plan,review:{roles:['Arquitecto Qwen','Revisor Qwen'],independentModels:false,geometryValidated:true}};
-   extra.push(statement(`INSERT OR IGNORE INTO studio_projects(id,user_id,title,mode,revision,created_at,updated_at) SELECT ?,user_id,?,?,1,?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,projectId,plan.title,mode,date,date,input.jobId,input.leaseToken,at),statement(`INSERT OR IGNORE INTO studio_versions(id,project_id,version,content,created_at) SELECT ?,?,1,?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,projectId+'-v1',projectId,content,date,input.jobId,input.leaseToken,at));
+   value.creative={projectId,plan,review:{roles:result.model==='atlas-cloud'?['Arquitecto Qwen en Groq','Validador geométrico']:['Arquitecto Qwen','Revisor Qwen'],independentModels:false,geometryValidated:true}};
+   if(result.model==='atlas-cloud'){
+    const designer=value.agents?.find(a=>a.status==='completed')?.model||value.modelName;
+    value.creative.review.roles=['Diseño: '+designer,'Compilador y validador geométrico'];
+    value.answer=`He creado ${mode==='game'?'un prototipo 3D jugable':'un entorno 3D'} con una composición de ${designer} y validación geométrica. [Abrir en el taller](/taller?project=${projectId}). Puedes recorrerlo, modificarlo y exportarlo. La calidad visual y la jugabilidad necesitan comprobarse en el dispositivo.`;
+   }
+   extra.push(fence=>statement(`INSERT OR IGNORE INTO studio_projects(id,user_id,title,mode,revision,created_at,updated_at) SELECT ?,user_id,?,?,1,?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,projectId,plan.title,mode,date,date,input.jobId,input.leaseToken,fence),fence=>statement(`INSERT OR IGNORE INTO studio_versions(id,project_id,version,content,created_at) SELECT ?,?,1,?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,projectId+'-v1',projectId,content,date,input.jobId,input.leaseToken,fence));
+  }
+  if(row.kind==='chat'&&['music','film'].includes(intent)&&result.creationId){
+   if(!validId(result.creationId))fail('La creación no pertenece a este encargo.');
+   const saved=await one("SELECT content,kind,id FROM ai_creations WHERE user_id=? AND id=? AND status='completed' AND prompt=?",row.user_id,result.creationId,row.question);
+   if(!saved||saved.kind!==(intent==='music'?'music':'video'))fail('La creación no pertenece a este encargo.');
+   let creation;try{creation=JSON.parse(saved.content);}catch{fail('La creación guardada no tiene un formato válido.');}
+   if(!creation||creation.id!==saved.id||creation.kind!==saved.kind)fail('La creación guardada no corresponde a este encargo.');
+   const room=intent==='music'?'music':'cinema';
+   value.creation={id:creation.id,kind:creation.kind};
+   value.answer=(intent==='music'?'He creado y guardado una partitura con notas, acordes y arreglo.':'He creado y guardado un guion de planos para la casa 3D.')+' [Abrir '+(intent==='music'?'la composición':'la dirección')+'](/?room='+room+'&creation='+encodeURIComponent(creation.id)+'). '+(intent==='music'?'Puedes escucharla y exportar su audio en el estudio; no contiene voz neuronal.':'Puedes revisar los planos y grabarlos en el cine; el guion no es todavía un vídeo renderizado.');
   }
   if(row.kind==='video'){
    if(result.video?.artifactId!==input.jobId)fail('El vídeo no pertenece a esta solicitud.');
    value.video={artifactId:input.jobId,url:'/api/cloud/artifacts/'+input.jobId,provider:'Wan 2.1 · ComfyUI local'};
    value.answer='El vídeo generado en la GPU está listo. [Abrir vídeo]('+value.video.url+').';
   }
+  // Compilation and artifact reads can outlive the original lease check. Use a
+  // fresh fence before the atomic writes; a late result must not publish.
+  const publication=await ownedJob(row.user_id,input.jobId),commitAt=now();
+  if(publication.status==='completed'&&publication.lease_token===input.leaseToken)return {ok:true,status:'completed'};
+  if(publication.status!=='running'||publication.lease_token!==input.leaseToken||publication.lease_until<commitAt)fail('La reserva cambió antes de guardar la respuesta.',409);
   const serialized=JSON.stringify(value);
   await db.batch([
-   ...extra,
+   ...extra.map(make=>make(commitAt)),
    statement(`INSERT OR IGNORE INTO cloud_messages(id,conversation_id,role,content,created_at)
-    SELECT ?,conversation_id,'assistant',?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,input.jobId+'-assistant',value.answer,at,input.jobId,input.leaseToken,at),
-   statement("UPDATE cloud_jobs SET status='completed',result=?,lease_until=0,progress=100,stage='completed',updated_at=? WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?",serialized,at,input.jobId,input.leaseToken,at),
+    SELECT ?,conversation_id,'assistant',?,? FROM cloud_jobs WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?`,input.jobId+'-assistant',value.answer,commitAt,input.jobId,input.leaseToken,commitAt),
+   statement("UPDATE cloud_jobs SET status='completed',result=?,lease_until=0,progress=100,stage='completed',updated_at=? WHERE id=? AND lease_token=? AND status='running' AND lease_until>=?",serialized,commitAt,input.jobId,input.leaseToken,commitAt),
    statement("UPDATE cloud_conversations SET updated_at=? WHERE id=? AND EXISTS(SELECT 1 FROM cloud_jobs WHERE id=? AND lease_token=? AND status='completed')",at,row.conversation_id,input.jobId,input.leaseToken),
   ]);
   const saved=await one('SELECT status,lease_token FROM cloud_jobs WHERE id=?',input.jobId);
@@ -226,10 +251,20 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
   if(typeof input?.jobId!=='string'||!validId(input.leaseToken))fail('Resultado sin reserva válida.');
   const row=await one('SELECT status,lease_token FROM cloud_jobs WHERE id=?',input.jobId);
   if(!row||row.status!=='running'||row.lease_token!==input.leaseToken)fail('La reserva de la respuesta ha caducado.',409);
-  await statement("UPDATE cloud_jobs SET status='failed',error='El motor local no pudo completar la respuesta. Puedes intentarlo de nuevo.',lease_until=0,updated_at=? WHERE id=? AND lease_token=? AND status='running'",now(),input.jobId,input.leaseToken).run();
+  const error=input.code==='design'?'El diseño no pasó las comprobaciones geométricas y de navegación tras una corrección. Ajusta el encargo y vuelve a intentarlo.':input.code==='quota'?'Cuota de inferencia agotada. Espera a su renovación; no se activa ningún plan de pago.':'El motor no pudo completar la respuesta. Puedes intentarlo de nuevo.';
+  await statement("UPDATE cloud_jobs SET status='failed',error=?,lease_until=0,updated_at=? WHERE id=? AND lease_token=? AND status='running'",error,now(),input.jobId,input.leaseToken).run();
   return {ok:true,status:'failed'};
  }
+ async function claimOwned(userId,id){
+  const owned=await ownedJob(userId,id);const at=now(),leaseToken=uuid(),leaseMs=['world','game'].includes(owned.kind)||owned.kind==='chat'&&creationIntent(owned.question)?90000:45000;
+  await statement("UPDATE cloud_jobs SET status='failed',error='La inferencia no terminó tras dos intentos. Puedes volver a enviar el mensaje.',lease_token=NULL,lease_until=0,updated_at=? WHERE id=? AND user_id=? AND status='running' AND lease_until<? AND attempts>=2",at,id,userId,at).run();
+  const row=await statement("UPDATE cloud_jobs SET status='running',lease_token=?,lease_until=?,agent_id='sites-groq',attempts=attempts+1,updated_at=? WHERE id=? AND user_id=? AND (status='queued' OR (status='running' AND lease_until<? AND attempts<2)) RETURNING id,conversation_id,kind,question,internet,parameters",leaseToken,at+leaseMs,at,id,userId,at).first();
+  if(!row)return {job:null};
+  const messages=await all('SELECT role,content FROM cloud_messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 48',row.conversation_id);
+  return {job:{id:row.id,conversationId:row.conversation_id,messages:contextWindow(messages),kind:row.kind,question:row.question,internet:row.internet===1,parameters:JSON.parse(row.parameters||'{}'),leaseToken}};
+ }
  async function observeResidentEvents(telemetry){
+  await db.prepare('CREATE TABLE IF NOT EXISTS resident_memories(id TEXT PRIMARY KEY,resident_id TEXT NOT NULL,process_id TEXT NOT NULL,state TEXT NOT NULL,phase TEXT,event_key TEXT NOT NULL UNIQUE,text TEXT NOT NULL,at TEXT NOT NULL,created_at INTEGER NOT NULL)').run();
   const events=buildResidentMemoryEvents(telemetry,{now:now()});
   if(!events.length)return {observed:0};
   // One read avoids twelve no-op writes on every ten-second house poll.
@@ -247,8 +282,10 @@ export function createCloudQueue(db,{now=()=>Date.now(),uuid=()=>crypto.randomUU
  }
  async function residentMemories(residentId){
   if(!isResidentId(residentId))fail('Habitante no válido.',404);
+  await db.prepare('CREATE TABLE IF NOT EXISTS resident_memories(id TEXT PRIMARY KEY,resident_id TEXT NOT NULL,process_id TEXT NOT NULL,state TEXT NOT NULL,phase TEXT,event_key TEXT NOT NULL UNIQUE,text TEXT NOT NULL,at TEXT NOT NULL,created_at INTEGER NOT NULL)').run();
   const rows=await all('SELECT id,process_id,state,phase,text,at,created_at FROM resident_memories WHERE resident_id=? ORDER BY created_at DESC,id LIMIT ?',residentId,RESIDENT_MEMORY_LIMIT);
   return {residentId,memories:rows.map(row=>({id:row.id,processId:row.process_id,state:row.state,phase:row.phase||null,text:row.text,at:row.at,observedAt:new Date(row.created_at).toISOString()}))};
  }
- return {enqueue,status,conversations,conversation,conversationExecutionEvents,getJob,cancel,heartbeat,claim,complete,fail:failJob,observeResidentEvents,residentMemories};
+ async function continueOwned(userId,id,leaseToken){const row=await ownedJob(userId,id);return row.status==='running'&&row.lease_token===leaseToken&&row.lease_until>=now();}
+ return {continueOwned,enqueue,status,conversations,conversation,conversationExecutionEvents,getJob,cancel,heartbeat,claim,claimOwned,complete,fail:failJob,observeResidentEvents,residentMemories};
 }

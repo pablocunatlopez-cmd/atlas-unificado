@@ -1,7 +1,7 @@
 import {cloudError,cloudJson,cloudUser,queue} from '@/lib/cloud/http';
-import {projectLiaHypothesisTimeline} from '../../../../../../continuous/lia-hypothesis-timeline.mjs';
-import {projectLiaKnowledgeState} from '../../../../../../continuous/lia-knowledge-state.mjs';
-import {projectLiaConversation} from '../../../../../../continuous/lia-conversation-projection.mjs';
+import {projectLiaHypothesisTimeline} from '@/lib/lia/lia-hypothesis-timeline.mjs';
+import {projectLiaKnowledgeState} from '@/lib/lia/lia-knowledge-state.mjs';
+import {projectLiaConversation} from '@/lib/lia/lia-conversation-projection.mjs';
 export const dynamic='force-dynamic';
 export async function GET(_request:Request,context:{params:Promise<{id:string}>}){
  try{

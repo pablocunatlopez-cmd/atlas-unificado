@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Script} from 'node:vm';
+import {readFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
+import ts from 'typescript';
+import * as rank from '../lib/collaboration/character-network.ts';
+import {MISSIONS} from '../lib/collaboration/missions.ts';
+import weights from '../data/character-network.json' with {type:'json'};
+const require=createRequire(import.meta.url),file=new URL('../app/character-network.tsx',import.meta.url);
+const js=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
+test('dos encargos dan fichas distintas; elegir Ara conserva el ID de ERAS, no el de su delegado',()=>{
+ const picked=[],state=[],out={};let cursor=0;
+ const react={useState(initial){const i=cursor++;return [i in state?state[i]:initial,v=>state[i]=v];}};
+ new Script(js).runInNewContext({exports:out,require:k=>k==='react'?react:k==='react/jsx-runtime'?require(k):k.includes('json')?weights:rank});
+ const walk=n=>Array.isArray(n)?n.flatMap(walk):n?.props?[n,...walk(n.props.children)]:[];
+ const render=(locked=false)=>{cursor=0;return walk(out.default({missions:MISSIONS,onSelect:id=>picked.push(id),locked}));};
+ render().find(n=>n.type==='input').props.onChange({target:{value:'recorte en la mezcla; exploradora del valle'}});
+ render().find(n=>n.type==='form').props.onSubmit({preventDefault(){}});
+ const buttons=render().filter(n=>n.type==='button'&&n.props.onClick);
+ assert.ok(buttons.some(n=>String(n.props.children).includes('Ritmo')));
+ const ara=buttons.find(n=>String(n.props.children).includes('Ara'));assert.ok(ara);assert.deepEqual(picked,[]);ara.props.onClick();assert.deepEqual(picked,['eras-character:ice:scout']);
+ assert.ok(render(true).filter(n=>n.type==='button'&&n.props.onClick).every(n=>n.props.disabled));
+});

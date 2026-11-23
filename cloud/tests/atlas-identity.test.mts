@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {LIA_ARCHITECTURE,LIA_SYSTEM_IDENTITY} from '../lib/core/identity.ts';
+import {MISSIONS,missionFor} from '../lib/collaboration/missions.ts';
+import {CORE_VERTICES} from '../lib/core/lor-spec.ts';
+import {missionContext} from '../lib/collaboration/baselines.ts';
+test('three vertices have separate environments and converge on the fourth shared persona',()=>{const a=LIA_ARCHITECTURE;assert.deepEqual(a.vertices.map(v=>[v.name,v.function,v.room]),[['Atlas','Mente','mind'],['Ion','Cuerpo','body'],['Dios · Ícaro','Cielo · Constelación','constellation']]);assert.equal(new Set([...a.vertices.map(v=>v.room),a.beneficiary.room]).size,4);assert.equal(a.beneficiary.name,'Lía');assert.match(LIA_SYSTEM_IDENTITY,/Eres Lía/);assert.deepEqual(CORE_VERTICES.map(v=>v.actor),['Atlas','Ion','Ícaro']);});
+test('every specialist mission shares Lía as beneficiary while preserving its own specialty and stable identity',()=>{for(const m of MISSIONS){assert.equal(m.beneficiary.id,'lia');assert.match(m.purpose,/Mejorar a Lía/);}assert.equal(missionFor('core:suceso')?.residentId,'sky-agents');assert.equal(missionFor('core:atlas')?.room,'mind');assert.notEqual(missionFor('music-console')?.domain,missionFor('games-desk')?.domain);});
+test('both collaborators receive the same explicit architecture and beneficiary with their evidence',()=>{const m=MISSIONS[0],context=missionContext(m,[{id:'read',title:'Fuente',text:'Evidencia'}]);assert.equal(context.architecture,LIA_ARCHITECTURE);assert.equal(context.beneficiary.id,'lia');assert.equal(context.vocation.title,m.title);assert.equal(context.documents[0].id,'read');});
+
+test('ERAS belongs to Ion as Lía graphic engine while the original game remains its test application',()=>{assert.equal(LIA_ARCHITECTURE.embodiment.id,'eras');assert.equal(LIA_ARCHITECTURE.embodiment.owner,'ion');assert.equal(LIA_ARCHITECTURE.embodiment.workspace,'/eras/');assert.match(LIA_SYSTEM_IDENTITY,/ERAS es el motor gráfico de tu cuerpo/);assert.match(LIA_ARCHITECTURE.embodiment.origin,/banco de pruebas/);});
+
+test('graphics work targets the ERAS engine consumers rather than only decorative house geometry',()=>{for(const id of ['module:graphics','room:games']){const mission=missionFor(id)!;assert.ok(mission.targetFiles.includes('public/eras-engine/runtime.js'));assert.ok(mission.targetFiles.includes('scripts/sync-eras-engine.mjs'));}});

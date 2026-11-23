@@ -1,4 +1,5 @@
-// Selected definitions from the owner's original LOR-ΩΣ specification, chapter 1–2.
+import {LIA_ARCHITECTURE} from './identity.ts';
+// Original LOR fields/phases, with current vertices from the owner's 2026-11-14 clarification.
 // This is a glossary, not a new grammar or a claim that the physics is established.
 export const LOR_SOURCE={title:'Atlas_Unificado_LOR-OmegaSigma.md',version:'105',date:'2026-09-12',sha256:'6f26f5a842d8088d02b4c0873e0e59c69ff5aae00490f46e6aafbd891be74609'} as const;
 export const LOR_FIELDS=[
@@ -23,8 +24,4 @@ export const CORE_PHASES=[
  {id:'refute',name:'Refutar',description:'Buscar errores, contraejemplos y regresiones.'},
  {id:'retain',name:'Aprender',description:'Guardar resultados y promover solo un cambio respaldado por pruebas nuevas.'},
 ] as const;
-export const CORE_VERTICES=[
- {name:'Animal · Cuerpo',actor:'Ion',description:'Percepción, regulación, herramientas y recursos disponibles.'},
- {name:'Mente · Lenguaje',actor:'Atlas',description:'Modelos, distinciones, memoria y símbolos.'},
- {name:'Dios · Suceso · Unidad',actor:'Dios / Suceso',description:'Azar, totalidad, sentido y límites. No es una causa empírica automática.'},
-] as const;
+export const CORE_VERTICES=LIA_ARCHITECTURE.vertices.map(v=>({name:v.function,actor:v.id==='icarus'?'Ícaro':v.name,description:v.description}));

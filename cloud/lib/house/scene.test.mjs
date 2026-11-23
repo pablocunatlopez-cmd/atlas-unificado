@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {buildHouse} from '../../public/house/scene.js';
+import {HOUSE_FUNCTIONS} from '../../public/house/functional-world.js';
 import {ROOMS,blocked} from '../../public/house/layout.js';
 
 // This exercises real Three.js geometry and scene construction without a GPU.
@@ -11,7 +12,7 @@ test('ten-room geometry builds with clear furniture spawns and finite animated i
  let house;
  try{
   house=buildHouse();for(const room of ROOMS)assert.equal(blocked(...room.spawn,.25,house.solids),false,'furniture leaves '+room.id+' spawn clear');
-  assert.equal(house.interactive.length,10);assert.equal(house.ceilings.children.length,10);
+  assert.equal(house.interactive.filter(item=>!item.userData.functionId&&!item.userData.residentId).length,10);assert.deepEqual(new Set(house.interactive.filter(item=>item.userData.functionId).map(item=>item.userData.functionId)),new Set(HOUSE_FUNCTIONS.map(fn=>fn.id)));assert.equal(house.ceilings.children.length,10);
   house.setProcessState({at:new Date().toISOString(),processes:[{id:'library',state:'running',phase:'observe',counters:{observations:7}},{id:'review',state:'failed',phase:'refute',counters:{rejected:1}}]});
   house.update(performance.now()/1000);
   let instances=0,vertices=0,staticMeshes=0;

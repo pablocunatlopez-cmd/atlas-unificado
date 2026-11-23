@@ -1,4 +1,4 @@
-import type {EvidenceRecord} from './evidence-contract';
+import type {EvidenceRecord} from './evidence-contract.ts';
 
 const MAX = 32;
 const byArtifact = new Map<string, EvidenceRecord>();

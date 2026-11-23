@@ -1,4 +1,4 @@
-import {boxGeometry,sphereGeometry} from './gltf.ts';
+import {boxGeometry,sphereGeometry,cylinderGeometry,coneGeometry} from './gltf.ts';
 import type {Scene,SceneObject,Vec3} from './scene.ts';
 
 export type StlBounds={min:Vec3;max:Vec3};
@@ -25,7 +25,7 @@ export const DEFAULT_MM_PER_UNIT=1;
 export const DEFAULT_MIN_WALL_MM=1.2;
 
 type Triangle={a:Vec3;b:Vec3;c:Vec3;normal:Vec3};
-type ObjectMesh={index:number;type:'box'|'sphere';triangles:Triangle[];bounds:StlBounds;degenerate:number;boundary:number;nonmanifold:number;thickness:number|null};
+type ObjectMesh={index:number;type:SceneObject['type'];triangles:Triangle[];bounds:StlBounds;degenerate:number;boundary:number;nonmanifold:number;thickness:number|null};
 
 const number=(value:number)=>Math.abs(value)<1e-9?0:value;
 const format=(value:number)=>number(value).toFixed(6);
@@ -71,7 +71,7 @@ function thicknessOf(triangles:Triangle[]):number|null{
  }
  return minimum;
 }
-function buildMesh(object:SceneObject,index:number,type:'box'|'sphere',geometry:{position:number[];indices:number[]},millimetersPerUnit:number):ObjectMesh{
+function buildMesh(object:SceneObject,index:number,type:SceneObject['type'],geometry:{position:number[];indices:number[]},millimetersPerUnit:number):ObjectMesh{
  const min:Vec3=[Infinity,Infinity,Infinity],max:Vec3=[-Infinity,-Infinity,-Infinity],triangles:Triangle[]=[];let degenerate=0;
  for(let offset=0;offset<geometry.indices.length;offset+=3){
   const a=transform(object,vector(geometry.position,geometry.indices[offset]*3),millimetersPerUnit);
@@ -95,10 +95,10 @@ function resolve(options:StlOptions){
 }
 function analyze(scene:Scene,options:StlOptions){
  const {millimetersPerUnit,minWallMm}=resolve(options);
- const geometries={box:boxGeometry(),sphere:sphereGeometry()},meshes:ObjectMesh[]=[],errors:MeshIssue[]=[],warnings:MeshIssue[]=[];
+ const geometries={box:boxGeometry(),sphere:sphereGeometry(),cylinder:cylinderGeometry(),cone:coneGeometry()},meshes:ObjectMesh[]=[],errors:MeshIssue[]=[],warnings:MeshIssue[]=[];
  for(let index=0;index<scene.objects.length;index++){
   const object=scene.objects[index];
-  if(!object||!['box','sphere'].includes(object.type)){errors.push({code:'geometry',message:`Objeto ${index+1}: tipo de geometría no reconocido.`,object:index+1});continue;}
+  if(!object||!['box','sphere','cylinder','cone'].includes(object.type)){errors.push({code:'geometry',message:`Objeto ${index+1}: tipo de geometría no reconocido.`,object:index+1});continue;}
   if(![...object.position,...object.size,object.yaw].every(Number.isFinite)||object.size.some(value=>value<=0)){errors.push({code:'geometry',message:`Objeto ${index+1}: posición, tamaño o giro no finitos, o tamaño no positivo.`,object:index+1});continue;}
   const mesh=buildMesh(object,index+1,object.type,geometries[object.type],millimetersPerUnit);meshes.push(mesh);
   if(mesh.degenerate)errors.push({code:'degenerate',message:`Objeto ${mesh.index}: ${mesh.degenerate} triángulo(s) degenerado(s).`,object:mesh.index});

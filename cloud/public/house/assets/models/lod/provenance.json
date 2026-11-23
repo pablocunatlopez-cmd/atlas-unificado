@@ -1,0 +1,87 @@
+{
+  "sourceLicense": "CC0-1.0",
+  "licenseFile": "../avatar/CC0-LICENSE.md",
+  "generator": "Blender 4.3.2 CPU · scripts/build-resident-lod.py",
+  "forward": "+Z",
+  "up": "+Y",
+  "floorY": 0,
+  "standingScaleReference": 1.84,
+  "assets": [
+    {
+      "file": "female-standing.glb",
+      "template": "female",
+      "pose": "standing",
+      "sha256": "8876e923e56978166cd413f4ec4bb6fc81dd594364e7503ba2e113501b1dd8f7",
+      "source": "../avatar/female.glb",
+      "sourceSha256": "3b51b243fb1efeffe4abab022706546955681684cdadb699d61dd266f6a097c3",
+      "triangles": 3509,
+      "height": 1.8798,
+      "parts": [
+        "skin",
+        "tunic",
+        "trousers",
+        "boots",
+        "hair",
+        "eyes",
+        "eyebrows"
+      ]
+    },
+    {
+      "file": "female-seated.glb",
+      "template": "female",
+      "pose": "seated",
+      "sha256": "04211a0cf660cec7fdd7e195b02fad13b1b492d011dd1c67c518f315083879f2",
+      "source": "../avatar/female.glb",
+      "sourceSha256": "3b51b243fb1efeffe4abab022706546955681684cdadb699d61dd266f6a097c3",
+      "triangles": 3509,
+      "height": 1.5164,
+      "parts": [
+        "skin",
+        "tunic",
+        "trousers",
+        "boots",
+        "hair",
+        "eyes",
+        "eyebrows"
+      ]
+    },
+    {
+      "file": "male-standing.glb",
+      "template": "male",
+      "pose": "standing",
+      "sha256": "4c8c0cdb07d436fc5428ab452f608ff77bf4e52afd2138eb574bdaccb24e918a",
+      "source": "../avatar/male.glb",
+      "sourceSha256": "f098db2f38a3cdac286d7c9d0bde69ee99056b082e538193c036e2a9d1ab6df6",
+      "triangles": 3510,
+      "height": 1.8871,
+      "parts": [
+        "skin",
+        "tunic",
+        "trousers",
+        "boots",
+        "hair",
+        "eyes",
+        "eyebrows"
+      ]
+    },
+    {
+      "file": "male-seated.glb",
+      "template": "male",
+      "pose": "seated",
+      "sha256": "b0a91e7e0ff07ab9169342ce2d030089c972d6c857d68723900aa5a259ecd2b0",
+      "source": "../avatar/male.glb",
+      "sourceSha256": "f098db2f38a3cdac286d7c9d0bde69ee99056b082e538193c036e2a9d1ab6df6",
+      "triangles": 3510,
+      "height": 1.4997,
+      "parts": [
+        "skin",
+        "tunic",
+        "trousers",
+        "boots",
+        "hair",
+        "eyes",
+        "eyebrows"
+      ]
+    }
+  ]
+}

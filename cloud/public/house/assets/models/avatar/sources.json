@@ -1,0 +1,34 @@
+{
+  "author": "MakeHuman Community / Data Collection AB / core asset contributors",
+  "license": "CC0-1.0",
+  "license_url": "https://static.makehumancommunity.org/about/license.html",
+  "sources": [
+    "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/3dobjs/base.obj",
+    "https://files2.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip"
+  ],
+  "changes": "Adult targets applied; original anatomical surface, skin UV layout and authored skeleton weights preserved through Loop subdivision with interpolated authored weights and UV islands; loose garments sculpted from helper topology; braid/crop hair, eyebrow, eyelash and eye proxies fitted to each adult shape. Skinned glTF compiled for realtime use.",
+  "files": {
+    "eyelashes.png": "4b69c0fff2648874460e9caf80c31413c444218a5c50afebc425aeaa65484a35",
+    "male.glb": "f098db2f38a3cdac286d7c9d0bde69ee99056b082e538193c036e2a9d1ab6df6",
+    "eyes.png": "4659691c7295ad6206c78b003e5fd0e5f91dcd53032fa914a229bb48cabe424b",
+    "eyebrows.png": "9940f7d0b1b223709a19b05156ba6f6e9e4dbdbced02d7574f4d51d72c58967b",
+    "female-skin.png": "b2a6ac8cd4f9febdb447368e29c76cd68410bb66e46d9dcfa2d5f75126eea8fc",
+    "male-skin.png": "862a26e335e958b70534cb5f0d7c47ef30ab148a56c42b3e9da969cf76f12963",
+    "female.glb": "3b51b243fb1efeffe4abab022706546955681684cdadb699d61dd266f6a097c3",
+    "braid01.png": "24c0d2a639f04704734c3e38af97d110777c1b203e5a10c66a5c89563643a018",
+    "CC0-LICENSE.md": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c",
+    "short02.png": "47fe33831a3929567c733356dd66243116e05df2ace1f884ddca0080b728229f",
+    "female-normal.webp": "dbf860e54d725edbe484cabf7b42a40a4060fc6f1692e1be17a02aa3063742fb",
+    "female-roughness.webp": "c32cf34c150a488f578a4e77064d8e25b033f3f31139128068c39a9cbde04645",
+    "male-normal.webp": "ff0a7170f28e1ed57f8e9210c53662f2efe5e742c905e8f0120f8c83ca09dc95",
+    "male-roughness.webp": "3ee2874bb5e1c9cd26156b8e95aa7c9a3a6db79a393dee414d096003bb0c05eb"
+  },
+  "derived_detail": {
+    "method": "Approximate UV-aligned high-pass albedo relief plus seeded micropores; locally estimated roughness. Not scanned displacement.",
+    "script": "scripts/make-avatar-detail.py",
+    "size": [
+      1024,
+      1024
+    ]
+  }
+}

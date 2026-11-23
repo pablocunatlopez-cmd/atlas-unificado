@@ -40,7 +40,9 @@ export function createAtlasSpiralLayer({THREE,scene}={}){
   line([[0,3,0],vertex.position],0x677487);
  }
  let mounted=false,disposed=false;
+ const roomByVertex=Object.freeze({mental:'mind',physical:'body',event:'constellation'});
  return Object.freeze({
+  roomForVertex(id){return roomByVertex[id]||null;},
   mount(){
    if(disposed)throw Error('Spiral layer disposed');
    if(mounted)return false;

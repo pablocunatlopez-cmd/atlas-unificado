@@ -6,16 +6,16 @@ const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for
 // Position is [x,y,z]; yaw follows the walking camera (0=-Z, +PI/2=+X).
 // Multiple stations may reflect one real process; they are not extra agents.
 const stations=[
- {id:'salon-centre',room:'salon',position:[1.3,0,2.7],yaw:-1.25,archetype:'human',processIds:['chat'],name:'Lía · conversación',role:'Conversación de Atlas',seated:false,cosmetic:false},
+ {id:'salon-centre',room:'salon',position:[1.3,0,2.7],yaw:-1.25,archetype:'human',processIds:['chat'],name:'Lía · conversación',role:'Lía · integración de Atlas, Ion e Ícaro',seated:false,cosmetic:false},
  {id:'music-console',room:'music',position:[-8.9,0,4],yaw:-Math.PI/2,archetype:'human',processIds:[],name:'Noa · composición',role:'Composición Web Audio local',seated:true,cosmetic:false},
  {id:'music-mixer',room:'music',position:[-6.1,0,5.9],yaw:Math.PI,archetype:'robot',processIds:[],name:'Ritmo · mezcla',role:'Mezcla musical local',seated:false,cosmetic:false},
  {id:'lab-desk',room:'lab',position:[-8.8,0,-4],yaw:-Math.PI/2,archetype:'human',processIds:['research'],name:'Vera · fuentes',role:'Lectura de fuentes públicas',seated:true,cosmetic:false},
  {id:'lab-bench',room:'lab',position:[-8.2,0,-5.35],yaw:0,archetype:'animal',processIds:['experience'],activePhases:['apply','refute'],name:'Nilo · experimentos',role:'Contraste de la experiencia',seated:false,cosmetic:false},
  {id:'games-desk',room:'games',position:[8.8,0,4],yaw:Math.PI/2,archetype:'robot',processIds:['creative'],name:'Talo · constructor',role:'Generación de planes 3D',seated:true,cosmetic:false},
  {id:'games-maquette',room:'games',position:[7.5,0,5.25],yaw:Math.PI,archetype:'animal',processIds:['creative'],name:'Zuri · maquetas',role:'Prototipos 3D con contratos',seated:false,cosmetic:false},
- {id:'cinema-projector',room:'cinema',position:[5.2,0,-4.8],yaw:Math.PI/2,archetype:'robot',processIds:['video'],name:'Faro · vídeo',role:'Generación de vídeo local',seated:false,cosmetic:false},
+ {id:'cinema-projector',room:'cinema',position:[5.2,0,-4.8],yaw:Math.PI/2,archetype:'robot',processIds:['video'],name:'Faro · vídeo',role:'Dirección de planos y captura de la casa',seated:false,cosmetic:false},
  {id:'sky-sources',room:'constellation',position:[-2.3,0,-5.5],yaw:0,archetype:'bird',processIds:['research','external'],name:'Alba · referencias',role:'Fuentes de la Constelación',seated:true,cosmetic:false},
- {id:'sky-agents',room:'constellation',position:[2.3,0,-5.5],yaw:0,archetype:'bird',processIds:['agents'],name:'Ícaro · agentes',role:'Colaboradores programadores',seated:true,cosmetic:false},
+ {id:'sky-agents',room:'constellation',position:[2.3,0,-5.5],yaw:0,archetype:'bird',processIds:['agents'],name:'Ícaro · agentes',role:'Dios · cielo · conexión externa de Lía',seated:true,cosmetic:false},
  {id:'mind-desk',room:'mind',position:[-10,0,-13.6],yaw:0,archetype:'human',processIds:['experience'],activePhases:['observe','understand','retain'],name:'Nora · memoria',role:'Observación y memoria situada',seated:true,cosmetic:false},
  {id:'body-console',room:'body',position:[-5.6,0,-13.6],yaw:0,archetype:'robot',processIds:['tools'],name:'Ion · herramientas',role:'Ejecución de funciones de software',seated:false,cosmetic:false},
  {id:'body-arm',room:'body',position:[-2.7,0,-13.2],yaw:.83,archetype:'robot',processIds:['tools'],name:'Pico · acciones',role:'Acciones de software · brazo simbólico',seated:false,cosmetic:false},
@@ -25,6 +25,9 @@ const stations=[
  {id:'language-symbol',room:'language',position:[12,0,-13.25],yaw:0,archetype:'robot',processIds:['core'],name:'Sigma · símbolos',role:'Políticas y símbolos verificables',seated:false,cosmetic:false},
  {id:'language-meaning',room:'language',position:[14.5,0,-13.25],yaw:0,archetype:'human',processIds:['experience'],activePhases:['connect','retain'],name:'Ema · sentido',role:'Interpretación situada de la experiencia',seated:false,cosmetic:false}
 ];
+// Critic vocations share the cinema tools; the legacy cosmetic flag only keeps
+// unreported presence from being displayed as an active inference process.
+const audienceRoles=['Crítica de narrativa audiovisual','Color e iluminación','Escucha y claridad sonora','Movimiento e interacción','Accesibilidad y comprensión','Ritmo de montaje'];
 const audience=[
  ['cinema-audience-1',6.5,-2.6,'human','Teo · espectador'],
  ['cinema-audience-2',8.2,-2.6,'robot','Luz · espectadora'],
@@ -32,7 +35,7 @@ const audience=[
  ['cinema-audience-4',8.2,-4.3,'animal','Mico · espectador'],
  ['cinema-audience-5',6.5,-6,'human','Leo · espectador'],
  ['cinema-audience-6',8.2,-6,'bird','Brisa · espectadora']
-].map(([id,x,z,archetype,name])=>({id,room:'cinema',position:[x,0,z],yaw:Math.PI/2,archetype,processIds:[],name,role:'Habitante del cine · presencia decorativa',seated:true,cosmetic:true}));
+].map(([id,x,z,archetype,name],index)=>({id,room:'cinema',position:[x,0,z],yaw:Math.PI/2,archetype,processIds:[],name,role:audienceRoles[index],seated:true,cosmetic:true}));
 
 export const RESIDENTS=freeze([...stations,...audience]);
 export const WORKSTATIONS=freeze(RESIDENTS.filter(resident=>!resident.cosmetic));
@@ -44,16 +47,12 @@ const processPriorities={running:5,failed:4,waiting:3,passed:2,idle:1};
 // Shared by the 3D poses and the roster: one process may visit several stations,
 // but only its actual phase authorizes the resident's work indication.
 export function processForResident(value,resident,{ageMs=Infinity}={}){
- if(resident.cosmetic)return {id:resident.id,state:'idle',workVerified:false,reason:'reported',displayState:STATE_LABELS.idle};
- if(!resident.processIds.length)return {id:resident.id,state:'waiting',workVerified:false,reason:'local_only',displayState:REASON_LABELS.local_only};
- const process=(value.processes||[]).filter(item=>resident.processIds.includes(item.id)).sort((a,b)=>processPriorities[b.state]-processPriorities[a.state])[0];
- if(!process)return {id:resident.id,state:'waiting',workVerified:false,reason:'no_process',displayState:REASON_LABELS.no_process};
- const freshness=telemetryFreshness(value,{ageMs,maxAgeMs:TELEMETRY_FRESH_MS});
- const relevant=!resident.activePhases||resident.activePhases.includes(process.phase);
- if(process.state==='running'&&(!freshness.fresh||!relevant)){
-  const reason=!freshness.fresh?freshness.reason:'wrong_phase';
-  return {...process,state:'waiting',workVerified:false,reason,displayState:REASON_LABELS[reason]||REASON_LABELS.stale};
- }
- const workVerified=freshness.fresh&&relevant&&process.state==='running';
- return {...process,workVerified,reason:workVerified?'fresh':'reported',displayState:STATE_LABELS[process.state]||REASON_LABELS.reported};
+ if(resident.cosmetic&&!value.processes.some(p=>p.actorId===resident.id))return {id:resident.id,state:'idle',workVerified:false,reason:'reported',displayState:'En reposo'};
+ if(!resident.processIds.length&&!value.processes.some(p=>p.actorId===resident.id))return {id:resident.id,state:'waiting',workVerified:false,reason:'local_only',displayState:'Disponible · local'};
+ const process=value.processes.filter(item=>item.actorId?item.actorId===resident.id:resident.processIds.includes(item.id)).sort((a,b)=>processPriorities[b.state]-processPriorities[a.state])[0];
+ if(!process)return {id:resident.id,state:'waiting',workVerified:false,reason:'no_process',displayState:'En espera'};
+ const freshness=telemetryFreshness(value,{ageMs});const fresh=freshness.fresh;
+ const relevant=process.actorId===resident.id||!resident.activePhases||resident.activePhases.includes(process.phase);
+ if(process.state==='running'&&(!fresh||!relevant))return {...process,state:'waiting',workVerified:false,reason:!fresh?freshness.reason:'wrong_phase',displayState:!fresh?(REASON_LABELS[freshness.reason]||'Sin señal reciente'):'En espera de su fase'};
+ return {...process,workVerified:fresh&&relevant&&process.state==='running',reason:fresh&&relevant&&process.state==='running'?'fresh':'reported',displayState:STATE_LABELS[process.state]};
 }

@@ -1,0 +1,86 @@
+{
+  "license": "CC0-1.0",
+  "upstreamAuthors": "MakeHuman Community / Data Collection AB / core asset contributors",
+  "sourceLicense": "../avatar/CC0-LICENSE.md",
+  "sourceManifest": "../avatar/sources.json",
+  "generator": "scripts/build-ultra-skin.py",
+  "description": "UV-aligned 4096 × 4096 albedo and normal maps. The authored 2K albedo and 1K normal were resampled. Organic pigmentation and pore relief were then calculated at 4K. The anatomy, skin UVs and original color remain.",
+  "assets": [
+    {
+      "file": "female-skin.webp",
+      "sha256": "6b010acb103e537223ff1659c56a57b5d380a784813c2194bf8dc10a856c5199",
+      "size": [
+        4096,
+        4096
+      ],
+      "bytes": 747020,
+      "template": "female",
+      "usage": "sRGB albedo",
+      "source": {
+        "path": "../avatar/female-skin.png",
+        "sha256": "b2a6ac8cd4f9febdb447368e29c76cd68410bb66e46d9dcfa2d5f75126eea8fc",
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    },
+    {
+      "file": "female-normal.webp",
+      "sha256": "b2b3441807e3828212ca9c6c7512a75e280d1a6dcf0d0e0c7539e1f8ee0ed69e",
+      "size": [
+        4096,
+        4096
+      ],
+      "bytes": 2108540,
+      "template": "female",
+      "usage": "linear tangent normal",
+      "source": {
+        "path": "../avatar/female-normal.webp",
+        "sha256": "dbf860e54d725edbe484cabf7b42a40a4060fc6f1692e1be17a02aa3063742fb",
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    },
+    {
+      "file": "male-skin.webp",
+      "sha256": "809c694fa003ce7a54265ab961e8f75161b0edbdfa59d6cb319285ae43bcb030",
+      "size": [
+        4096,
+        4096
+      ],
+      "bytes": 768426,
+      "template": "male",
+      "usage": "sRGB albedo",
+      "source": {
+        "path": "../avatar/male-skin.png",
+        "sha256": "862a26e335e958b70534cb5f0d7c47ef30ab148a56c42b3e9da969cf76f12963",
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    },
+    {
+      "file": "male-normal.webp",
+      "sha256": "79fc233b87ea315d1c73816aacf63a489c81004c80515073daeae97608027a06",
+      "size": [
+        4096,
+        4096
+      ],
+      "bytes": 2115758,
+      "template": "male",
+      "usage": "linear tangent normal",
+      "source": {
+        "path": "../avatar/male-normal.webp",
+        "sha256": "ff0a7170f28e1ed57f8e9210c53662f2efe5e742c905e8f0120f8c83ca09dc95",
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    }
+  ]
+}

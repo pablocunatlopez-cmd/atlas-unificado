@@ -1,6 +1,6 @@
 // Atlas house, deterministic plan. Coordinates are metres in the X/Z plane.
 export const ROOMS=Object.freeze([
- {id:'salon',title:'Salón de Atlas',short:'Atlas',kind:'Conversar',accent:'#91dac5',bounds:[-4,0,4,8],spawn:[-1.8,5.7],yaw:.25,hotspot:[0,2.5]},
+ {id:'salon',title:'Lía · Entorno compartido',short:'Lía',kind:'Conversar con Lía',accent:'#91dac5',bounds:[-4,0,4,8],spawn:[-1.8,5.7],yaw:.25,hotspot:[0,2.5]},
  {id:'music',title:'Estudio de música',short:'Música',kind:'Componer',accent:'#eac586',bounds:[-12,0,-4,8],spawn:[-6.8,4],yaw:-Math.PI/2,hotspot:[-9.8,4]},
  {id:'lab',title:'Laboratorio',short:'Laboratorio',kind:'Experimentar',accent:'#89c9e2',bounds:[-12,-8,-4,0],spawn:[-6.8,-4],yaw:-Math.PI/2,hotspot:[-9.6,-4]},
  {id:'games',title:'Taller de mundos',short:'Mundos',kind:'Crear en 3D',accent:'#c3a6ec',bounds:[4,0,12,8],spawn:[6.8,4],yaw:Math.PI/2,hotspot:[9.4,4]},
